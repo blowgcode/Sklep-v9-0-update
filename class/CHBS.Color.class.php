@@ -31,7 +31,7 @@ class CHBSColor
 		
 		$rgb=array_map('hexdec',$hex);
 
-		$output='rgba('.implode(',',$rgb).','.(hexdec($color[6].$color[7])/255).')';
+		$output='rgba('.implode(',',$rgb).','.(hexdec($color[6].$color[7])/100).')';
 		
 		return($output);
 	}

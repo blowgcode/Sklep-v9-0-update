@@ -7,13 +7,18 @@ class CHBSBookingExtra
 {
 	/**************************************************************************/
 	
+	public $mandatoryType;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->mandatoryType=array
 		(
 			0=>array(__('Disable','chauffeur-booking-system')),
 			2=>array(__('Disable (and equal to passenger quantity)','chauffeur-booking-system')),
-			1=>array(__('Enable (and customer can enter own quantity)','chauffeur-booking-system'))
+			3=>array(__('Disable (and equal to the number of hours of ride in the "Hourly" service type)','chauffeur-booking-system')),
+			1=>array(__('Enable (and customer can enter own quantity)','chauffeur-booking-system')),
 		);
 	}
 
@@ -132,6 +137,7 @@ class CHBSBookingExtra
 		
 		$TaxRate=new CHBSTaxRate();
 		$Vehicle=new CHBSVehicle();
+		$Geofence=new CHBSGeofence();
 		$ServiceType=new CHBSServiceType();
 		$TransferType=new CHBSTransferType();
 		
@@ -144,6 +150,8 @@ class CHBSBookingExtra
 		$data['dictionary']['service_type']=$ServiceType->getServiceType();
 		$data['dictionary']['transfer_type']=$TransferType->getTransferType();
 		$data['dictionary']['mandatory_type']=$this->getMandatoryType();
+		
+		$data['dictionary']['geofence']=$Geofence->getDictionary();
 		
 		$Template=new CHBSTemplate($data,PLUGIN_CHBS_TEMPLATE_PATH.'admin/meta_box_booking_extra.php');
 		echo $Template->output();			
@@ -171,6 +179,7 @@ class CHBSBookingExtra
 		CHBSHelper::setDefault($meta,'quantity_enable','1');
 		CHBSHelper::setDefault($meta,'quantity_max','1');
 		CHBSHelper::setDefault($meta,'mandatory','0');
+		CHBSHelper::setDefault($meta,'state_default',0);
 		
 		CHBSHelper::setDefault($meta,'price',CHBSPrice::getDefaultPrice());
 	   
@@ -178,6 +187,9 @@ class CHBSBookingExtra
 		
 		CHBSHelper::setDefault($meta,'service_type_id_enable',array_keys($ServiceType->getServiceType()));
 		CHBSHelper::setDefault($meta,'transfer_type_id_enable',array_keys($TransferType->getTransferType()));
+		
+		CHBSHelper::setDefault($meta,'geofence_pickup',array(-1));
+		CHBSHelper::setDefault($meta,'geofence_dropoff',array(-1));		
 		
 		$TaxRate=new CHBSTaxRate();
 		CHBSHelper::setDefault($meta,'tax_rate_id',$TaxRate->getDefaultTaxPostId());
@@ -195,6 +207,7 @@ class CHBSBookingExtra
 
 		$TaxRate=new CHBSTaxRate();
 		$Vehicle=new CHBSVehicle();
+		$Geofence=new CHBSGeofence();
 		$Validation=new CHBSValidation();
 		$ServiceType=new CHBSServiceType();
 		$TransferType=new CHBSTransferType();   
@@ -223,10 +236,36 @@ class CHBSBookingExtra
 		
 		/***/
 		
+		$geofenceField=array('geofence_pickup','geofence_dropoff');
+		$geofenceDictionary=$Geofence->getDictionary();
+		
+		foreach($geofenceField as $geofenceFieldValue)
+		{
+			$meta[$geofenceFieldValue]=(array)CHBSHelper::getPostValue($geofenceFieldValue);	
+			
+			if(in_array(-1,$meta[$geofenceFieldValue]))
+			{
+				$meta[$geofenceFieldValue]=array(-1);
+			}
+			else
+			{
+				foreach($meta[$geofenceFieldValue] as $index=>$value)
+				{
+					if(!isset($geofenceDictionary[$value]))
+						unset($meta[$geofenceFieldValue][$index]);				
+				}
+			}
+
+			if(!count($meta[$geofenceFieldValue]))
+				$meta[$geofenceFieldValue]=array(-1);
+		}
+		
+		/***/
+		
 		$meta['description']=CHBSHelper::getPostValue('description');
 		
 		$meta['quantity_enable']=CHBSHelper::getPostValue('quantity_enable');
-		if(!in_array($meta['quantity_enable'],array(0,1,2)))
+		if(!in_array($meta['quantity_enable'],array_keys($this->mandatoryType)))
 			$meta['quantity_enable']=1;
 		
 		if($meta['quantity_enable']!=1) $meta['quantity_max']=1;
@@ -239,7 +278,11 @@ class CHBSBookingExtra
 		
 		$meta['mandatory']=CHBSHelper::getPostValue('mandatory');
 		if(!$Validation->isBool($meta['mandatory']))
-			$meta['mandatory']=0;		
+			$meta['mandatory']=0;	
+		
+		$meta['state_default']=CHBSHelper::getPostValue('state_default');
+		if(!$Validation->isBool($meta['state_default']))
+			$meta['state_default']=0;		
 		
 		$meta['price']=CHBSHelper::getPostValue('price');
 		if(!CHBSPrice::isPrice($meta['price'],false))
@@ -378,17 +421,44 @@ class CHBSBookingExtra
 	
 	/**************************************************************************/
 	
-	function calculatePrice($bookingExtra,$taxRate)
+	function getPriceModification($data,$bookingForm)
+	{
+		$ratio=1;
+		
+		$serviceTypeId=(int)$data['service_type_id'];
+		
+		if(!in_array($serviceTypeId,array(1,3))) return($ratio);
+		
+		$transferTypeId=(int)$data['transfer_type_service_type_'.$serviceTypeId];
+		
+		if(!in_array($transferTypeId,array(2,3))) return($ratio);
+		
+		if($transferTypeId===2)
+		{			
+			$ratio=($bookingForm['meta']['booking_extra_price_change_return_percentage']/100);
+		}
+		
+		if($transferTypeId===3)
+		{			
+			$ratio=($bookingForm['meta']['booking_extra_price_change_return_new_ride_percentage']/100);
+		}
+		
+		return($ratio);
+	}
+	
+	/**************************************************************************/
+	
+	function calculatePrice($bookingExtra,$bookingForm,$postData)
 	{
 		$Currency=new CHBSCurrency();
 		
 		/***/
-		
+			
 		$taxRateValue=0;
 		$taxRateId=$bookingExtra['meta']['tax_rate_id'];
 		
-		if(isset($taxRate[$taxRateId]))
-			$taxRateValue=$taxRate[$taxRateId]['meta']['tax_rate_value'];
+		if(isset($bookingForm['dictionary']['tax_rate'][$taxRateId]))
+			$taxRateValue=$bookingForm['dictionary']['tax_rate'][$taxRateId]['meta']['tax_rate_value'];
 		
 		/***/
 		
@@ -403,7 +473,10 @@ class CHBSBookingExtra
 		
 		$bookingExtra['meta']['price']=CHBSPrice::numberFormat($bookingExtra['meta']['price']);
 		
-		$priceNetValue=CHBSPrice::numberFormat($bookingExtra['meta']['price']*CHBSCurrency::getExchangeRate());		   
+		$priceNetValue=CHBSPrice::numberFormat($bookingExtra['meta']['price']*$this->getPriceModification($postData,$bookingForm));
+		
+		$priceNetValue=CHBSPrice::numberFormat($priceNetValue*CHBSCurrency::getExchangeRate());		
+		
 		$priceGrossValue=CHBSPrice::calculateGross($priceNetValue,$taxRateId);
 		
 		$priceNetFormat=CHBSPrice::format($priceNetValue,CHBSCurrency::getFormCurrency());
@@ -485,6 +558,13 @@ class CHBSBookingExtra
 						$quantity=CHBSBookingHelper::getPassenegerSum($bookingForm['meta'],$data);
 					}
 				}
+				elseif((int)$bookingForm['dictionary']['booking_extra'][$value]['meta']['quantity_enable']===3)
+				{
+					if($data['service_type_id']==2)
+					{
+						$quantity=(int)$data['duration_service_type_2'];
+					}
+				}
 				
 				$taxValue=0;
 				if(isset($taxRateDictionary[$bookingForm['dictionary']['booking_extra'][$value]['meta']['tax_rate_id']]))
@@ -493,6 +573,8 @@ class CHBSBookingExtra
 				/***/
 				
 				$price=$bookingForm['dictionary']['booking_extra'][$value]['meta']['price'];
+				
+				$price=CHBSPrice::numberFormat($price*$this->getPriceModification($data,$bookingForm));
 				
 				if(CHBSCurrency::getBaseCurrency()!=CHBSCurrency::getFormCurrency())
 				{
@@ -532,9 +614,7 @@ class CHBSBookingExtra
 			'title'=>__('Title','chauffeur-booking-system'),
 			'price'=>__('Price','chauffeur-booking-system'),
 			'quantity'=>__('Quantity','chauffeur-booking-system'),
-			'service_type'=>__('Service types','chauffeur-booking-system'),
-			'transfer_type'=>__('Transfer types','chauffeur-booking-system'),
-			'vehicle'=>__('Vehicles','chauffeur-booking-system')
+			'condition'=>__('Conditions','chauffeur-booking-system')
 		);
    
 		return($column);		  
@@ -547,11 +627,14 @@ class CHBSBookingExtra
 		global $post;
 		
 		$Vehicle=new CHBSVehicle();
+		$Geofence=new CHBSGeofence();
+		
 		$Validation=new CHBSValidation();
 		$ServiceType=new CHBSServiceType();
 		$TransferType=new CHBSTransferType();
 		
 		$vehicleDictionary=$Vehicle->getDictionary();
+		$geofenceDictionary=$Geofence->getDictionary();
 		
 		$meta=CHBSPostMeta::getPostMeta($post);
 		
@@ -585,61 +668,91 @@ class CHBSBookingExtra
 				
 			break;
 		
-			case 'service_type':
+			case 'condition':
 				
-				$html=null;
+				$html=array
+				(
+					'service_type'=>'',
+					'transfer_type'=>'',
+					'vehicle'=>'',
+					'geofence_pickup'=>'',
+					'geofence_dropoff'=>''
+				);		
+				
+				/***/
 				
 				if(is_array($meta['service_type_id_enable']))
 				{
 					foreach($meta['service_type_id_enable'] as $value)
 					{
-						if($Validation->isNotEmpty($html)) $html.=', ';
-						$html.=$ServiceType->getServiceTypeName($value);
+						if($Validation->isNotEmpty($html['service_type'])) $html['service_type'].=', ';
+						$html['service_type'].=$ServiceType->getServiceTypeName($value);
 					}
 				}
-				
-				if($Validation->isEmpty($html)) $html='-';
-					
-				echo $html;
-				
-			break;	
-		
-			case 'transfer_type':
-				
-				$html=null;
-				
 				if(is_array($meta['transfer_type_id_enable']))
 				{
 					foreach($meta['transfer_type_id_enable'] as $value)
 					{
-						if($Validation->isNotEmpty($html)) $html.=', ';
-						$html.=$TransferType->getTransferTypeName($value);
+						if($Validation->isNotEmpty($html['transfer_type'])) $html['transfer_type'].=', ';
+						$html['transfer_type'].=$TransferType->getTransferTypeName($value);
 					}
-				}
-				
-				if($Validation->isEmpty($html)) $html='-';
-					
-				echo $html;
-				
-			break;		
-		
-			case 'vehicle':
-				
-				$html=null;
-				
-				$vehicle=$meta['vehicle_id'];
-				
-				if(in_array(-1,$vehicle)) $html=esc_html__('All vehicles','chauffeur-booking-system');
-				else
+				}	
+				if(is_array($meta['vehicle_id']))
 				{
-					foreach($vehicle as $vehicleId)
+					foreach($meta['vehicle_id'] as $vehicleId)
 					{
-						if($Validation->isNotEmpty($html)) $html.=', ';
-						$html.='<a href="'.get_edit_post_link($vehicleId).'" target="_blank">'.esc_html($vehicleDictionary[$vehicleId]['post']->post_title).'</a>';
+						if($Validation->isNotEmpty($html['vehicle'])) $html['vehicle'].=', ';
+						$html['vehicle'].='<a href="'.esc_url(CHBSHelper::editPostURLAddress($vehicleId)).'" target="_blank">'.esc_html($vehicleDictionary[$vehicleId]['post']->post_title).'</a>';
 					}
 				}
-	
-				echo $html;
+				if(is_array($meta['geofence_pickup']))
+				{
+					foreach($meta['geofence_pickup'] as $geofenceId)
+					{
+						if(!array_key_exists($geofenceId,$geofenceDictionary)) continue;
+						
+						if($Validation->isNotEmpty($html['geofence_pickup'])) $html['geofence_pickup'].=', ';
+						$html['geofence_pickup'].='<a href="'.esc_url(CHBSHelper::editPostURLAddress($geofenceId)).'" target="_blank">'.esc_html($geofenceDictionary[$geofenceId]['post']->post_title).'</a>';
+					}
+				}				
+				if(is_array($meta['geofence_dropoff']))
+				{
+					foreach($meta['geofence_dropoff'] as $geofenceId)
+					{
+						if(!array_key_exists($geofenceId,$geofenceDictionary)) continue;
+						
+						if($Validation->isNotEmpty($html['geofence_dropoff'])) $html['geofence_dropoff'].=', ';
+						$html['geofence_dropoff'].='<a href="'.esc_url(CHBSHelper::editPostURLAddress($geofenceId)).'" target="_blank">'.esc_html($geofenceDictionary[$geofenceId]['post']->post_title).'</a>';
+					}
+				}	
+
+				/***/
+				
+				echo 
+				'
+					<table class="to-table-post-list">
+						<tr>
+							<td>'.esc_html__('Service type','chauffeur-booking-system').'</td>
+							<td>'.$html['service_type'].'</td>
+						</tr>	
+						<tr>
+							<td>'.esc_html__('Transfer type','chauffeur-booking-system').'</td>
+							<td>'.$html['transfer_type'].'</td>
+						</tr>
+						<tr>
+							<td>'.esc_html__('Vehicles','chauffeur-booking-system').'</td>
+							<td>'.$html['vehicle'].'</td>
+						</tr>
+						<tr>
+							<td>'.esc_html__('Pickup geofence','chauffeur-booking-system').'</td>
+							<td>'.$html['geofence_pickup'].'</td>
+						</tr>
+						<tr>
+							<td>'.esc_html__('Drop-off geofence','chauffeur-booking-system').'</td>
+							<td>'.$html['geofence_dropoff'].'</td>
+						</tr>
+					</table>
+				';
 				
 			break;	
 		}

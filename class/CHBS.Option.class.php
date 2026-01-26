@@ -7,85 +7,120 @@ class CHBSOption
 {
 	/**************************************************************************/
 	
-	static function createOption($refresh=false)
+	static function createOption($refresh=false,$prefix='chbs')
 	{
-		return(CHBSGlobalData::setGlobalData(PLUGIN_CHBS_CONTEXT,array('CHBSOption','createOptionObject'),$refresh));				
+		$constant=CHBSConstant::get('context',false,$prefix);
+		
+		$instance=$prefix=='chbs' ? 'CHBSOption' : new CHBSExtensionOption($prefix);
+		
+		return(CHBSGlobalData::setGlobalData($constant,array($instance,'createOptionObject'),$refresh));	
 	}
 		
 	/**************************************************************************/
 	
-	static function createOptionObject()
+	static function createOptionObject($prefix='chbs')
 	{	
-		return((array)get_option(PLUGIN_CHBS_OPTION_PREFIX.'_option'));
+		$constant=CHBSConstant::get('option_prefix',true,$prefix);	
+		
+		return((array)get_option($constant.'_option'));
 	}
 	
 	/**************************************************************************/
 	
-	static function refreshOption()
+	static function refreshOption($prefix='chbs')
 	{
-		return(self::createOption(true));
+		return(self::createOption(true,$prefix));
 	}
 	
 	/**************************************************************************/
 	
-	static function getOption($name)
-	{
-		global $chbsGlobalData;
-
-		self::createOption();
-
-		if(!array_key_exists($name,$chbsGlobalData[PLUGIN_CHBS_CONTEXT])) return(null);
-		return($chbsGlobalData[PLUGIN_CHBS_CONTEXT][$name]);		
-	}
-
-	/**************************************************************************/
-	
-	static function getOptionObject()
+	static function getOption($name,$prefix='chbs')
 	{
 		global $chbsGlobalData;
-		return($chbsGlobalData[PLUGIN_CHBS_CONTEXT]);
+
+		self::createOption(false,$prefix);
+		
+		$constant=CHBSConstant::get('context',false,$prefix);
+
+		if(!array_key_exists($name,$chbsGlobalData[$constant])) return(null);
+		return($chbsGlobalData[$constant][$name]);		
+	}
+
+	/**************************************************************************/
+	
+	static function getOptionObject($prefix='chbs')
+	{
+		global $chbsGlobalData;
+		
+		$constant=CHBSConstant::get('context',false,$prefix);
+		
+		if(array_key_exists($constant,$chbsGlobalData))
+			return($chbsGlobalData[$constant]);
+		else return(array());
 	}
 	
 	/**************************************************************************/
 	
-	static function updateOption($option)
+	static function updateOption($option,$prefix='chbs')
 	{
 		$nOption=array();
 		foreach($option as $index=>$value) $nOption[$index]=$value;
 		
-		$oOption=self::refreshOption();
-
-		update_option(PLUGIN_CHBS_OPTION_PREFIX.'_option',array_merge($oOption,$nOption));
+		$oOption=self::refreshOption($prefix);
 		
-		self::refreshOption();
+		$constant=CHBSConstant::get('option_prefix',true,$prefix);
+		
+		update_option($constant.'_option',array_merge($oOption,$nOption));
+		
+		self::refreshOption($prefix);
 	}
 	
 	/**************************************************************************/
 	
-	static function resetOption()
+	static function resetOption($prefix='chbs')
 	{
-		update_option(PLUGIN_CHBS_OPTION_PREFIX.'_option',array());
-		self::refreshOption();		
+		$constant=CHBSConstant::get('option_prefix',true,$prefix);
+		
+		update_option($constant.'_option',array());
+		self::refreshOption($prefix);		
 	}
 	
 	/**************************************************************************/
 	
-	static function getSalt()
+	static function getSalt($prefix='chbs',$index=1)
 	{
 		$Validation=new CHBSValidation();
 		
-		$salt=self::getOption('salt');
+		$key='salt_'.$index;
+		
+		$salt=self::getOption($key,$prefix);
 		
 		if($Validation->isEmpty($salt))
 		{
-			$option['salt']=CHBSHelper::createSalt();
+			$option[$key]=CHBSHelper::createSalt();
 			
-			self::updateOption($option);
+			self::updateOption($option,$prefix);
 			
-			$salt=$option['salt'];
+			$salt=$option[$key];
 		}
 		
 		return($salt);
+	}
+	
+	/**************************************************************************/
+	
+	static function changeOptionName($name,$option)
+	{
+		foreach($name as $nameOld=>$nameNew)
+		{
+			if(array_key_exists($nameOld,$option))
+			{
+				$option[$nameNew]=$option[$nameOld];
+				unset($option[$nameOld]);
+			}
+		}
+		
+		return($option);
 	}
 	
 	/**************************************************************************/

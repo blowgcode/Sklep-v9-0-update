@@ -11,7 +11,16 @@ class CHBSRequestData
 	{
 		if((int)$serviceTypeId!==-1)
 		{
-			if(((int)self::get('service_type_id')!==(int)$serviceTypeId)) return;
+			$id=self::get('service_type_id',false);
+			
+			if($id===false)
+			{
+				return(self::get($name,$defaultValue));
+			}
+			else 
+			{
+				if(((int)self::get('service_type_id')!==(int)$serviceTypeId)) return(false);
+			}
 		}
 		
 		return(self::get($name,$defaultValue));
@@ -38,8 +47,8 @@ class CHBSRequestData
 	{
 		if(array_key_exists($name,$_GET))
 			return(CHBSHelper::stripslashes($_GET[$name]));
-	
-		return;
+		
+		return($defaultValue);
 	}
 	
 	/**************************************************************************/

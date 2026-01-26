@@ -7,6 +7,11 @@ class CHBSBookingDriver
 {
 	/**************************************************************************/
 	
+	public $bookingDriverEvent;
+	public $notificactionSendEvent;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->bookingDriverEvent=array
@@ -32,14 +37,40 @@ class CHBSBookingDriver
 				'label'=>__('Reject booking by driver.','chauffer-booking-system')
 			)
 		);
+		
+		$this->notificactionSendEvent=array
+		(
+			'after_booking_send'=>array(__('Sending the booking','chauffeur-booking-system'))
+		);
+		
+		$BookingStatus=new CHBSBookingStatus();
+		
+		$bookingStatusDictionary=$BookingStatus->getBookingStatus();
+		
+		foreach($bookingStatusDictionary as $index=>$value)
+			$this->notificactionSendEvent['after_booking_status_update_to_'.$index]=array(sprintf(esc_html__('Updating the booking status to "%s"','chauffeur-booking-system'),esc_html__($value[0],'chauffeur-booking-system')));
+	}
+	
+	/**************************************************************************/
+	
+	function getNotificactionSendEvent($event=null)
+	{
+		if(is_null($event)) return($this->notificactionSendEvent);
+		else return($this->notificactionSendEvent[$event]);
+	}
+	
+	/**************************************************************************/
+	
+	function isNotificactionSendEvent($event)
+	{
+		return(array_key_exists($event,$this->getNotificactionSendEvent()));
 	}
 
 	/**************************************************************************/
 
 	function setPostMetaDefault(&$meta)
 	{
-		CHBSHelper::setDefault($meta,'booking_driver_log',array());
-		CHBSHelper::setDefault($meta,'booking_driver_status',-1);
+		CHBSHelper::setDefault($meta,'booking_driver_log',array());		
 	}
 
 	/**************************************************************************/
@@ -51,66 +82,18 @@ class CHBSBookingDriver
 	}
 
 	/**************************************************************************/
-
-	function setDriver($newBooking,$oldBooking=false,$sendEmail=false,$setDriver=true)
+	
+	function addEvent($booking,$bookingDriverEventId,$driverId=-1)
 	{
 		$Driver=new CHBSDriver();
-
-		/***/
-
-		if($setDriver)
-		{
-			$driverId=-1;
-			$driverDictionary=$Driver->getDictionary();
-
-			if(array_key_exists(CHBSHelper::getPostValue('driver_id'),$driverDictionary))
-				$driverId=CHBSHelper::getPostValue('driver_id');
-
-			CHBSPostMeta::updatePostMeta($newBooking['post']->ID,'driver_id',$driverId); 
-		}
-		
-		/***/
-
-		if($oldBooking!==false)
-		{
-			if($newBooking['meta']['driver_id']!=$oldBooking['meta']['driver_id'])
-			{
-				if((int)$newBooking['meta']['driver_id']===-1)
-				{
-					$sendEmail=false;
-					$this->addEvent($newBooking['post']->ID,2);
-					$this->setBookingDriverAcceptanceData($newBooking['post']->ID,0,2,'0000-00-00','00:00');
-					$this->setBookingDriverAcceptanceData($newBooking['post']->ID,0,1,'0000-00-00','00:00');
-				}
-				else
-				{
-					$sendEmail=true;
-					$this->addEvent($newBooking['post']->ID,1); 
-				}
-			}
-		}
-		else $sendEmail=true;
-
-		if($sendEmail)
-		{
-			$this->sendEmail($newBooking,$oldBooking);
-			$this->setBookingDriverAcceptanceData($newBooking['post']->ID);
-		}
-	}
-
-	/**************************************************************************/
-
-	function addEvent($bookingId,$bookingDriverEventId)
-	{
-		$Driver=new CHBSDriver();
-		$Booking=new CHBSBooking();
-
-		if(($booking=$Booking->getBooking($bookingId))===false) return(false);
 
 		if(($driverDictionary=$Driver->getDictionary())===false) return(false);
 
-		$driverId=$booking['meta']['driver_id'];
-
+		if($driverId===-1)
+		{
+			$driverId=$booking['meta']['driver_id'];
+		}
+		
 		$data=array
 		(
 			'date'=>date_i18n('Y-m-d G:i'),
@@ -126,18 +109,71 @@ class CHBSBookingDriver
 			$data['driver_second_name']=$driverDictionary[$driverId]['meta']['second_name'];
 		}
 
-		$meta=CHBSPostMeta::getPostMeta($bookingId);
+		$meta=CHBSPostMeta::getPostMeta($booking['post']->ID);
 		if(!is_array($meta['booking_driver_log'])) $meta['booking_driver_log']=array();
 
 		array_push($meta['booking_driver_log'],$data);
 
-		CHBSPostMeta::updatePostMeta($bookingId,'booking_driver_log',$meta['booking_driver_log']); 
+		CHBSPostMeta::updatePostMeta($booking['post']->ID,'booking_driver_log',$meta['booking_driver_log']); 
+	}
+	
+	/**************************************************************************/
+	
+	function setDriver($bookingNew,$bookingOld=false)
+	{
+		if($bookingOld!==false)
+		{
+			if($bookingNew['meta']['driver_id']!=$bookingOld['meta']['driver_id'])
+			{
+				if((int)$bookingNew['meta']['driver_id']===-1)
+				{
+					$this->addEvent($bookingNew,2);
+				}
+				else
+				{
+					$this->addEvent($bookingOld,2); 
+					$this->addEvent($bookingNew,1); 
+				}
+				
+				$this->setBookingDriverAcceptanceData($bookingNew['post']->ID,0,2,'0000-00-00','00:00');
+				$this->setBookingDriverAcceptanceData($bookingNew['post']->ID,0,1,'0000-00-00','00:00');
+			}
+		}
+		else
+		{			
+			$this->addEvent($bookingNew,1);
+		}
 	}
 
 	/**************************************************************************/
 
-	function sendEmail($newBooking,$oldBooking=false)
+	function sendEmail($bookingNew,$bookingOld=false,$emailAssignDriverForce=false)
 	{
+		if(in_array($bookingNew['meta']['booking_status_id'],CHBSOption::getOption('booking_driver_acceptance_notificaction_booking_status_id')))
+		{
+			if($emailAssignDriverForce)
+			{
+				$emailAssignDriver=true;
+			}
+			else
+			{
+				$emailAssignDriver=false;
+
+				if($bookingOld!==false)
+				{
+					$b=array(false,false);
+
+					$b[0]=(int)$bookingNew['meta']['driver_id']!==(int)$bookingOld['meta']['driver_id'] ? true : false;
+					$b[1]=(int)$bookingNew['meta']['booking_status_id']!==(int)$bookingOld['meta']['booking_status_id'] ? true : false;
+
+					if(in_array(true,$b,true)) $emailAssignDriver=true;
+				}
+				else $emailAssignDriver=true;
+			}
+		}
+				
+		/***/
+		
 		global $chbs_logEvent;
 		
 		$Driver=new CHBSDriver();
@@ -147,27 +183,34 @@ class CHBSBookingDriver
 
 		$recipient=array();
 
-		if(array_key_exists($newBooking['meta']['driver_id'],$driverDictionary))
-			$recipient[0]=$Driver->getNotificationRecipient($newBooking['post']->ID,1);
+		if(array_key_exists($bookingNew['meta']['driver_id'],$driverDictionary))
+			$recipient[0]=$Driver->getNotificationRecipient($bookingNew['meta']['driver_id'],1,'driver');
 
-		if($oldBooking!==false)
+		if($bookingOld!==false)
 		{
-			if(array_key_exists($oldBooking['meta']['driver_id'],$driverDictionary))
-				$recipient[1]=$Driver->getNotificationRecipient($oldBooking['post']->ID,1,'driver');
-		}
-		if(count($recipient[0]))
+			if((array_key_exists($bookingOld['meta']['driver_id'],$driverDictionary)) && ((int)$bookingOld['meta']['driver_id']!==(int)$bookingNew['meta']['driver_id']))
+				$recipient[1]=$Driver->getNotificationRecipient($bookingOld['meta']['driver_id'],1,'driver');
+		}		
+		
+		if(isset($recipient[0]))
 		{
-			$chbs_logEvent=5;
-			$Booking->sendEmail($newBooking['post']->ID,CHBSOption::getOption('sender_default_email_account_id'),'booking_assign_driver',$recipient[0],sprintf(__('You have been assigned to a booking "%s"','chauffeur-booking-system'),$newBooking['post']->post_title)); 
+			if($emailAssignDriver)
+			{
+				$chbs_logEvent=5;
+				$Booking->sendEmail($bookingNew['post']->ID,CHBSOption::getOption('sender_default_email_account_id'),'booking_assign_driver',$recipient[0],sprintf(__('You have been assigned to a booking "%s"','chauffeur-booking-system'),$bookingNew['post']->post_title)); 
+			
+				if((int)$bookingNew['meta']['booking_acceptance_driver_stage_number']===1)
+				{
+					$this->setBookingDriverAcceptanceData($bookingNew['post']->ID,0,2,'0000-00-00','00:00');
+					$this->setBookingDriverAcceptanceData($bookingNew['post']->ID,0,1);
+				}
+			}
 		}
 		
 		if(isset($recipient[1]))
 		{
-			if(count($recipient[1]))
-			{
-				$chbs_logEvent=6;
-				$Booking->sendEmail($newBooking['post']->ID,CHBSOption::getOption('sender_default_email_account_id'),'booking_unassign_driver',$recipient[1],sprintf(__('You has been unassigned from booking "%s"','chauffeur-booking-system'),$oldBooking['post']->post_title)); 
-			}
+			$chbs_logEvent=6;
+			$Booking->sendEmail($bookingNew['post']->ID,CHBSOption::getOption('sender_default_email_account_id'),'booking_unassign_driver',$recipient[1],sprintf(__('You has been unassigned from booking "%s"','chauffeur-booking-system'),$bookingOld['post']->post_title)); 
 		}
 	}
 
@@ -239,7 +282,7 @@ class CHBSBookingDriver
 		if($Validation->isEmpty($token)) return;
 		if(($booking=$Booking->getBooking($bookingId))===false) return;
 
-		if((int)$booking['meta']['booking_driver_status']===1) return;
+		if((int)$booking['meta']['booking_acceptance_driver_status']===1) return;
 
 		$confirmationToken=self::createToken($bookingId,$driverId);
 		if(strcmp($token,$confirmationToken)!=0) return;
@@ -262,7 +305,7 @@ class CHBSBookingDriver
 			
 			/***/
 			
-			$this->addEvent($bookingId,4);
+			$this->addEvent($booking,4,$driverId);
 
 			/***/
 			
@@ -270,13 +313,13 @@ class CHBSBookingDriver
 				CHBSPostMeta::updatePostMeta($bookingId,'booking_status_id',CHBSOption::getOption('booking_driver_acceptance_status_after_accept'));
 
 			$emailTemplate='booking_driver_accept';
-			$emailSubject=sprintf(__('Driver %s accepts booking %s'),$booking['driver_full_name'],$booking['post']->post_title);
+			$emailSubject=sprintf(__('Driver %s accepts booking %s','chauffeur-booking-system'),$booking['driver_full_name'],$booking['post']->post_title);
 
-			$html='<div class="chbs-main"><div class="chbs-notice">'.__('<b>Thank you!</b> You have accepted this booking.','chauffeur-booking-system').'</div></div>';
+			$html='<div class="chbs-main chbs-booking-form-id-'.(int)$booking['meta']['booking_form_id'].' chbs-booking-accepted"><div class="chbs-notice">'.__('<b>Thank you!</b> You have accepted this booking.','chauffeur-booking-system').'</div></div>';
 		}
 		else
 		{
-			$this->addEvent($bookingId,5);
+			$this->addEvent($booking,5,$driverId);
 			
 			/***/
 			
@@ -289,9 +332,9 @@ class CHBSBookingDriver
 				CHBSPostMeta::updatePostMeta($bookingId,'booking_status_id',CHBSOption::getOption('booking_driver_acceptance_status_after_reject'));
 
 			$emailTemplate='booking_driver_reject';
-			$emailSubject=sprintf(__('Driver %s rejects booking %s'),$booking['driver_full_name'],$booking['post']->post_title);
+			$emailSubject=sprintf(__('Driver %s rejects booking %s','chauffeur-booking-system'),$booking['driver_full_name'],$booking['post']->post_title);
 
-			$html='<div class="chbs-main"><div class="chbs-notice">'.__('You have rejected this booking.','chauffeur-booking-system').'</div></div>';
+			$html='<div class="chbs-main chbs-booking-form-id-'.(int)$booking['meta']['booking_form_id'].' chbs-booking-rejected"><div class="chbs-notice">'.__('You have rejected this booking.','chauffeur-booking-system').'</div></div>';
 		}
 
 		$recipient=preg_split('/;/',CHBSOption::getOption('booking_driver_acceptance_email_recipient'));
@@ -299,7 +342,7 @@ class CHBSBookingDriver
 		foreach($recipient as $index=>$value)
 		{
 			if(!$Validation->isEmailAddress($value))
-			unset($recipient[$index]);
+				unset($recipient[$index]);
 		}
 
 		if(count($recipient))
@@ -323,9 +366,8 @@ class CHBSBookingDriver
 		
 		/***/
 		
-		$GoogleCalendar=new CHBSGoogleCalendar();
-		$GoogleCalendar->sendBooking($bookingId,false,'after_booking_status_change');
-		
+		do_action('chbs_booking_status_change',$bookingNew,$bookingOld);
+				
 		/***/
 		
 		return($html);
@@ -365,13 +407,13 @@ class CHBSBookingDriver
 
 				$oldBooking=$booking;
 				$newBooking=$booking;
-
+				
 				foreach($driverDictionary as $driverDictionaryIndex=>$driverDictionaryValue)
 				{
 					CHBSPostMeta::updatePostMeta($post->ID,'driver_id',$driverDictionaryIndex);
 					$newBooking['meta']['driver_id']=$driverDictionaryIndex;
 
-					$this->sendEmail($newBooking,$oldBooking);
+					$this->sendEmail($newBooking,$oldBooking,true);
 
 					$oldBooking=null;
 				}
@@ -410,8 +452,7 @@ class CHBSBookingDriver
 		
 				/***/
 		
-				$GoogleCalendar=new CHBSGoogleCalendar();
-				$GoogleCalendar->sendBooking($post->ID,false,'after_booking_status_change');
+				do_action('chbs_booking_status_change',$bookingNew,$bookingOld);
 				
 				/***/
 			}			

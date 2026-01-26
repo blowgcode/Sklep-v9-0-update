@@ -7,12 +7,18 @@ class CHBSBookingStatus
 {
 	/**************************************************************************/
 	
+	public $bookingStatus;
+	public $bookingStatusMap;
+	public $bookingStatusSynchronization;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->bookingStatus=array
 		(
-			1=>array(__('Pending','chauffeur-booking-system')),
-			2=>array(__('Confirmed','chauffeur-booking-system')),
+			1=>array(__('Pending (new)','chauffeur-booking-system')),
+			2=>array(__('Processing (accepted)','chauffeur-booking-system')),
 			3=>array(__('Cancelled (rejected)','chauffeur-booking-system')),
 			4=>array(__('Completed (finished)','chauffeur-booking-system')),
 			5=>array(__('On hold','chauffeur-booking-system')),
@@ -37,6 +43,14 @@ class CHBSBookingStatus
 			2=>array(__('One way: from wooCommerce to plugin','chauffeur-booking-system')),
 			3=>array(__('One way: from plugin to wooCommerce','chauffeur-booking-system'))
 		);
+	}
+	
+	/**************************************************************************/
+	
+	function getBookingStatusName($bookingStatusId)
+	{
+		if(!$this->isBookingStatus($bookingStatusId)) return(null);
+		return($this->bookingStatus[$bookingStatusId][0]);
 	}
 	
 	/**************************************************************************/

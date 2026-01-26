@@ -36,7 +36,7 @@ class CHBSVisualComposer
         {
             if(is_array($value))
             {
-                if(array_key_exists('post',$value))
+                if((array_key_exists('post',$value)) && (property_exists($value['post'],'post_title')))
                     $dictionary[$index]=$value['post']->post_title;
                 elseif(isset($value['name']))
                     $dictionary[$index]=$value['name'];

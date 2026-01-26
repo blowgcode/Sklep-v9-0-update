@@ -7,6 +7,10 @@ class CHBSBookingFormStyle
 {
 	/**************************************************************************/
 	
+	public $color;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->color=array
@@ -15,56 +19,72 @@ class CHBSBookingFormStyle
 			(
 				'color'=>'FF700A',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Main color, tab background, active form step background, next step button background, active button background, icons (total distance, total time, colored form field icons), vehicle prices.','chauffeur-booking-system')
 			),
 			2=>array
 			(
 				'color'=>'F6F6F6',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Light gray backgrounds – e.g., summary box background.','chauffeur-booking-system')
 			),
 			3=>array
 			(
 				'color'=>'FFFFFF',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('White backgrounds.','chauffeur-booking-system')
 			),
 			4=>array
 			(
 				'color'=>'778591',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Light texts, field labels, form step labels, back button labels, inactive button labels, small icons.','chauffeur-booking-system')
 			),
 			5=>array
 			(
 				'color'=>'EAECEE',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Light bar backgrounds (e.g., Ride Details, Extra Options, Vehicle Filter), inactive form step background, light borders and dividers, back button background, inactive button background.','chauffeur-booking-system')
 			),
 			6=>array
 			(
 				'color'=>'2C3E50',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Dark texts, form field values, headers, payment method labels.','chauffeur-booking-system')
 			),
 			7=>array
 			(
 				'color'=>'CED3D9',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Dark dividers, icons (passengers, suitcases in the vehicle list), inactive days in the calendar, \'Edit\' button borders.','chauffeur-booking-system')
 			),
 			8=>array
 			(
 				'color'=>'9EA8B2',
 				'header'=>'',
-				'subheader'=>''
+				'subheader'=>'',
+				'description'=>__('Very light texts, deposit label.','chauffeur-booking-system')
 			),
 			9=>array
 			(
 				'color'=>'556677',
 				'header'=>'',
-				'subheader'=>''
-			)	 
+				'subheader'=>'',
+				'description'=>__('Error message backgrounds.','chauffeur-booking-system')
+			),
+			10=>array
+			(
+				'color'=>'FFFFFF',
+				'header'=>'',
+				'subheader'=>'',
+				'description'=>__('White labels.','chauffeur-booking-system')
+			)		 
 		);
 		
 		$Validation=new CHBSValidation();

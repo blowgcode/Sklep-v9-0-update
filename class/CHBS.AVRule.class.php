@@ -476,7 +476,7 @@ class CHBSAVRule
 		{
 			$label=$value;
 			
-			if($link) $label='<a href="'.get_edit_post_link($index).'">'.$value.'</a>';
+			if($link) $label='<a href="'.esc_url(CHBSHelper::editPostURLAddress($index)).'">'.$value.'</a>';
 			$html.='<div>'.$label.'</div>';
 		}
 		
@@ -624,7 +624,7 @@ class CHBSAVRule
 				
 				foreach($dictionary as $index=>$value)
 				{
-					$vehicle='<a href="'.get_edit_post_link($index).'">'.$value['post']->post_title.'</a>';
+					$vehicle='<a href="'.esc_url(CHBSHelper::editPostURLAddress($index)).'">'.$value['post']->post_title.'</a>';
 					
 					if((!isset($meta['vehicle'])) || (!isset($meta['vehicle'][$index])) || (!isset($meta['vehicle'][$index]['availability']))) $availability=-1;
 					else $availability=$meta['vehicle'][$index]['availability'];
@@ -654,7 +654,7 @@ class CHBSAVRule
 				
 				foreach($dictionary as $index=>$value)
 				{
-					$bookingExtra='<a href="'.get_edit_post_link($index).'">'.$value['post']->post_title.'</a>';
+					$bookingExtra='<a href="'.esc_url(CHBSHelper::editPostURLAddress($index)).'">'.$value['post']->post_title.'</a>';
 					
 					if((!isset($meta['booking_extra'])) || (!isset($meta['booking_extra'][$index])) || (!isset($meta['booking_extra'][$index]['availability']))) $availability=-1;
 					else $availability=$meta['booking_extra'][$index]['availability'];
@@ -781,24 +781,42 @@ class CHBSAVRule
 	
 	function getAVFromRule($bookingForm,$bookingData=array(),$objectType='payment')
 	{
+		$Date=new CHBSDate();
+		$Validation=new CHBSValidation();
+		$ServiceType=new CHBSServiceType();
+		
 		$availability=array();
 		
 		$data=CHBSHelper::getPostOption();
 		
+		CHBSHelper::removeUIndex($data,'service_type_id');
+		
+		$serviceTypeId=(int)$data['service_type_id'];
+		
+		if(!$ServiceType->isServiceType($serviceTypeId)) return($availability);
+		
+		$data['pickup_date_service_type_'.$serviceTypeId]=$Date->formatDateToStandard($data['pickup_date_service_type_'.$serviceTypeId]);
+		$data['pickup_time_service_type_'.$serviceTypeId]=$Date->formatTimeToStandard($data['pickup_time_service_type_'.$serviceTypeId]);  
+		$data['return_date_service_type_'.$serviceTypeId]=$Date->formatDateToStandard($data['return_date_service_type_'.$serviceTypeId]);
+		$data['return_time_service_type_'.$serviceTypeId]=$Date->formatTimeToStandard($data['return_time_service_type_'.$serviceTypeId]);  		
+		
 		$bookingDataDefault=array();
 		
 		/***/
-		
-		CHBSHelper::removeUIndex($data,'service_type_id');
 
 		$key=array
 		(
+			'pickup_date'=>'pickup_date_service_type_'.$serviceTypeId,
+			'pickup_time'=>'pickup_time_service_type_'.$serviceTypeId,
+			'return_date'=>'return_date_service_type_'.$serviceTypeId,
+			'return_time'=>'return_time_service_type_'.$serviceTypeId,
+			'transfer_type_id'=>'transfer_type_service_type_'.$serviceTypeId,
 			'booking_form_id'=>'booking_form_id',
 			'service_type_id'=>'service_type_id',
-			'fixed_location_pickup'=>'fixed_location_pickup_service_type_'.$data['service_type_id'],
-			'fixed_location_dropoff'=>'fixed_location_dropoff_service_type_'.$data['service_type_id'],
-			'pickup_location_coordinate'=>'pickup_location_coordinate_service_type_'.$data['service_type_id'],
-			'dropoff_location_coordinate'=>'dropoff_location_coordinate_service_type_'.$data['service_type_id']
+			'fixed_location_pickup'=>'fixed_location_pickup_service_type_'.$serviceTypeId,
+			'fixed_location_dropoff'=>'fixed_location_dropoff_service_type_'.$serviceTypeId,
+			'pickup_location_coordinate'=>'pickup_location_coordinate_service_type_'.$serviceTypeId,
+			'dropoff_location_coordinate'=>'dropoff_location_coordinate_service_type_'.$serviceTypeId
 		);
 		
 		foreach($key as $index=>$value)
@@ -848,19 +866,21 @@ class CHBSAVRule
 				{
 					$inside=false;
 					
-					$pickupLocation=json_decode($bookingData['pickup_location_coordinate']);
-					
-					foreach($coordinate as $coordinateValue)
+					if($Validation->isNotEmpty($bookingData['pickup_location_coordinate']))
 					{
-						$result=$GeofenceChecker->pointInPolygon(new CHBSPoint($pickupLocation->lat,$pickupLocation->lng),$coordinateValue);
-						
-						if($result)
+						$pickupLocation=json_decode($bookingData['pickup_location_coordinate']);
+
+						foreach($coordinate as $coordinateValue)
 						{
-							$inside=true;
-							break;
+							$result=$GeofenceChecker->pointInPolygon(new CHBSPoint($pickupLocation->lat,$pickupLocation->lng),$coordinateValue);
+
+							if($result)
+							{
+								$inside=true;
+								break;
+							}
 						}
 					}
-					
 					if(!$inside) continue;
 				}
 			}   
@@ -891,6 +911,85 @@ class CHBSAVRule
 					if(!$inside) continue;
 				}
 			}  
+			
+			if(is_array($ruleData['meta']['pickup_date']))
+			{
+				if(count($ruleData['meta']['pickup_date']))
+				{
+					$match=false;
+
+					foreach($ruleData['meta']['pickup_date'] as $value)
+					{
+						if($Date->dateInRange($bookingData['pickup_date'],$value['start'],$value['stop']))
+						{
+							$match=true;
+							break;
+						}
+					}
+
+					if(!$match) continue;
+				}
+			}
+			
+			if(is_array($ruleData['meta']['pickup_time']))
+			{
+				if(count($ruleData['meta']['pickup_time']))
+				{
+					$match=false;
+
+					foreach($ruleData['meta']['pickup_time'] as $value)
+					{
+						if($Date->timeInRange($bookingData['pickup_time'],$value['start'],$value['stop']))
+						{
+							$match=true;
+							break;
+						}
+					}
+
+					if(!$match) continue;
+				}
+			}
+			
+			if((int)$bookingData['transfer_type_id']===3)
+			{
+				if(is_array($ruleData['meta']['return_date']))
+				{
+					if(count($ruleData['meta']['return_date']))
+					{
+						$match=false;
+
+						foreach($ruleData['meta']['return_date'] as $value)
+						{
+							if($Date->dateInRange($bookingData['return_date'],$value['start'],$value['stop']))
+							{
+								$match=true;
+								break;
+							}
+						}
+
+						if(!$match) continue;
+					}
+				}				
+				
+				if(is_array($ruleData['meta']['return_time']))
+				{
+					if(count($ruleData['meta']['return_time']))
+					{
+						$match=false;
+
+						foreach($ruleData['meta']['return_time'] as $value)
+						{
+							if($Date->timeInRange($bookingData['return_time'],$value['start'],$value['stop']))
+							{
+								$match=true;
+								break;
+							}
+						}
+
+						if(!$match) continue;
+					}
+				}				
+			}
 			
 			switch($objectType)
 			{

@@ -30,18 +30,14 @@ class CHBSBookingReport
 		$output=
 		'
 			<div id="to-booking-report-form" class="alignleft actions">
-				<span>'.esc_html__('Pickup/return date:','chauffeur-booking-system').'</span>
-				<input type="text" id="'.CHBSHelper::getFormName('booking_report_form_date_from',false).'" name="'.CHBSHelper::getFormName('booking_report_form_date_from',false).'" class="to-datepicker-custom" value="'.esc_attr(CHBSHelper::getGetValue('booking_report_form_date_from')).'" placeholder="'.esc_html__('From:','chauffeur-booking-system').'"/>
-				<input type="text" id="'.CHBSHelper::getFormName('booking_report_form_date_to',false).'" name="'.CHBSHelper::getFormName('booking_report_form_date_to',false).'" class="to-datepicker-custom" value="'.esc_attr(CHBSHelper::getGetValue('booking_report_form_date_to')).'" placeholder="'.esc_html__('To:','chauffeur-booking-system').'"/>
+				<input type="text" id="'.CHBSHelper::getFormName('booking_report_form_date_from',false).'" placeholder="'.esc_html('Pickup/return date (from)','chauffeur-booking-system').'" name="'.CHBSHelper::getFormName('booking_report_form_date_from',false).'" class="to-datepicker-custom" value="'.esc_attr(CHBSHelper::getGetValue('booking_report_form_date_from')).'" placeholder="'.esc_html__('From:','chauffeur-booking-system').'"/>
+				<input type="text" id="'.CHBSHelper::getFormName('booking_report_form_date_to',false).'" placeholder="'.esc_html('Pickup/return date (to)','chauffeur-booking-system').'" name="'.CHBSHelper::getFormName('booking_report_form_date_to',false).'" class="to-datepicker-custom" value="'.esc_attr(CHBSHelper::getGetValue('booking_report_form_date_to')).'" placeholder="'.esc_html__('To:','chauffeur-booking-system').'"/>
 				<button class="to-booking-report-form-generate button">'.esc_html__('Generate','chauffeur-booking-system').'</button>
 			</div>
 			<script type="text/javascript">
 				jQuery(document).ready(function($)
 				{
-					var timeFormat=\''.CHBSOption::getOption('time_format').'\';
-					var dateFormat=\''.CHBSJQueryUIDatePicker::convertDateFormat(CHBSOption::getOption('date_format')).'\';
-				
-					toCreateCustomDateTimePicker(dateFormat,timeFormat);				
+					toCreateCustomDateTimePicker();				
 
 					$(\'.to-booking-report-form-generate\').on(\'click\',function()
 					{
@@ -73,12 +69,13 @@ class CHBSBookingReport
 		$dateFrom=CHBSHelper::getGetValue('booking_report_form_date_from');
 		$dateTo=CHBSHelper::getGetValue('booking_report_form_date_to');
 		
-		if(($Validation->isEmpty($dateFrom)) || ($Validation->isEmpty($dateTo))) return;
+		if($Validation->isNotEmpty($dateFrom))
+			$dateFrom=$Date->formatDateToStandard($dateFrom);
+		else $dateFrom='00-00-0000';
 		
-		$dateFrom=$Date->formatDateToStandard($dateFrom);
-		$dateTo=$Date->formatDateToStandard($dateTo);
-
-		if((!$Validation->isDate($dateFrom)) || (!$Validation->isDate($dateTo))) return;
+		if($Validation->isNotEmpty($dateTo))
+			$dateTo=$Date->formatDateToStandard($dateTo);
+		else $dateTo='31-12-9999';
 		
 		$query=$this->getBooking($dateFrom,$dateTo);
 		
@@ -132,7 +129,16 @@ class CHBSBookingReport
 			
 			/***/
 			
-			if(!$Date->dateInRange($booking['meta']['pickup_date'],$dateFrom,$dateTo)) continue;
+			$c=array(false,false);
+			
+			$c[0]=$Date->dateInRange($booking['meta']['pickup_date'],$dateFrom,$dateTo);
+			
+			if((in_array($booking['meta']['service_type_id'],array(1,3))) && ((int)$booking['meta']['transfer_type_id']===3))
+			{
+				$c[1]=$Date->dateInRange($booking['meta']['return_date'],$dateFrom,$dateTo);
+			}
+			
+			if(!in_array(true,$c,true)) continue;
 			
 			/***/
 			
@@ -192,11 +198,9 @@ class CHBSBookingReport
 			$data[]=$booking['meta']['client_contact_detail_phone_number'];
 			$data[]=$booking['payment_name'];
 			
-			array_walk($data,function(&$value,&$key)
-			{
-				$value=preg_replace('/\s+/',' ',$value);
-			});
-				
+			foreach($data as $dataIndex=>$dataValue)
+				$data[$dataIndex]=preg_replace('/\s+/',' ',$dataValue);
+		
 			$document.=implode(chr(9),$data)."\r\n";			
 		}
 		
@@ -206,7 +210,7 @@ class CHBSBookingReport
 		header('Cache-Control: public');
 		header('Content-Type: text/csv');
 		header('Content-Transfer-Encoding: Binary');
-		header('Content-Disposition: attachment;filename=booking['.$dateFrom.'-'.$dateTo.'].csv');
+		header('Content-Disposition: attachment;filename=booking.csv');
 		echo $document;
 		die();
 	}
@@ -229,9 +233,12 @@ class CHBSBookingReport
 
 		array_push($metaQuery,array
 		(
-			'key'=>PLUGIN_CHBS_CONTEXT.'_woocommerce_product_id',
-			'value'=>array(0),
-			'compare'=>'IN'
+			array
+			(
+				'key'=>PLUGIN_CHBS_CONTEXT.'_woocommerce_product_id',
+				'value'=>array(0),
+				'compare'=>'IN'
+			)		
 		));	
 		
 		$argument['meta_query']=$metaQuery;

@@ -7,7 +7,8 @@ class CHBSCurrency
 {
 	/**************************************************************************/
 	
-	private $currency;
+	public $currency;
+	public $symbolPosition;
 	
 	/**************************************************************************/
 	
@@ -67,7 +68,8 @@ class CHBSCurrency
 			'ALL'=>array
 			(
 				'name'=>__('Albanian lek','chauffeur-booking-system'),
-				'symbol'=>'ALL'
+				'symbol'=>'ALL',
+				'flag'=>'AL'
 			),
 			'DZD'=>array
 			(
@@ -82,7 +84,8 @@ class CHBSCurrency
 			'ARS'=>array
 			(
 				'name'=>__('Argentine peso','chauffeur-booking-system'),
-				'symbol'=>'ARS'
+				'symbol'=>'ARS',
+				'flag'=>'AR'
 			),
 			'AMD'=>array
 			(
@@ -97,7 +100,8 @@ class CHBSCurrency
 			'AUD'=>array
 			(
 				'name'=>__('Australian dollar','chauffeur-booking-system'),
-				'symbol'=>'&#36;'
+				'symbol'=>'&#36;',
+				'flag'=>'AU'
 			),
 			'AZN'=>array
 			(
@@ -163,6 +167,7 @@ class CHBSCurrency
 			(
 				'name'=>__('British pound','chauffeur-booking-system'),
 				'symbol'=>'&pound;',
+				'flag'=>'GB'
 			),
 			'BND'=>array
 			(
@@ -172,7 +177,8 @@ class CHBSCurrency
 			'BGN'=>array
 			(
 				'name'=>__('Bulgarian lev','chauffeur-booking-system'),
-				'symbol'=>'BGN'
+				'symbol'=>'BGN',
+				'flag'=>'BG'
 			),
 			'BIF'=>array
 			(
@@ -192,7 +198,8 @@ class CHBSCurrency
 			'CAD'=>array
 			(
 				'name'=>__('Canadian dollar','chauffeur-booking-system'),
-				'symbol'=>'CAD'
+				'symbol'=>'CAD',
+				'flag'=>'CA'
 			),
 			'CVE'=>array
 			(
@@ -247,7 +254,8 @@ class CHBSCurrency
 			'HRK'=>array
 			(
 				'name'=>__('Croatian kuna','chauffeur-booking-system'),
-				'symbol'=>'HRK'
+				'symbol'=>'HRK',
+				'flag'=>'HR'
 			),
 			'CUC'=>array
 			(
@@ -257,12 +265,14 @@ class CHBSCurrency
 			'CZK'=>array
 			(
 				'name'=>__('Czech koruna','chauffeur-booking-system'),
-				'symbol'=>'&#75;&#269;'
+				'symbol'=>'&#75;&#269;',
+				'flag'=>'CZ'
 			),
 			'DKK'=>array
 			(
 				'name'=>__('Danish krone','chauffeur-booking-system'),
-				'symbol'=>'&#107;&#114;'
+				'symbol'=>'&#107;&#114;',
+				'flag'=>'DK'
 			),
 			'DJF'=>array
 			(
@@ -302,7 +312,8 @@ class CHBSCurrency
 			'EUR'=>array
 			(
 				'name'=>__('European euro','chauffeur-booking-system'),
-				'symbol'=>'&euro;'
+				'symbol'=>'&euro;',
+				'flag'=>'EU'
 			),
 			'FKP'=>array
 			(
@@ -363,12 +374,14 @@ class CHBSCurrency
 			'HKD'=>array
 			(
 				'name'=>__('Hong Kong dollar','chauffeur-booking-system'),
-				'symbol'=>'&#36;'
+				'symbol'=>'&#36;',
+				'flag'=>'HK'
 			),
 			'HUF'=>array
 			(
 				'name'=>__('Hungarian forint','chauffeur-booking-system'),
-				'symbol'=>'&#70;&#116;'
+				'symbol'=>'&#70;&#116;',
+				'flag'=>'HU'
 			),
 			'ISK'=>array
 			(
@@ -378,7 +391,8 @@ class CHBSCurrency
 			'INR'=>array
 			(
 				'name'=>__('Indian rupee','chauffeur-booking-system'),
-				'symbol'=>'&#8377;'
+				'symbol'=>'&#8377;',
+				'flag'=>'IN'
 			),
 			'IDR'=>array
 			(
@@ -486,7 +500,8 @@ class CHBSCurrency
 			'MKD'=>array
 			(
 				'name'=>__('Macedonian denar','chauffeur-booking-system'),
-				'symbol'=>'MKD'
+				'symbol'=>'MKD',
+				'flag'=>'MK'
 			),
 			'MGA'=>array
 			(
@@ -571,7 +586,8 @@ class CHBSCurrency
 			'NZD'=>array
 			(
 				'name'=>__('New Zealand dollar','chauffeur-booking-system'),
-				'symbol'=>'&#36;'
+				'symbol'=>'&#36;',
+				'flag'=>'NZ'
 			),
 			'NIO'=>array
 			(
@@ -591,7 +607,8 @@ class CHBSCurrency
 			'NOK'=>array
 			(
 				'name'=>__('Norwegian krone','chauffeur-booking-system'),
-				'symbol'=>'&#107;&#114;'
+				'symbol'=>'&#107;&#114;',
+				'flag'=>'NO'
 			),
 			'OMR'=>array
 			(
@@ -607,7 +624,8 @@ class CHBSCurrency
 			'PKR'=>array
 			(
 				'name'=>__('Pakistani rupee','chauffeur-booking-system'),
-				'symbol'=>'PKR'
+				'symbol'=>'PKR',
+				'flag'=>'PK'
 			),
 			'PAB'=>array
 			(
@@ -639,6 +657,7 @@ class CHBSCurrency
 				'name'=>__('Polish zloty','chauffeur-booking-system'),
 				'symbol'=>'zł',
 				'symbol_position'=>2,
+				'flag'=>'PL'
 			),
 			'QAR'=>array
 			(
@@ -649,12 +668,14 @@ class CHBSCurrency
 			'RON'=>array
 			(
 				'name'=>__('Romanian leu','chauffeur-booking-system'),
-				'symbol'=>'lei'
+				'symbol'=>'lei',
+				'flag'=>'RO'
 			),
 			'RUB'=>array
 			(
 				'name'=>__('Russian ruble','chauffeur-booking-system'),
-				'symbol'=>'RUB'
+				'symbol'=>'RUB',
+				'flag'=>'RU'
 			),
 			'RWF'=>array
 			(
@@ -689,7 +710,8 @@ class CHBSCurrency
 			'RSD'=>array
 			(
 				'name'=>__('Serbian dinar','chauffeur-booking-system'),
-				'symbol'=>'RSD'
+				'symbol'=>'RSD',
+				'flag'=>'RS'
 			),
 			'SLL'=>array
 			(
@@ -711,7 +733,8 @@ class CHBSCurrency
 			'SKK'=>array
 			(
 				'name'=>__('Slovak koruna','chauffeur-booking-system'),
-				'symbol'=>'SKK'
+				'symbol'=>'SKK',
+				'flag'=>'SK'
 			),
 			'SBD'=>array
 			(
@@ -726,7 +749,8 @@ class CHBSCurrency
 			'ZAR'=>array
 			(
 				'name'=>__('South African rand','chauffeur-booking-system'),
-				'symbol'=>'&#82;'
+				'symbol'=>'&#82;',
+				'flag'=>'ZA'
 			),
 			'KRW'=>array
 			(
@@ -761,12 +785,14 @@ class CHBSCurrency
 			'SEK'=>array
 			(
 				'name'=>__('Swedish krona','chauffeur-booking-system'),
-				'symbol'=>'&#107;&#114;'
+				'symbol'=>'&#107;&#114;',
+				'flag'=>'SE'
 			),
 			'CHF'=>array
 			(
 				'name'=>__('Swiss franc','chauffeur-booking-system'),
-				'symbol'=>'&#67;&#72;&#70;'
+				'symbol'=>'&#67;&#72;&#70;',
+				'flag'=>'CH'
 			),
 			'TJS'=>array
 			(
@@ -796,7 +822,8 @@ class CHBSCurrency
 			'TRY'=>array
 			(
 				'name'=>__('Turkish new lira','chauffeur-booking-system'),
-				'symbol'=>'&#84;&#76;'
+				'symbol'=>'&#84;&#76;',
+				'flag'=>'TR'
 			),
 			'TMM'=>array
 			(
@@ -816,14 +843,16 @@ class CHBSCurrency
 			'UAH'=>array
 			(
 				'name'=>__('Ukrainian hryvnia','chauffeur-booking-system'),
-				'symbol'=>'UAH'
+				'symbol'=>'UAH',
+				'flag'=>'UA'
 			),
 			'USD'=>array
 			(
 				'name'=>__('United States dollar','chauffeur-booking-system'),
 				'symbol'=>'&#36;',
 				'decimal_separator'=>'.',
-				'thousand_separator'=>','
+				'thousand_separator'=>',',
+				'flag'=>'US'
 			),
 			'UYU'=>array
 			(
@@ -1157,7 +1186,7 @@ class CHBSCurrency
 			'symbol_position',
 			'decimal_separator',
 			'decimal_digit_number',
-			'thousand_separator',
+			'thousand_separator'
 		);
 		
 		/***/

@@ -381,7 +381,7 @@ class CHBSDriver
 		
 		/***/
 		
-		$message=$BookingHelper->createNotification($data,'%0A');
+		$message=$BookingHelper->createNotification($data,"\n");
 		
 		$Telegram->sendMessage($driverDictionary[$driverId]['meta']['contact_telegram_token'],$driverDictionary[$driverId]['meta']['contact_telegram_group_id'],$message,'HTML');
 	

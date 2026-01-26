@@ -163,6 +163,9 @@ class CHBSVehicle
 		if(!$Validation->isNumber($option['standard'],1,4)) 
 			$option['standard']=1;	
 		
+		if(!$Validation->isNumber($option['vehicle_number'],1,999)) 
+			$option['vehicle_number']=1;	
+		
 		/***/
 		
 		$dictionary=$VehicleCompany->getDictionary();
@@ -320,6 +323,7 @@ class CHBSVehicle
 			'vehicle_make',
 			'vehicle_model',
 			'vehicle_company_id',
+			'vehicle_number',
 			'passenger_count',
 			'bag_count',
 			'standard',
@@ -355,9 +359,13 @@ class CHBSVehicle
 		
 		$defaultPrice=CHBSPrice::getDefaultPrice();
 		
+		CHBSHelper::setDefault($meta,'description','');
+		
 		CHBSHelper::setDefault($meta,'vehicle_make','');
 		CHBSHelper::setDefault($meta,'vehicle_model','');
 		CHBSHelper::setDefault($meta,'vehicle_company_id',0);
+		
+		CHBSHelper::setDefault($meta,'vehicle_number',1);
 		
 		CHBSHelper::setDefault($meta,'passenger_count','4');
 		CHBSHelper::setDefault($meta,'bag_count','4');
@@ -458,7 +466,7 @@ class CHBSVehicle
 				)
 			);
 		}
-		 
+		
 		$query=new WP_Query($argument);
 		if($query===false) return($dictionary);
  
@@ -523,7 +531,7 @@ class CHBSVehicle
 	
 	/**************************************************************************/
 	
-	function calculatePrice($data,$calculateHiddenFee=true,$roundVehiclePrice=false,$bidData=array())
+	function calculatePrice($data,$calculateHiddenFee=true,$roundVehiclePrice=false,$bidData=array(),$usePriceRule=true,$useCoupon=true)
 	{
 		$Length=new CHBSLength();
 		$TaxRate=new CHBSTaxRate();
@@ -540,9 +548,9 @@ class CHBSVehicle
 		
 		$passengerSum=0;
 		if(CHBSBookingHelper::isPassengerEnable($data['booking_form']['meta'],$data['service_type_id'],'adult'))
-			$passengerSum+=$data['passenger_adult'];
+			$passengerSum+=(int)$data['passenger_adult'];
 		if(CHBSBookingHelper::isPassengerEnable($data['booking_form']['meta'],$data['service_type_id'],'children'))
-			$passengerSum+=$data['passenger_children'];		   
+			$passengerSum+=(int)$data['passenger_children'];		   
 		
 		/***/
 		
@@ -599,7 +607,10 @@ class CHBSVehicle
             'waypoint_count'=>CHBSBookingHelper::getWaypointCount($data,$data['booking_form'],$data['service_type_id'],$data['transfer_type_id'])
 		);
 		
-		$priceBase=$PriceRule->getPriceFromRule($argument,$data['booking_form'],$priceBase);	
+		if($usePriceRule)
+		{
+			$priceBase=$PriceRule->getPriceFromRule($argument,$data['booking_form'],$priceBase);	
+		}
 		
 		/***/
 		
@@ -628,17 +639,20 @@ class CHBSVehicle
 		
 		/***/
 		
-		$Coupon=new CHBSCoupon();
-		$coupon=$Coupon->checkCode();
-		
-		if($coupon!==false)
+		if($useCoupon)
 		{
-			$discountPercentage=$coupon['meta']['discount_percentage'];
-			foreach($priceBase as $index=>$value)
+			$Coupon=new CHBSCoupon();
+			$coupon=$Coupon->checkCode();
+
+			if($coupon!==false)
 			{
-				if(preg_match('/\_value$/',$index))
+				$discountPercentage=$coupon['meta']['discount_percentage'];
+				foreach($priceBase as $index=>$value)
 				{
-					$priceBase[$index]=CHBSPrice::numberFormat($priceBase[$index]*(1-$discountPercentage/100));
+					if(preg_match('/\_value$/',$index))
+					{
+						$priceBase[$index]=CHBSPrice::numberFormat($priceBase[$index]*(1-$discountPercentage/100));
+					}
 				}
 			}
 		}
@@ -668,6 +682,9 @@ class CHBSVehicle
 			$priceSumNetValue=$priceBase['price_fixed_value'];
 			$priceSumGrossValue=CHBSPrice::numberFormat($priceSumNetValue*(1+$TaxRate->getTaxRateValue($priceBase['price_fixed_tax_rate_id'],$taxRate)/100)); 
 			
+			$priceSumNetValueOneWay=$priceSumNetValue;
+			$priceSumGrossValueOneWay=$priceSumGrossValue;
+			
 			if(in_array($data['service_type_id'],array(1,3)))
 			{
 				if(in_array((int)$data['transfer_type_id'],array(2)))
@@ -681,25 +698,28 @@ class CHBSVehicle
 					$priceSumGrossValue+=CHBSPrice::numberFormat($priceBase['price_fixed_return_new_ride_value']*(1+$TaxRate->getTaxRateValue($priceBase['price_fixed_return_new_ride_tax_rate_id'],$taxRate)/100));					 
 				}				
 			}
+			
+			$priceSumNetValueReturn=$priceSumNetValue;
+			$priceSumGrossValueReturn=$priceSumGrossValue;
 		}
 		else
 		{
+			$calculationMethod=(int)$data['booking_form']['meta']['calculation_method_service_type_'.$data['service_type_id']];
+			
 			/***/
 			
 			$passengerAdult=0;
 			$passengerChildren=0;
 			if(CHBSBookingHelper::isPassengerEnable($data['booking_form']['meta'],$data['service_type_id'],'adult'))
-				$passengerAdult=$data['passenger_adult'];
+				$passengerAdult=(int)$data['passenger_adult'];
 			if(CHBSBookingHelper::isPassengerEnable($data['booking_form']['meta'],$data['service_type_id'],'children'))
-				$passengerChildren=$data['passenger_children'];   
+				$passengerChildren=(int)$data['passenger_children'];   
 			
 			$passengerAll=$passengerAdult+$passengerChildren;
 			
-			/***/
+			if($passengerAll<=0) $passengerAll=1;
 			
-			$calculationMethod=(int)$data['booking_form']['meta']['calculation_method_service_type_'.$data['service_type_id']];
-			
-			/***/
+			if(!in_array($calculationMethod,array(3,6))) $passengerAll=1;
 			
 			if(in_array($data['service_type_id'],array(1,3)))
 			{
@@ -715,18 +735,21 @@ class CHBSVehicle
 				
 				if(in_array($calculationMethod,array(1,2,3,7)))
 				{
-					$priceSumNetValuePart[0]=CHBSPrice::numberFormat($priceBase['price_distance_value']*$distance);	
-					$priceSumGrossValue+=$BookingHelper->calculateTaxRateDistance($calculationMethod,$data['service_type_id'],$priceBase['price_distance_value'],$priceBase['price_distance_tax_rate_id'],$distance);
+					$priceSumNetValuePart[0]=CHBSPrice::numberFormat($priceBase['price_distance_value']*$distance*$passengerAll);	
+					$priceSumGrossValue+=$BookingHelper->calculateTaxRateDistance($calculationMethod,$data['service_type_id'],$priceBase['price_distance_value'],$priceBase['price_distance_tax_rate_id'],$distance,$passengerAll);
 				}
 			
 				if(in_array($calculationMethod,array(2,3,7)))
 				{
-					$priceSumNetValuePart[1]=CHBSPrice::numberFormat($priceBase['price_hour_value']*$duration);
-					$priceSumGrossValue+=CHBSPrice::numberFormat(CHBSPrice::numberFormat($priceBase['price_hour_value']*(1+$TaxRate->getTaxRateValue($priceBase['price_hour_tax_rate_id'],$taxRate)/100))*$duration); 
+					$priceSumNetValuePart[1]=CHBSPrice::numberFormat($priceBase['price_hour_value']*$duration*$passengerAll);
+					$priceSumGrossValue+=CHBSPrice::numberFormat($priceSumNetValuePart[1]*(1+$TaxRate->getTaxRateValue($priceBase['price_hour_tax_rate_id'],$taxRate)/100)); 
 				}
 				
 				$priceSumNetValue=array_sum($priceSumNetValuePart);
-
+				
+				$priceSumNetValueOneWay=$priceSumNetValue;
+				$priceSumGrossValueOneWay=$priceSumGrossValue;
+				
 				/***/
 				
 				if(in_array((int)$data['transfer_type_id'],array(2,3)))
@@ -735,25 +758,18 @@ class CHBSVehicle
 					
 					if(in_array($calculationMethod,array(1,2,3,7)))
 					{
-						$priceSumNetValuePart[0]=CHBSPrice::numberFormat($priceBase['price_distance'.$priceType.'_value']*$distance);	
-						$priceSumGrossValue+=$BookingHelper->calculateTaxRateDistance($calculationMethod,$data['service_type_id'],$priceBase['price_distance'.$priceType.'_value'],$priceBase['price_distance'.$priceType.'_tax_rate_id'],$distance);
+						$priceSumNetValuePart[0]=CHBSPrice::numberFormat($priceBase['price_distance'.$priceType.'_value']*$distance*$passengerAll);	
+						$priceSumGrossValue+=$BookingHelper->calculateTaxRateDistance($calculationMethod,$data['service_type_id'],$priceBase['price_distance'.$priceType.'_value'],$priceBase['price_distance'.$priceType.'_tax_rate_id'],$distance,$passengerAll);
 					}
 
 					if(in_array($calculationMethod,array(2,3,7)))
 					{
-						$priceSumNetValuePart[1]=CHBSPrice::numberFormat($priceBase['price_hour'.$priceType.'_value']*$duration);
+						$priceSumNetValuePart[1]=CHBSPrice::numberFormat($priceBase['price_hour'.$priceType.'_value']*$duration*$passengerAll);
 						$priceSumGrossValue+=CHBSPrice::numberFormat($priceSumNetValuePart[1]*(1+$TaxRate->getTaxRateValue($priceBase['price_hour'.$priceType.'_tax_rate_id'],$taxRate)/100)); 
 					}
 
-					$priceSumNetValue+=array_sum($priceSumNetValuePart);					
-				}
-
-				/***/
-				
-				if(in_array($calculationMethod,array(3)))
-				{
-					$priceSumNetValue*=$passengerAll;
-					$priceSumGrossValue*=$passengerAll;
+					$priceSumNetValue+=array_sum($priceSumNetValuePart);	
+					$priceSumNetValueReturn=$priceSumNetValue;
 				}
 								
 				/***/
@@ -779,13 +795,13 @@ class CHBSVehicle
 					
 					if($passengerAdult)
 					{
-						$priceSumNetValuePart[0]=$priceBase['price_passenger_adult_value']*$passengerAdult*$returnFactor;
+						$priceSumNetValuePart[0]=CHBSPrice::numberFormat($priceBase['price_passenger_adult_value']*$passengerAdult*$returnFactor);
 						$priceSumGrossValue+=CHBSPrice::numberFormat($priceSumNetValuePart[0]*(1+$TaxRate->getTaxRateValue($priceBase['price_passenger_adult_tax_rate_id'],$taxRate)/100));					 
 					}
 
 					if($passengerChildren)
 					{
-						$priceSumNetValuePart[1]=$priceBase['price_passenger_children_value']*$passengerChildren*$returnFactor; 
+						$priceSumNetValuePart[1]=CHBSPrice::numberFormat($priceBase['price_passenger_children_value']*$passengerChildren*$returnFactor); 
 						$priceSumGrossValue+=CHBSPrice::numberFormat($priceSumNetValuePart[1]*(1+$TaxRate->getTaxRateValue($priceBase['price_passenger_children_tax_rate_id'],$taxRate)/100));					 
 					}	
 					
@@ -804,16 +820,13 @@ class CHBSVehicle
 			}
 			else
 			{
-				$priceSumNetValue=$priceBase['price_hour_value']*$duration;
+				$priceSumNetValue=CHBSPrice::numberFormat($priceBase['price_hour_value']*$duration*$passengerAll);
 				$priceSumGrossValue=CHBSPrice::numberFormat($priceSumNetValue*(1+$TaxRate->getTaxRateValue($priceBase['price_hour_tax_rate_id'],$taxRate)/100));			
-				
-				if(in_array($calculationMethod,array(3,6)))
-				{
-					$priceSumNetValue*=$passengerAll;
-					$priceSumGrossValue*=$passengerAll;
-				}
 			}
 		}
+		
+		$priceSumNetValueReturn=$priceSumNetValue-$priceSumNetValueOneWay;
+		$priceSumGrossValueReturn=$priceSumGrossValue-$priceSumGrossValueOneWay;
 		
 		/***/
 		
@@ -837,14 +850,41 @@ class CHBSVehicle
 				(
 					'net'=>array
 					(
-						'value'=>CHBSPrice::numberFormat($priceSumNetValue)
+						'value'=>CHBSPrice::numberFormat($priceSumNetValue),
+						'format'=>CHBSPrice::format($priceSumNetValue,CHBSCurrency::getFormCurrency())
 					),
 					'gross'=>array
 					(
 						'value'=>CHBSPrice::numberFormat($priceSumGrossValue),
 						'format'=>CHBSPrice::format($priceSumGrossValue,CHBSCurrency::getFormCurrency())
 					)
-				)
+				),
+				'sum_one_way'=>array
+				(
+					'net'=>array
+					(
+						'value'=>CHBSPrice::numberFormat($priceSumNetValueOneWay),
+						'format'=>CHBSPrice::format($priceSumNetValueOneWay,CHBSCurrency::getFormCurrency())
+					),
+					'gross'=>array
+					(
+						'value'=>CHBSPrice::numberFormat($priceSumGrossValueOneWay),
+						'format'=>CHBSPrice::format($priceSumGrossValueOneWay,CHBSCurrency::getFormCurrency())
+					)
+				),				
+				'sum_return'=>array
+				(
+					'net'=>array
+					(
+						'value'=>CHBSPrice::numberFormat($priceSumNetValueReturn),
+						'format'=>CHBSPrice::format($priceSumNetValueReturn,CHBSCurrency::getFormCurrency())
+					),
+					'gross'=>array
+					(
+						'value'=>CHBSPrice::numberFormat($priceSumNetValueReturn),
+						'format'=>CHBSPrice::format($priceSumGrossValueReturn,CHBSCurrency::getFormCurrency())
+					)
+				)				
 			),
 			'currency'=>$currency
 		);
@@ -874,7 +914,7 @@ class CHBSVehicle
 		
 		$Booking=new CHBSBooking();
 		
-		if(($bidPriceEnable) || (((int)$data['booking_form']['meta']['booking_summary_hide_fee']===1) && ($calculateHiddenFee)) || (($priceBase['minimum_order_value']>0) && ((int)$priceBase['price_type']===1)))
+		if(($bidPriceEnable) || ((in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(1,2))) && ($calculateHiddenFee)) || (($priceBase['minimum_order_value']>0) && ((int)$priceBase['price_type']===1)))
 		{
 			$Date=new CHBSDate();
 			
@@ -894,8 +934,18 @@ class CHBSVehicle
 			if(($priceBase['minimum_order_value']>0) && ((int)$priceBase['price_type']===1))
 			{
 				$priceBooking=$Booking->calculatePrice($data2,$price);
-				$difference=$priceBase['minimum_order_value']-$priceBooking['total']['sum']['net']['value'];
 				
+				if((int)$priceBase['minimum_order_booking_extra_include']===0)
+					$priceBooking['total']['sum']['net']['value']-=$priceBooking['booking_extra']['sum']['net']['value'];
+				
+				if((int)$priceBase['minimum_order_extra_time_include']===0)
+					$priceBooking['total']['sum']['net']['value']-=$priceBooking['extra_time']['sum']['net']['value'];
+
+				if((int)$priceBase['minimum_order_waypoint_duration_include']===0)
+					$priceBooking['total']['sum']['net']['value']-=$priceBooking['waypoint_duration']['sum']['net']['value'];				
+				
+				$difference=$priceBase['minimum_order_value']-$priceBooking['total']['sum']['net']['value'];
+					
 				if($difference>0)
 				{
 					$transferTypeId=(int)$data['transfer_type_id'];
@@ -911,7 +961,7 @@ class CHBSVehicle
 			
 			/***/
 			
-			if(((int)$data['booking_form']['meta']['booking_summary_hide_fee']===1) && (($calculateHiddenFee) || ($bidPriceEnable)))
+			if((in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(1,2))) && (($calculateHiddenFee) || ($bidPriceEnable)))
 			{
 				$priceBooking=$Booking->calculatePrice($data2,$price,true);
 
@@ -989,8 +1039,7 @@ class CHBSVehicle
 			$price['price']['base']['round_value']=$roundValue;
 		}
 		
-		/***/		
-		
+		/***/
 		
 		$price['price']['sum']['gross']['formatHtml']=$this->getPriceFormatHtml($price['price']['sum']['gross']['value']);
 		$price['price']['sum']['net']['formatHtml']=$this->getPriceFormatHtml($price['price']['sum']['net']['value']);
@@ -1339,8 +1388,15 @@ class CHBSVehicle
 		
 		$WPML=new CHBSWPML();
 		$Date=new CHBSDate();
+		$Vehicle=new CHBSVehicle();
 		$Booking=new CHBSBooking();
 		$Validation=new CHBSValidation();
+		
+		/***/
+		
+		$tVehicleBookingCount=array();
+		
+		$dictionaryVehicle=$Vehicle->getDictionary();
 		
 		/***/
 		
@@ -1379,32 +1435,62 @@ class CHBSVehicle
 		}
 		
 		/***/
+		
+		$tVehicleUnset=CHBSBookingHelper::checkMaximumBookingNumberAll($data,$bookingForm);
+		
+		foreach($dictionary as $dictionaryIndex=>$dictionaryValue)
+		{
+			if(in_array($dictionaryIndex,$tVehicleUnset))
+				unset($dictionary[$dictionaryIndex]);
+		}
+		
+		/***/
+		
+		$key=array
+		(
+			'date_exclude'=>array('startDate','startTime','stopDate','stopTime'),
+			'date_blocked'=>array('start_date','start_time','stop_date','stop_time')
+		);
 	 
 		foreach($dictionary as $dictionaryIndex=>$dictionaryValue)
 		{
 			$meta=$dictionaryValue['meta'];
-			if(!array_key_exists('date_exclude',$meta)) continue;
-		   
-			foreach($meta['date_exclude'] as $dateExcludeValue)
-			{
-				$dateStart=CHBSDate::strtotime($dateExcludeValue['startDate'].' '.$dateExcludeValue['startTime']);
-				$dateStop=CHBSDate::strtotime($dateExcludeValue['stopDate'].' '.$dateExcludeValue['stopTime']);
-  
-				if(is_array($dateSet[0]))
-				{
-					foreach($dateSet[0] as $date)
+			
+			foreach($key as $keyIndex=>$keyValue)
+			{				
+				if(!array_key_exists($keyIndex,$meta)) continue;
+		
+				foreach($meta[$keyIndex] as $dateValue)
+				{	
+					$dateStart=CHBSDate::strtotime($dateValue[$keyValue[0]].' '.$dateValue[$keyValue[1]]);
+					$dateStop=CHBSDate::strtotime($dateValue[$keyValue[2]].' '.$dateValue[$keyValue[3]]);
+
+					if(is_array($dateSet[0]))
 					{
-						$b=array_fill(0,4,false);
-
-						$b[0]=CHBSHelper::valueInRange($date[0],$dateStart,$dateStop);
-						$b[1]=CHBSHelper::valueInRange($date[1],$dateStart,$dateStop);
-						$b[2]=CHBSHelper::valueInRange($dateStart,$date[0],$date[1]);
-						$b[3]=CHBSHelper::valueInRange($dateStop,$date[0],$date[1]);
-
-						if(in_array(true,$b,true))
+						foreach($dateSet[0] as $date)
 						{
-							unset($dictionary[$dictionaryIndex]);
-							break;					
+							$b=array_fill(0,4,false);
+
+							$b[0]=CHBSHelper::valueInRange($date[0],$dateStart,$dateStop);
+							$b[1]=CHBSHelper::valueInRange($date[1],$dateStart,$dateStop);
+							$b[2]=CHBSHelper::valueInRange($dateStart,$date[0],$date[1]);
+							$b[3]=CHBSHelper::valueInRange($dateStop,$date[0],$date[1]);
+
+							if(in_array(true,$b,true))
+							{
+								if($keyIndex=='date_blocked')
+								{
+									if(!array_key_exists($dictionaryIndex,$tVehicleBookingCount))
+										$tVehicleBookingCount[$dictionaryIndex]=0;
+									
+									$tVehicleBookingCount[$dictionaryIndex]++;
+								}
+								else
+								{
+									unset($dictionary[$dictionaryIndex]);
+									break;
+								}
+							}
 						}
 					}
 				}
@@ -1460,11 +1546,12 @@ class CHBSVehicle
 						(
 							'key'=>PLUGIN_CHBS_CONTEXT.'_passenger_enable',
 							'value'=>1
-						),   
+						),
 						array
 						(
 							'key'=>PLUGIN_CHBS_CONTEXT.'_woocommerce_product_id',
-							'value'=>0
+							'value'=>array(0),
+							'compare'=>'IN'
 						)
 					)
 				);
@@ -1537,27 +1624,55 @@ class CHBSVehicle
 				if((CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$serviceTypeId,'adult')) || (CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$serviceTypeId,'children')))
 				{
 					if(CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$serviceTypeId,'adult'))
-						$passengerSumCurrent+=$data['passenger_adult_service_type_'.$serviceTypeId];
+						$passengerSumCurrent+=(int)$data['passenger_adult_service_type_'.$serviceTypeId];
 					if(CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$serviceTypeId,'children'))
-						$passengerSumCurrent+=$data['passenger_children_service_type_'.$serviceTypeId];			
+						$passengerSumCurrent+=(int)$data['passenger_children_service_type_'.$serviceTypeId];			
 				}
 				
 				/***/
 
+				$passengerSumBooking=array();
+				
 				while($query->have_posts())
 				{
 					$query->the_post();
 
 					$meta=CHBSPostMeta::getPostMeta($post);  
 					
-					$passengerSumVehicle=$dictionary[$meta['vehicle_id']]['meta']['passenger_count'];
-					$passengerSumBooking=(int)$meta['passenger_adult_number']+(int)$meta['passenger_children_number'];
-					
-					if($passengerSumVehicle>=($passengerSumCurrent+$passengerSumBooking))
-						$vehiclePreventRemove[]=$meta['vehicle_id'];
+					if(!array_key_exists($meta['vehicle_id'],$passengerSumBooking))
+						$passengerSumBooking[$meta['vehicle_id']]=0;
+						
+					$passengerSumBooking[$meta['vehicle_id']]+=(int)$meta['passenger_adult_number']+(int)$meta['passenger_children_number'];
+				}
+				
+				foreach($passengerSumBooking as $passengerSumBookingIndex=>$passengerSumBookingValue)
+				{
+					$passengerSumVehicle=$dictionary[$passengerSumBookingIndex]['meta']['passenger_count'];
+				
+					if($passengerSumVehicle>=($passengerSumBookingValue+$passengerSumCurrent))
+						$vehiclePreventRemove[]=$passengerSumBookingIndex;
 				}
 				
 				CHBSHelper::preservePost($post,$bPost,0);
+			}
+		}
+
+		/***/
+
+		if((int)$bookingForm['meta']['prevent_double_vehicle_booking_enable']===1)
+		{
+			foreach($dictionary as $dictionaryIndex=>$dictionaryValue)
+			{
+				if(!array_key_exists($dictionaryIndex,$tVehicleBookingCount)) continue;
+				
+				$vehcicleNumber=(int)$dictionaryValue['meta']['vehicle_number'];
+				if($vehcicleNumber<=1) $vehcicleNumber=1;				
+				
+				if((int)$tVehicleBookingCount[$dictionaryIndex]>=(int)$vehcicleNumber)
+				{
+					if(!in_array($dictionaryIndex,$vehiclePreventRemove))
+						unset($dictionary[$dictionaryIndex]);
+				}				
 			}
 		}
 
@@ -1579,12 +1694,13 @@ class CHBSVehicle
 						'key'=>PLUGIN_CHBS_CONTEXT.'_vehicle_id',
 						'value'=>array_keys($dictionary),
 						'compare'=>'IN'
-					),   
+					),
 					array
 					(
 						'key'=>PLUGIN_CHBS_CONTEXT.'_woocommerce_product_id',
-						'value'=>0
-					)
+						'value'=>array(0),
+						'compare'=>'IN'
+					)	
 				)
 			);
 			
@@ -1664,9 +1780,27 @@ class CHBSVehicle
 
 							if(in_array(true,$b,true))
 							{
-								if(!in_array($meta['vehicle_id'],$vehiclePreventRemove))
-									unset($dictionary[$meta['vehicle_id']]);
-
+								if(!in_array($meta['vehicle_id'],$tVehicleBookingCount))
+									$tVehicleBookingCount[$meta['vehicle_id']]=0;
+								
+								$tVehicleBookingCount[$meta['vehicle_id']]++;
+								
+								/***/
+								
+								$vehcicleNumber=1;
+								if(array_key_exists($meta['vehicle_id'],$dictionaryVehicle))
+									$vehcicleNumber=$dictionaryVehicle[$meta['vehicle_id']]['meta']['vehicle_number'];
+								
+								if($vehcicleNumber<=1) $vehcicleNumber=1;
+								
+								/***/
+								
+								if((int)$tVehicleBookingCount[$meta['vehicle_id']]>=(int)$vehcicleNumber)
+								{
+									if(!in_array($meta['vehicle_id'],$vehiclePreventRemove))
+										unset($dictionary[$meta['vehicle_id']]);
+								}
+								
 								continue;					
 							}						
 						}
@@ -1692,7 +1826,7 @@ class CHBSVehicle
 			'post_status'=>'publish',
 			'posts_per_page'=>(int)get_option('posts_per_page'),
 			'paged'=>1,
-			'orderby'=>'post_title',
+			'orderby'=>'menu_order title',
 			'order'=>'asc'
 		);
 		

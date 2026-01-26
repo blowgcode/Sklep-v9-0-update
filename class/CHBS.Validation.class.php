@@ -5,12 +5,16 @@
 
 class CHBSValidation
 {
-    public $Notice;
+	/**************************************************************************/
+	
+	public $Notice;
+	
+	/**************************************************************************/
 
-    public function __construct($Notice=null) 
-    { 
-        $this->Notice = $Notice;
-    }
+	function __construct($Notice=null) 
+	{ 
+		$this->Notice=$Notice;
+	}
 
 	/**************************************************************************/
 
@@ -110,29 +114,25 @@ class CHBSValidation
 	
 	/**************************************************************************/
 	
-public function isTime($value, $empty = false) {
-    if ($this->isEmpty($value)) {
-        return $empty;
-    }
-
-    // Dopasowanie pojedynczej godziny HH:MM
-    $singleTimePattern = '/^(2[0-3]|[01][0-9]):([0-5][0-9])$/';
-
-    // Dopasowanie przedziału czasowego HH:MM - HH:MM
-    $timeRangePattern = '/^(2[0-3]|[01][0-9]):([0-5][0-9]) - (2[0-3]|[01][0-9]):([0-5][0-9])$/';
-
-    if (preg_match($singleTimePattern, $value) || preg_match($timeRangePattern, $value)) {
-        return true;
-    }
-
-    return false;
-}
+	public function isTime($value,$empty=false)
+	{
+		if(($empty) && ($this->isEmpty($value))) return(true);
+		
+        if(preg_match('/^\d{2}:\d{2}$/',(string)$value)) 
+        {
+            if(preg_match('/(2[0-3]|[0][0-9]|1[0-9]):([0-5][0-9])/',$value)) return(true);
+        }
+        
+		return(false);
+	}
 	
 	/**************************************************************************/
 	
 	public function isDate($value,$empty=false)
 	{
 		if(($empty) && ($this->isEmpty($value))) return(true);
+		
+		if($this->isEmpty($value)) $value='';
 		
 		$date=preg_split('/-/',$value);
 	

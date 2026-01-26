@@ -5,13 +5,16 @@
 
 class CHBSDemo
 {
-    public $pluginWPImportPath;
-
-    public function __construct()
-    {
-        $this->pluginWPImportPath = 'wordpress-importer/wordpress-importer.php';
-    }
-
+	/**************************************************************************/
+	
+	public $pluginWPImportPath;
+	
+	/**************************************************************************/
+	
+	function __construct()
+	{
+		$this->pluginWPImportPath='wordpress-importer/wordpress-importer.php';
+	}
 	
 	/**************************************************************************/
 	
@@ -72,6 +75,8 @@ class CHBSDemo
 			$this->importStop($pluginWPImportActive);
 			return(false);
 		}
+		
+		/***/
 		
 		$Import=new WP_Import();
 		$Import->fetch_attachments=true;

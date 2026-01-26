@@ -7,6 +7,12 @@ class CHBSBookingEdit
 {
 	/**************************************************************************/
 	
+	public $booking;
+	public $bookingEditId;
+	public $bookingEditIdHash;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->booking=false;

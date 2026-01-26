@@ -342,7 +342,7 @@ class CHBSCoupon
 					{
 						if(!array_key_exists($vehicleId,$vehicleDictionary)) continue;
 						if($Validation->isNotEmpty($html)) $html.=', ';
-						$html.='<a href="'.get_edit_post_link($vehicleId).'" target="_blank">'.esc_html($vehicleDictionary[$vehicleId]['post']->post_title).'</a>';
+						$html.='<a href="'.esc_url(CHBSHelper::editPostURLAddress($vehicleId)).'" target="_blank">'.esc_html($vehicleDictionary[$vehicleId]['post']->post_title).'</a>';
 					}
 				}
 	
@@ -369,6 +369,8 @@ class CHBSCoupon
 	
 	function create()
 	{
+		if(CHBSHelper::verifyNonce('option_page')===false) return(false);
+		
 		$option=CHBSHelper::getPostOption();
 
 		$response=array('global'=>array('error'=>1));

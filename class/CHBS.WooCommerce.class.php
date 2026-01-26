@@ -16,7 +16,7 @@ class CHBSWooCommerce
 	
 	function isEnable($meta)
 	{
-		return((class_exists('WooCommerce')) && ($meta['woocommerce_enable']) && (!$meta['price_hide']));
+		return((class_exists('WooCommerce')) && ($meta['woocommerce_enable']) && (!$meta['price_hide']) && (!$meta['woocommerce_add_to_cart_enable']));
 	}
 	
 	/**************************************************************************/
@@ -349,6 +349,9 @@ class CHBSWooCommerce
 	
 	function locateTemplate($template,$templateName,$templatePath) 
 	{
+		if((int)CHBSOption::getOption('woocommerce_template_plugin_enable')!==1)
+			return($template);
+			
 		global $woocommerce;
 	   
 		$templateTemp=$template;
@@ -363,7 +366,7 @@ class CHBSWooCommerce
  
 		if(!$template) $template=$templateTemp;
    
-		return ($template);
+		return($template);
 	}
 	
 	/**************************************************************************/
@@ -425,7 +428,7 @@ class CHBSWooCommerce
 		
 		add_action('woocommerce_view_order',array($this,'viewOrder'));
 		
-		add_action('add_meta_boxes',array($this,'addMetaBox'));
+		add_action('add_meta_boxes',array($this,'addMetaBox'),10,2);
 		
 		add_action('wpo_wcpdf_order_items_data',array($this,'changeOrderItemsData'),10,4);
 		
@@ -437,7 +440,93 @@ class CHBSWooCommerce
 		
 		add_action('woocommerce_after_cart_item_name',array($this,'displayCartItemMeta'),10,4);
 		
+		add_action('woocommerce_thankyou',array($this,'newOrder'),10,1);
+		//add_action('woocommerce_checkout_order_processed',array($this,'newOrder'),10,1);
+		
 		add_filter('current_screen',array($this,'disableBookingEdit'),100,3);
+		
+		add_filter('woocommerce_rest_prepare_shop_order_object',array($this,'prepareOrderRESTAPI'),10,3);
+	}
+	
+	/**************************************************************************/
+	
+	function newOrder($orderId)
+	{		
+		if(!$orderId) return(false);
+		
+		$Country=new CHBSCountry();
+		
+		$Booking=new CHBSBooking();
+		$BookingForm=new CHBSBookingForm();
+		
+		$bookingFormDictionary=$BookingForm->getDictionary();
+		
+		$order=wc_get_order($orderId);
+		$orderItem=$order->get_items();
+		
+		$orderData=$order->get_data();
+		
+		foreach($orderItem as $itemId=>$item)
+		{
+			$product=$item->get_product();
+			
+			if(!is_object($product)) continue;
+			
+			$productId=(int)$product->get_id();
+			$productMeta=CHBSPostMeta::getPostMeta($productId);
+			
+			/***/
+			
+			$bookingId=(int)$productMeta['booking_id'];
+			
+			if($bookingId<=0) continue;
+			if(($booking=$Booking->getBooking($bookingId))===false) continue;
+			
+			/***/
+			
+			$bookingFormId=(int)$booking['meta']['booking_form_id'];
+			
+			if(!array_key_exists($bookingFormId,$bookingFormDictionary)) continue;
+			
+			$bookingForm=$bookingFormDictionary[$bookingFormId];
+			
+			if(!(((int)$bookingForm['meta']['woocommerce_add_to_cart_enable']===1) && ((int)$bookingForm['meta']['woocommerce_add_to_cart_process_booking_enable']===1))) continue;
+			
+			if((int)$booking['meta']['woocommerce_product_id']!=$productId) continue;
+			
+			/***/
+			
+			$updateData=array();
+			
+			if((int)$bookingForm['meta']['woocommerce_add_to_cart_update_client_detail_enable']===1)
+			{
+				$updateData['client_contact_detail_first_name']=$orderData['billing']['first_name'];
+				$updateData['client_contact_detail_last_name']=$orderData['billing']['last_name'];
+				$updateData['client_contact_detail_email_address']=$orderData['billing']['email'];
+				$updateData['client_contact_detail_phone_number']=$orderData['billing']['phone'];
+			}
+			
+			if((int)$bookingForm['meta']['woocommerce_add_to_cart_update_client_billing_details_enable']===1)
+			{
+				$updateData['client_billing_detail_enable']=1;
+				$updateData['client_billing_detail_company_name']=$orderData['billing']['company'];
+				$updateData['client_billing_detail_tax_number']='';
+				$updateData['client_billing_detail_street_name']=$orderData['billing']['address_1'];
+				$updateData['client_billing_detail_street_number']=$orderData['billing']['address_2'];
+				$updateData['client_billing_detail_city']=$orderData['billing']['city'];
+				$updateData['client_billing_detail_state']=$orderData['billing']['state'];
+				$updateData['client_billing_detail_postal_code']=$orderData['billing']['postcode'];
+				$updateData['client_billing_detail_country_name']=$Country->getCountryName($orderData['billing']['country']);
+			}
+			
+			foreach($updateData as $index=>$value)
+				CHBSPostMeta::updatePostMeta($bookingId,$index,$value);
+				
+			CHBSPostMeta::updatePostMeta($bookingId,'woocommerce_product_id_2',$booking['meta']['woocommerce_product_id']);
+			CHBSPostMeta::updatePostMeta($bookingId,'woocommerce_product_id',0);
+			
+			$Booking->sendBookingNotification($bookingId);
+		}
 	}
 	
 	/**************************************************************************/
@@ -482,19 +571,17 @@ class CHBSWooCommerce
 	
 	/**************************************************************************/
 	
-	function addMetaBox()
+	function addMetaBox($postType,$post)
 	{
-		global $post;
-		
-		switch($post->post_type)
+		switch($postType)
 		{
-			case 'shop_order':
+			case 'woocommerce_page_wc-orders':
 
 				$meta=CHBSPostMeta::getPostMeta($post);
-
+	
 				if((is_array($meta)) && (array_key_exists('booking_id',$meta)) && ($meta['booking_id']>0))
 				{
-					add_meta_box(PLUGIN_CHBS_CONTEXT.'_meta_box_woocommerce_order',__('Booking','chauffeur-booking-system'),array($this,'addMetaBoxWooCommerceBooking'),'shop_order','side','low');		
+					add_meta_box(PLUGIN_CHBS_CONTEXT.'_meta_box_woocommerce_order',__('Booking','chauffeur-booking-system'),array($this,'addMetaBoxWooCommerceBooking'),$postType,'side','low');		
 				}
 				
 			break;
@@ -504,7 +591,7 @@ class CHBSWooCommerce
 				$meta=CHBSPostMeta::getPostMeta($post);
 				if((is_array($meta)) && (array_key_exists('booking_id',$meta)) && ($meta['booking_id']>0))
 				{
-					add_meta_box(PLUGIN_CHBS_CONTEXT.'_meta_box_woocommerce_product',__('Booking information','chauffeur-booking-system'),array($this,'addMetaBoxWooCommerceProduct'),'product','normal','low');		
+					add_meta_box(PLUGIN_CHBS_CONTEXT.'_meta_box_woocommerce_product',__('Booking information','chauffeur-booking-system'),array($this,'addMetaBoxWooCommerceProduct'),$postType,'normal','low');		
 				}				
 				
 			break;
@@ -513,10 +600,8 @@ class CHBSWooCommerce
 	
 	/**************************************************************************/
 	
-	function addMetaBoxWooCommerceBooking()
+	function addMetaBoxWooCommerceBooking($post)
 	{
-		global $post;
-		
 		$meta=CHBSPostMeta::getPostMeta($post);
 		
 		echo 
@@ -524,19 +609,17 @@ class CHBSWooCommerce
 			<div>
 				<div>'.esc_html__('This order has corresponding booking from "Chauffeur Booking System" plugin. Click on button below to see its details in new window.','chauffeur-booking-system').'</div>
 				<br/>
-				<a class="button button-primary" href="'.esc_url(get_edit_post_link($meta['booking_id'])).'" target="_blank">'.esc_html__('Open booking','chauffeur-booking-system').'</a>
+				<a class="button button-primary" href="'.esc_url(CHBSHelper::editPostURLAddress($meta['booking_id'])).'" target="_blank">'.esc_html__('Open booking','chauffeur-booking-system').'</a>
 			</div>
 		';
 	}
 	
 	/**************************************************************************/
 	
-	function addMetaBoxWooCommerceProduct()
+	function addMetaBoxWooCommerceProduct($post)
 	{
-		global $post;
-		
 		$meta=CHBSPostMeta::getPostMeta($post);
-		
+
 		if((is_array($meta)) && (array_key_exists('booking_id',$meta)) && ($meta['booking_id']>0))
 		{
 			$Booking=new CHBSBooking();
@@ -611,8 +694,7 @@ class CHBSWooCommerce
 					
 					$Booking->sendEmailBookingChangeStatus($bookingOld,$bookingNew);
 					
-					$GoogleCalendar=new CHBSGoogleCalendar();
-					$GoogleCalendar->sendBooking($bookingId,false,'after_booking_status_change');
+					do_action('chbs_booking_status_change',$bookingNew,$bookingOld);
 					
 					$emailSend=true;
 				}
@@ -700,15 +782,16 @@ class CHBSWooCommerce
 	
 	function isAddToCartEnable($bookingForm)
 	{
-		$b=array_fill(0,3,false);
+		$b=array_fill(0,5,false);
 		
 		$b[0]=class_exists('WooCommerce') ? true : false;
 		$b[1]=(int)$bookingForm['meta']['woocommerce_add_to_cart_enable']===1 ? true : false;
+		$b[2]=(int)$bookingForm['meta']['woocommerce_enable']===0 ? true : false;
+		$b[3]=(int)$bookingForm['meta']['price_hide']===0 ? true : false;
 		
-		if(class_exists('WooCommerce'))
-			$b[2]=CHBSGlobalData::getGlobalData('currency_id')===get_woocommerce_currency() ? true : false;
+		if($b[0]) $b[4]=CHBSGlobalData::getGlobalData('currency_id')===get_woocommerce_currency() ? true : false;
 		
-		$b[2]=true;
+		$b[4]=true;
 		
 		if(!in_array(false,$b,true)) return(true);
 		
@@ -764,42 +847,65 @@ class CHBSWooCommerce
 	function setProductCategoryAddToCart($booking,$productId)
 	{
 		$Vehicle=new CHBSVehicle();
+		$BookingForm=new CHBSBookingForm();
 		
 		/***/
 		
-		$vehicleId=$booking['meta']['vehicle_id'];
+		$productCategoryId=-1;
+		$productCategory=array();
 		
-		$vehicleDictionary=$Vehicle->getDictionary();
+		$bookingFormDictionary=$BookingForm->getDictionary();
+				
+		if(array_key_exists($booking['meta']['booking_form_id'],$bookingFormDictionary))
+		{
+			$productCategoryId=$bookingFormDictionary[$booking['meta']['booking_form_id']]['meta']['woocommerce_add_to_cart_product_category'];
+		}
 		
-		if(!array_key_exists($vehicleId,$vehicleDictionary)) return(false);
-		
-		/***/
-		
-		$vehicleCategory=get_the_terms($vehicleId,CHBSVehicle::getCPTCategoryName());
-		
-		if(!is_array($vehicleCategory)) return(false);
+		if($productCategoryId==-1) return;
 		
 		/***/
 		
 		$wooCommerceCategory=get_terms(array('taxonomy'=>'product_cat','hide_empty'=>false));
-		
 		if(!is_array($wooCommerceCategory)) return(false);
 		
 		/***/
 		
-		$productCategory=array();
-		
-		foreach($vehicleCategory as $vehicleCategoryData)
+		if($productCategoryId==-2)
 		{
-			foreach($wooCommerceCategory as $wooCommerceCategoryData)
+			$vehicleId=$booking['meta']['vehicle_id'];
+
+			$vehicleDictionary=$Vehicle->getDictionary();
+			if(!array_key_exists($vehicleId,$vehicleDictionary)) return(false);
+
+			/***/
+
+			$vehicleCategory=get_the_terms($vehicleId,CHBSVehicle::getCPTCategoryName());
+			if(!is_array($vehicleCategory)) return(false);
+
+			/***/
+
+			foreach($vehicleCategory as $vehicleCategoryData)
 			{
-				if($vehicleCategoryData->slug==$wooCommerceCategoryData->slug)
+				foreach($wooCommerceCategory as $wooCommerceCategoryData)
 				{
-					$productCategory[]=$wooCommerceCategoryData->term_id;
+					if($vehicleCategoryData->slug==$wooCommerceCategoryData->slug)
+					{
+						$productCategory[]=$wooCommerceCategoryData->term_id;
+					}
 				}
 			}
 		}
-
+		else
+		{
+			foreach($wooCommerceCategory as $wooCommerceCategoryData)
+			{
+				if($productCategoryId==$wooCommerceCategoryData->term_id)
+				{
+					$productCategory=array($wooCommerceCategoryData->term_id);
+				}
+			}
+		}
+		
 		if(count($productCategory))
 		{
 			array_unique($productCategory);
@@ -823,7 +929,7 @@ class CHBSWooCommerce
 		
 		/***/
 		
-		$productName=sprintf(__(' A "%s" transfer from "%s"','chauffeur-booking-system'),$TransferType->getTransferTypeName($booking['meta']['transfer_type_id']),$location['pickup']);
+		$productName=sprintf(__('A "%s" transfer from "%s"','chauffeur-booking-system'),$TransferType->getTransferTypeName($booking['meta']['transfer_type_id']),$location['pickup']);
 		
 		if($Validation->isNotEmpty($location['dropoff']))
 			$productName.=sprintf(__(' to "%s"','chauffeur-booking-system'),$location['dropoff']);
@@ -880,9 +986,21 @@ class CHBSWooCommerce
 		if((array_key_exists('booking_id',$productMeta)) && ($productMeta['booking_id']>0))
 		{
 			$Booking=new CHBSBooking();
+			$BookingForm=new CHBSBookingForm();
+			
 			if(($booking=$Booking->getBooking($productMeta['booking_id']))!==false)
 			{
 				$bookingBilling=$Booking->createBilling($productMeta['booking_id']);
+				
+				/***/
+				
+				$bookingForm=array();
+				$bookingFormDictionary=$BookingForm->getDictionary();
+				
+				if(array_key_exists($booking['meta']['booking_form_id'],$bookingFormDictionary))
+				{
+					$bookingForm=$bookingFormDictionary[$booking['meta']['booking_form_id']];
+				}
 				
 				/***/
 				
@@ -928,6 +1046,15 @@ class CHBSWooCommerce
 				$html.=$this->getItemMetaLine(__('Duration: ','chauffeur-booking-system'),$bookingBilling['summary']['duration_s2']);
 				$html.=$this->getItemMetaLine(__('Distance: ','chauffeur-booking-system'),$bookingBilling['summary']['distance_s2']);
 				
+				if(in_array($booking['meta']['service_type_id'],array(1,3)))
+				{
+					if(in_array($booking['meta']['transfer_type_id'],$bookingForm['meta']['vehicle_sum_split']))
+					{
+						$html.=$this->getItemMetaLine(__('Vehicle ride cost (one way): ','chauffeur-booking-system'),CHBSPrice::format($bookingBilling['summary']['vehicle']['one_way']['value_gross'],$booking['meta']['currency_id']));
+						$html.=$this->getItemMetaLine(__('Vehicle ride cost (return): ','chauffeur-booking-system'),CHBSPrice::format($bookingBilling['summary']['vehicle']['return']['value_gross'],$booking['meta']['currency_id']));
+					}
+				}
+				
 				if((is_array($booking['meta']['booking_extra'])) && (count($booking['meta']['booking_extra'])))
 				{
 					$htmlTemp=null;
@@ -935,7 +1062,7 @@ class CHBSWooCommerce
 					foreach($booking['meta']['booking_extra'] as $index=>$value)
 					{
 						if($Validation->isNotEmpty($htmlTemp)) $htmlTemp.=', ';
-						$htmlTemp.=$value['name'].' x '.$value['quantity'];
+						$htmlTemp.=$value['name'].' x '.$value['quantity'].' ('.CHBSPrice::format($value['quantity']*$value['price'],$booking['meta']['currency_id'],true,false).')';
 					}
 					
 					$html.=$this->getItemMetaLine(__('Extras: '),$htmlTemp);
@@ -987,6 +1114,61 @@ class CHBSWooCommerce
 				}
 			}
 		}
+	}
+	
+	/**************************************************************************/
+	
+	function getProductCategoryDictionary()
+	{
+		$dictionary=array();
+		
+		$argument=array('orderby'=>'name','hierarchical'=>true,'taxonomy'=>'product_cat','hide_empty'=>false);
+		
+		$category=get_categories($argument);
+		
+		foreach($category as $categoryData) 
+		{
+			if($categoryData->category_parent==0)
+			{
+				$argument['parent']=$categoryData->term_id;
+				
+				$dictionary[$categoryData->term_id]=array('name_hierarchical'=>$categoryData->name);
+				
+				$subCategory=get_categories($argument);
+				
+				if($subCategory)
+				{
+					foreach($subCategory as $subCategoryData) 
+					{					
+						$dictionary[$subCategoryData->term_id]=array('name_hierarchical'=>'L '.$categoryData->name);
+					}
+				}
+			}
+		}
+		
+		return($dictionary);
+	}
+	
+	/**************************************************************************/
+	
+	function prepareOrderRESTAPI($response,$object,$request)
+	{
+		$orderId=$response->data['id'];
+		
+		$bookingId=(int)get_post_meta($orderId,PLUGIN_CHBS_CONTEXT.'_booking_id',true);
+		
+		if($bookingId>0)
+		{
+			$Booking=new CHBSBooking();
+			
+			if(($booking=$Booking->getBooking($bookingId))!==false)
+			{
+				$response->data['chbs_booking']['data']=$booking;
+				$response->data['chbs_booking']['billing']=$Booking->createBilling($bookingId);
+			}
+		}
+
+		return($response);
 	}
 	
 	/**************************************************************************/

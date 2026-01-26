@@ -5,13 +5,17 @@
 
 class CHBSBookingForm
 {
-    public $fieldMandatory;
-    public $vehicleSortingType;
-    public $calculationMethod;
-    public $maximumBookingNumberTimeUnit;
-
-    public function __construct()
-    {
+	/**************************************************************************/
+	
+	public $fieldMandatory;
+	public $calculationMethod;
+	public $vehicleSortingType;
+	public $maximumBookingNumberTimeUnit;
+	
+	/**************************************************************************/
+	
+	function __construct()
+	{
 		$this->fieldMandatory=array
 		(
 			'client_contact_detail_phone_number'=>array
@@ -65,10 +69,10 @@ class CHBSBookingForm
 		(
 			1=>array(__('Price ascending','chauffeur-booking-system')),
 			2=>array(__('Price descending','chauffeur-booking-system')),
-			3=>array(__('Vehicle number ascending','chauffeur-booking-system')),
-			4=>array(__('Vehicle number descending','chauffeur-booking-system')),
-			5=>array(__('Vehicle name ascending','chauffeur-booking-system')),
-			6=>array(__('Vehicle name descending','chauffeur-booking-system')),
+			3=>array(__('Order ascending','chauffeur-booking-system')),
+			4=>array(__('Order descending','chauffeur-booking-system')),
+			5=>array(__('Name ascending','chauffeur-booking-system')),
+			6=>array(__('Name descending','chauffeur-booking-system')),
 		);
 		
 		$this->calculationMethod=array
@@ -110,6 +114,7 @@ class CHBSBookingForm
 	
 	private function registerCPT()
 	{
+		$BookingCancel=new CHBSBookingCancel();
 		$BookingDriver=new CHBSBookingDriver();
 		
 		register_post_type
@@ -149,7 +154,7 @@ class CHBSBookingForm
 		add_filter('postbox_classes_'.self::getCPTName().'_chbs_meta_box_booking_form',array($this,'adminCreateMetaBoxClass'));
 		
 		add_shortcode(PLUGIN_CHBS_CONTEXT.'_booking_form',array($this,'createBookingForm'));
-		add_shortcode(PLUGIN_CHBS_CONTEXT.'_booking_driver_confirmation',array($BookingDriver,'createConfirmationForm'));
+		add_shortcode(PLUGIN_CHBS_CONTEXT.'_booking_cancel_confirmation',array($BookingCancel,'createConfirmationForm'));
 		add_shortcode(PLUGIN_CHBS_CONTEXT.'_booking_driver_acceptance_confirmation',array($BookingDriver,'createConfirmationForm'));
 		
 		add_filter('manage_edit-'.self::getCPTName().'_columns',array($this,'manageEditColumns')); 
@@ -187,7 +192,9 @@ class CHBSBookingForm
 		$Location=new CHBSLocation();
 		$Currency=new CHBSCurrency();
 		$GoogleMap=new CHBSGoogleMap();
+		$WooCommerce=new CHBSWooCommerce();
 		$ServiceType=new CHBSServiceType();
+		$TransferType=new CHBSTransferType();
 		$EmailAccount=new CHBSEmailAccount();
 		$BookingExtra=new CHBSBookingExtra();
 		$PaymentStripe=new CHBSPaymentStripe();
@@ -212,6 +219,8 @@ class CHBSBookingForm
 		$data['dictionary']['vehicle_category']=$Vehicle->getCategory();
 		
 		$data['dictionary']['service_type']=$ServiceType->getServiceType();
+		$data['dictionary']['transfer_type']=$TransferType->getTransferType();
+		
 		$data['dictionary']['email_account']=$EmailAccount->getDictionary();
 		$data['dictionary']['booking_extra_category']=$BookingExtra->getCategory();
   
@@ -251,6 +260,12 @@ class CHBSBookingForm
 		
 		$data['dictionary']['maximum_booking_number_time_unit']=$this->getMaximumBookingNumberTimeUnit();
 		
+		$data['dictionary']['woocommerce_product_category']=$WooCommerce->getProductCategoryDictionary();
+		
+		CHBSBookingHelper::getBookingTextShortcodes(false,$label);
+		
+		$data['message_shortcode']=$label;
+		
 		$Template=new CHBSTemplate($data,PLUGIN_CHBS_TEMPLATE_PATH.'admin/meta_box_booking_form.php');
 		echo $Template->output();			
 	}
@@ -268,7 +283,7 @@ class CHBSBookingForm
 	function savePost($postId)
 	{	  
 		if(!$_POST) return(false);
-		
+
 		if(CHBSHelper::checkSavePost($postId,PLUGIN_CHBS_CONTEXT.'_meta_box_booking_form_noncename','savePost')===false) return(false);
 		
 		$meta=array();
@@ -282,7 +297,9 @@ class CHBSBookingForm
 		$Country=new CHBSCountry();
 		$Currency=new CHBSCurrency();
 		$Location=new CHBSLocation();
+		$Geofence=new CHBSGeofence();
 		$Validation=new CHBSValidation();
+		$WooCommerce=new CHBSWooCommerce();
 		$ServiceType=new CHBSServiceType();
 		$EmailAccount=new CHBSEmailAccount();
 		$BookingExtra=new CHBSBookingExtra();
@@ -411,6 +428,12 @@ class CHBSBookingForm
 			$meta['step_third_enable']=1;	
 		
 		/***/
+		
+		$meta['phone_number_iti_library_enable']=(int)CHBSHelper::getPostValue('phone_number_iti_library_enable');
+		if(!$Validation->isBool($meta['phone_number_iti_library_enable']))
+			$meta['phone_number_iti_library_enable']=1;			
+		
+		/***/
 				
 		$meta['route_id']=(array)CHBSHelper::getPostValue('route_id');
 		if(in_array(-1,$meta['route_id']))
@@ -435,6 +458,18 @@ class CHBSBookingForm
 			$meta['route_list_item_empty_enable']=0;		
 		
 		$meta['route_list_item_empty_text']=CHBSHelper::getPostValue('route_list_item_empty_text'); 
+		
+		$meta['route_list_autocomplete_enable']=CHBSHelper::getPostValue('route_list_autocomplete_enable');
+		if(!$Validation->isBool($meta['route_list_autocomplete_enable']))
+			$meta['route_list_autocomplete_enable']=0;	
+		
+		$meta['route_pickup_location_field_enable']=CHBSHelper::getPostValue('route_pickup_location_field_enable');
+		if(!$Validation->isBool($meta['route_pickup_location_field_enable']))
+			$meta['route_pickup_location_field_enable']=0;			
+		
+		$meta['route_dropoff_location_field_enable']=CHBSHelper::getPostValue('route_dropoff_location_field_enable');
+		if(!$Validation->isBool($meta['route_dropoff_location_field_enable']))
+			$meta['route_dropoff_location_field_enable']=0;	
 		
 		/***/
 		
@@ -534,7 +569,57 @@ class CHBSBookingForm
 			$meta['duration_min']=1;
 			$meta['duration_max']=24;
 			$meta['duration_step']=1; 
-		}	 
+		}	
+		
+		/***/
+		
+		$meta['duration_distance_min']=CHBSHelper::getPostValue('duration_distance_min');
+		$meta['duration_distance_max']=CHBSHelper::getPostValue('duration_distance_max');		
+		$meta['duration_distance_step']=CHBSHelper::getPostValue('duration_distance_step');	 
+		$meta['duration_distance_list']=CHBSHelper::getPostValue('duration_distance_list');	 
+			
+		if(!$Validation->isNumber($meta['duration_distance_min'],1,9999))
+			$meta['duration_distance_min']=0;	
+		if(!$Validation->isNumber($meta['duration_distance_max'],1,9999))
+			$meta['duration_distance_max']=0;			
+		if(!$Validation->isNumber($meta['duration_distance_step'],1,9999))
+			$meta['duration_distance_step']=1;	   
+		
+		if(($meta['duration_distance_min']>=$meta['duration_distance_max']) || (!count(array_intersect(array(2),$meta['service_type_id']))))
+		{
+			$meta['duration_distance_min']=0;
+			$meta['duration_distance_max']=0;
+			$meta['duration_distance_step']=1; 
+		}	
+		
+		if(CHBSOption::getOption('length_unit')==2)
+		{
+			$meta['duration_distance_min']=$Length->convertUnit($meta['duration_distance_min'],2,1);
+			$meta['duration_distance_max']=$Length->convertUnit($meta['duration_distance_max'],2,1);
+			$meta['duration_distance_step']=$Length->convertUnit($meta['duration_distance_step'],2,1);
+		}
+		
+		$durationDistanceListTarget=array();
+		$durationDistanceListSource=preg_split('/;/',$meta['duration_distance_list']);
+		
+		foreach($durationDistanceListSource as $index=>$value)
+		{
+			if($Validation->isNumber($value,0,9999))
+			{
+				if(CHBSOption::getOption('length_unit')==2)
+				{
+					$value=$Length->convertUnit($value,2,1);
+				}
+				
+				$durationDistanceListTarget[]=$value;	
+			}
+		}
+		
+		$meta['duration_distance_list']=join(';',$durationDistanceListTarget);
+		
+		$meta['duration_distance_included_enable']=CHBSHelper::getPostValue('duration_distance_included_enable');
+		if(!$Validation->isBool($meta['duration_distance_included_enable']))
+			$meta['duration_distance_included_enable']=0;	
 		
 		/***/
 		
@@ -589,13 +674,44 @@ class CHBSBookingForm
 		if(!$Validation->isBool($meta['order_sum_split']))
 			$meta['order_sum_split']=0;  
 		
+		/***/
+		
+		$meta['vehicle_sum_split']=CHBSHelper::getPostValue('vehicle_sum_split');
+		
+		if(!is_array($meta['vehicle_sum_split'])) $meta['vehicle_sum_split']=array(-1);
+		
+		foreach($meta['vehicle_sum_split'] as $index=>$value)
+		{
+			if(!in_array($value,array(0,2,3)))
+				unset($meta['vehicle_sum_split'][$index]);
+		}
+		
+		if(!count($meta['vehicle_sum_split'])) $meta['vehicle_sum_split']=array(-1);
+		if(in_array(-1,$meta['vehicle_sum_split'])) $meta['vehicle_sum_split']=array(-1);
+		
+		/***/
+		
 		$meta['show_net_price_hide_tax']=CHBSHelper::getPostValue('show_net_price_hide_tax');
 		if(!$Validation->isBool($meta['show_net_price_hide_tax']))
 			$meta['show_net_price_hide_tax']=0; 
 		
+		$meta['show_price_before_discount']=CHBSHelper::getPostValue('show_price_before_discount');
+		if(!$Validation->isBool($meta['show_price_before_discount']))
+			$meta['show_price_before_discount']=0; 
+		
 		$meta['tax_rate_geofence_enable']=CHBSHelper::getPostValue('tax_rate_geofence_enable');
 		if(!$Validation->isBool($meta['tax_rate_geofence_enable']))
 			$meta['tax_rate_geofence_enable']=0; 
+		
+		/***/
+		
+		$meta['coupon_enable']=CHBSHelper::getPostValue('coupon_enable');
+		if(!$Validation->isBool($meta['coupon_enable']))
+			$meta['coupon_enable']=0;	
+		
+		$meta['coupon_discount_value_show']=CHBSHelper::getPostValue('coupon_discount_value_show');
+		if(!$Validation->isBool($meta['coupon_discount_value_show']))
+			$meta['coupon_discount_value_show']=0;
 		
 		/***/
 
@@ -632,7 +748,7 @@ class CHBSBookingForm
 		/***/
 		
 		$meta['booking_summary_hide_fee']=CHBSHelper::getPostValue('booking_summary_hide_fee');
-		if(!$Validation->isBool($meta['booking_summary_hide_fee']))
+		if(!in_array($meta['booking_summary_hide_fee'],array(0,1,2)))
 			$meta['booking_summary_hide_fee']=0;		 
 		
 		/***/
@@ -823,6 +939,10 @@ class CHBSBookingForm
 		if(!$Validation->isBool($meta['pickup_time_field_write_enable']))
 			$meta['pickup_time_field_write_enable']=0;  
 		
+		$meta['vehicle_price_calculation_first_step_enable']=CHBSHelper::getPostValue('vehicle_price_calculation_first_step_enable');
+		if(!$Validation->isBool($meta['vehicle_price_calculation_first_step_enable']))
+			$meta['vehicle_price_calculation_first_step_enable']=0;  
+		
 		/***/
 		
 		$meta['booking_extra_button_toggle_visibility_enable']=CHBSHelper::getPostValue('booking_extra_button_toggle_visibility_enable');
@@ -837,6 +957,16 @@ class CHBSBookingForm
 		$meta['booking_extra_note_mandatory_enable']=CHBSHelper::getPostValue('booking_extra_note_mandatory_enable');
 		if(!$Validation->isBool($meta['booking_extra_note_mandatory_enable']))
 			$meta['booking_extra_note_mandatory_enable']=0;  		
+		
+		$meta['booking_extra_price_change_return_percentage']=CHBSHelper::getPostValue('booking_extra_price_change_return_percentage');
+		if(!$Validation->isFloat($meta['booking_extra_price_change_return_percentage'],0.00,9999.99))
+			$meta['booking_extra_price_change_return_percentage']=0;  	
+		else $meta['booking_extra_price_change_return_percentage']=CHBSPrice::formatToSave($meta['booking_extra_price_change_return_percentage']);  	
+
+		$meta['booking_extra_price_change_return_new_ride_percentage']=CHBSHelper::getPostValue('booking_extra_price_change_return_new_ride_percentage');
+		if(!$Validation->isFloat($meta['booking_extra_price_change_return_new_ride_percentage'],0.00,9999.99))
+			$meta['booking_extra_price_change_return_new_ride_percentage']=0;  			
+		else $meta['booking_extra_price_change_return_new_ride_percentage']=CHBSPrice::formatToSave($meta['booking_extra_price_change_return_new_ride_percentage']);  	
 		
 		/***/
 		
@@ -856,14 +986,29 @@ class CHBSBookingForm
 		if(!$Validation->isBool($meta['woocommerce_add_to_cart_enable']))
 			$meta['woocommerce_add_to_cart_enable']=0;	   
 		
+		$meta['woocommerce_add_to_cart_process_booking_enable']=CHBSHelper::getPostValue('woocommerce_add_to_cart_process_booking_enable');
+		if(!$Validation->isBool($meta['woocommerce_add_to_cart_process_booking_enable']))
+			$meta['woocommerce_add_to_cart_process_booking_enable']=0;	   
+		
+		$meta['woocommerce_add_to_cart_update_client_detail_enable']=CHBSHelper::getPostValue('woocommerce_add_to_cart_update_client_detail_enable');
+		if(!$Validation->isBool($meta['woocommerce_add_to_cart_update_client_detail_enable']))
+			$meta['woocommerce_add_to_cart_update_client_detail_enable']=0;	 
+		
+		$meta['woocommerce_add_to_cart_update_client_billing_details_enable']=CHBSHelper::getPostValue('woocommerce_add_to_cart_update_client_billing_details_enable');
+		if(!$Validation->isBool($meta['woocommerce_add_to_cart_update_client_billing_details_enable']))
+			$meta['woocommerce_add_to_cart_update_client_billing_details_enable']=0;	 
+		
 		/***/
 		
-		$meta['coupon_enable']=CHBSHelper::getPostValue('coupon_enable');
-		if(!$Validation->isBool($meta['coupon_enable']))
-			$meta['coupon_enable']=0;	
+		$wooCommerceProductCategory=$WooCommerce->getProductCategoryDictionary();
+		$meta['woocommerce_add_to_cart_product_category']=CHBSHelper::getPostValue('woocommerce_add_to_cart_product_category');
+		if(!((array_key_exists($meta['woocommerce_add_to_cart_product_category'],$wooCommerceProductCategory)) || (in_array($meta['woocommerce_add_to_cart_product_category'],array(-1,-2)))))
+		{
+			$meta['woocommerce_add_to_cart_product_category']=-1;
+		}
 		
 		/***/
-		
+
 		$meta['passenger_adult_enable_service_type_1']=CHBSHelper::getPostValue('passenger_adult_enable_service_type_1');
 		if(!$Validation->isBool($meta['passenger_adult_enable_service_type_1']))
 			$meta['passenger_adult_enable_service_type_1']=0; 
@@ -1058,7 +1203,6 @@ class CHBSBookingForm
 
 						if((!$Validation->isTime($businessHour[$index]['default'])))
 							$businessHour[$index]['default']=$businessHour[$index]['start'];
-					
 					}
 				}
 			}
@@ -1098,9 +1242,11 @@ class CHBSBookingForm
 		
 		/***/
 		
+		$dictionaryVehicle=$Vehicle->getDictionary();
+		
 		$maximumBookingNumber=array();
 		$maximumBookingNumberPost=CHBSHelper::getPostValue('maximum_booking_number');
-		
+	
 		foreach($maximumBookingNumberPost['time_unit'] as $index=>$value)
 		{
 			$t=array($value,
@@ -1136,7 +1282,7 @@ class CHBSBookingForm
 				if(!in_array($t[5],array(1,2,3,4,5,6,7))) continue;
 			}
 			
-			if(!$Validation->isNumber($t[6],0,999999999)) continue;
+			if(!$Validation->isNumber($t[6],-1,999999999)) continue;
 			
 			$s=array('time_unit'=>$value,'number'=>$t[6]);
 			
@@ -1156,6 +1302,33 @@ class CHBSBookingForm
 			{
 				$s['week_day_number']=$t[5];
 			}
+		
+			/**/
+			
+			$vehicle=array();
+			if(count($dictionaryVehicle))
+			{
+				if((array_key_exists('vehicle',$maximumBookingNumberPost)) && (is_array($maximumBookingNumberPost['vehicle'])))
+				{
+					foreach($dictionaryVehicle as $vehicleIndex=>$vehicleValue)
+					{
+						$vehicle[$vehicleIndex]=-1;
+						
+						if((array_key_exists($vehicleIndex,$maximumBookingNumberPost['vehicle'])) && (array_key_exists($index,$maximumBookingNumberPost['vehicle'][$vehicleIndex]['number'])))
+						{
+							$vehicleBookingNumber=$maximumBookingNumberPost['vehicle'][$vehicleIndex]['number'][$index];
+							
+							if($Validation->isNumber($vehicleBookingNumber,-1,999999999))
+							{
+								$vehicle[$vehicleIndex]=$vehicleBookingNumber;
+							}
+						}
+					}
+				}
+			}
+			$s['vehicle']=$vehicle;
+			
+			/***/
 			
 			array_push($maximumBookingNumber,$s);
 		}
@@ -1292,18 +1465,49 @@ class CHBSBookingForm
 			if(!count($meta['driving_zone_restriction_'.$fieldName.'_location_country']))
 				$meta['driving_zone_restriction_'.$fieldName.'_location_country']=array(-1);
 			
-			$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=CHBSHelper::getPostValue('driving_zone_restriction_'.$fieldName.'_location_area_radius');
-			if(!$Validation->isNumber($meta['driving_zone_restriction_'.$fieldName.'_location_area_radius'],0,99999))
-				$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=50;
+			$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=CHBSLength::formatToSave(CHBSHelper::getPostValue('driving_zone_restriction_'.$fieldName.'_location_area_radius'),false,-1);
+			if(!$Validation->isFloat($meta['driving_zone_restriction_'.$fieldName.'_location_area_radius'],0,99999.99,false,1))
+				$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=((int)CHBSOption::getOption('length_unit')===1 ? 50 : 80.4672);
+			
+			if(CHBSOption::getOption('length_unit')==2)
+				$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=$Length->convertUnit($meta['driving_zone_restriction_'.$fieldName.'_location_area_radius'],2,1);
+			
+			$meta['driving_zone_restriction_'.$fieldName.'_location_area_radius']=CHBSLength::formatToSave($meta['driving_zone_restriction_'.$fieldName.'_location_area_radius'],false,1);
 			
 			$meta['driving_zone_restriction_'.$fieldName.'_location_area']=CHBSHelper::getPostValue('driving_zone_restriction_'.$fieldName.'_location_area');
 			$meta['driving_zone_restriction_'.$fieldName.'_location_area_coordinate_lat']=CHBSHelper::getPostValue('driving_zone_restriction_'.$fieldName.'_location_area_coordinate_lat');
 			$meta['driving_zone_restriction_'.$fieldName.'_location_area_coordinate_lng']=CHBSHelper::getPostValue('driving_zone_restriction_'.$fieldName.'_location_area_coordinate_lng');
 		}
-			 
-		/***/
+		
+		$meta['driving_zone_restriction_location_field_relation_type']=CHBSHelper::getPostValue('driving_zone_restriction_location_field_relation_type');
+		if(!in_array($meta['driving_zone_restriction_location_field_relation_type'],array(1,2)))
+			$meta['driving_zone_restriction_location_field_relation_type']=1;	
+		
 		/***/
 		
+		$locationReplace=array();
+		
+		$dictionaryGeofence=$Geofence->getDictionary();
+		
+		$meta['location_replace']=(array)CHBSHelper::getPostValue('location_replace');
+		foreach($meta['location_replace']['geofence'] as $index=>$value)
+		{
+			$d=array($value,$meta['location_replace']['location']['address']['name'][$index],$meta['location_replace']['location']['address']['coordinate_lat'][$index],$meta['location_replace']['location']['address']['coordinate_lng'][$index]);
+
+			if(!array_key_exists($d[0],$dictionaryGeofence)) continue;
+			
+			if($Validation->isEmpty($d[1])) continue;
+			if($Validation->isEmpty($d[2])) continue;
+			if($Validation->isEmpty($d[3])) continue;
+			
+			$locationReplace[]=array('geofence_id'=>$d[0],'location'=>array('name'=>$d[1],'coordinate'=>array('lat'=>$d[2],'lng'=>$d[3])));
+		}
+
+		$meta['location_replace']=$locationReplace;
+		
+		/***/
+		/***/
+				
 		$FormElement=new CHBSBookingFormElement();
 		$FormElement->save($postId);		
 		
@@ -1394,7 +1598,9 @@ class CHBSBookingForm
 		/***/
 		
 		$GoogleMap=new CHBSGoogleMap();
-				
+		
+		$meta['google_map_map_id']=CHBSHelper::getPostValue('google_map_map_id');
+
 		$meta['google_map_default_location_type']=CHBSHelper::getPostValue('google_map_default_location_type');
 		if(!in_array($meta['google_map_default_location_type'],array(1,2)))
 			$meta['google_map_default_location_type']=1;	   
@@ -1424,21 +1630,12 @@ class CHBSBookingForm
 		
 		$meta['google_map_traffic_layer_enable']=CHBSHelper::getPostValue('google_map_traffic_layer_enable');  
 		$meta['google_map_draggable_enable']=CHBSHelper::getPostValue('google_map_draggable_enable');  
-		$meta['google_map_scrollwheel_enable']=CHBSHelper::getPostValue('google_map_scrollwheel_enable');  
 		
 		if(!$Validation->isBool($meta['google_map_traffic_layer_enable']))
 			$meta['google_map_traffic_layer_enable']=0;	 
 		if(!$Validation->isBool($meta['google_map_draggable_enable']))
-			$meta['google_map_draggable_enable']=1;		
-		if(!$Validation->isBool($meta['google_map_scrollwheel_enable']))
-			$meta['google_map_scrollwheel_enable']=1;			 
+			$meta['google_map_draggable_enable']=1;					 
 
-		/***/
-		
-		$meta['google_map_draggable_location_enable']=CHBSHelper::getPostValue('google_map_draggable_location_enable'); 
-		if(!$Validation->isBool($meta['google_map_draggable_location_enable']))
-			$meta['google_map_draggable_location_enable']=0;			  
-		
 		/***/
 		
 		$meta['google_map_map_type_control_enable']=CHBSHelper::getPostValue('google_map_map_type_control_enable');  
@@ -1459,15 +1656,12 @@ class CHBSBookingForm
 		
 		$meta['google_map_zoom_control_enable']=CHBSHelper::getPostValue('google_map_zoom_control_enable');  
 		$meta['google_map_zoom_control_position']=CHBSHelper::getPostValue('google_map_zoom_control_position');  
-		$meta['google_map_zoom_control_level']=CHBSHelper::getPostValue('google_map_zoom_control_level'); 
 		
 		if(!$Validation->isBool($meta['google_map_zoom_control_enable']))
 			$meta['google_map_zoom_control_enable']=0;   
 		if(!array_key_exists($meta['google_map_zoom_control_position'],$GoogleMap->getPosition()))
 			$meta['google_map_zoom_control_position']='TOP_CENTER';		
-		if(!$Validation->isNumber($meta['google_map_zoom_control_level'],1,21))
-			$meta['google_map_zoom_control_position']=6;   
-
+		
 		/***/
 		/***/
 		
@@ -1476,6 +1670,8 @@ class CHBSBookingForm
 		$meta['google_calendar_settings']=CHBSHelper::getPostValue('google_calendar_settings');  
 		$meta['google_calendar_regenerate_token_enable']=CHBSHelper::getPostValue('google_calendar_regenerate_token_enable');  
 		$meta['google_calendar_add_event_action']=CHBSHelper::getPostValue('google_calendar_add_event_action');  
+		$meta['google_calendar_event_title']=CHBSHelper::getPostValue('google_calendar_event_title');
+		$meta['google_calendar_event_description']=CHBSHelper::getPostValue('google_calendar_event_description');
 		
 		if(!$Validation->isBool($meta['google_calendar_enable']))
 			$meta['google_calendar_enable']=0;		
@@ -1519,7 +1715,7 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'service_type_id',array(1,2,3));
 		CHBSHelper::setDefault($meta,'service_type_id_default',1);
 		
-		CHBSHelper::setDefault($meta,'transfer_type_enable_1',array());
+		CHBSHelper::setDefault($meta,'transfer_type_enable_1',array(1,2,3));
 		CHBSHelper::setDefault($meta,'transfer_type_enable_3',array(1,2,3));
 		CHBSHelper::setDefault($meta,'transfer_type_list_item_empty_enable',0);
 		CHBSHelper::setDefault($meta,'transfer_type_list_item_empty_text','');		
@@ -1537,6 +1733,9 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'route_id',array(-1));
 		CHBSHelper::setDefault($meta,'route_list_item_empty_enable',0);
 		CHBSHelper::setDefault($meta,'route_list_item_empty_text','');
+		CHBSHelper::setDefault($meta,'route_list_autocomplete_enable',0);
+		CHBSHelper::setDefault($meta,'route_pickup_location_field_enable',0);
+		CHBSHelper::setDefault($meta,'route_dropoff_location_field_enable',0);
 		
 		CHBSHelper::setDefault($meta,'booking_extra_category_id',array(-1));
 		
@@ -1555,6 +1754,12 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'duration_max',24);
 		CHBSHelper::setDefault($meta,'duration_step',1);
 		
+		CHBSHelper::setDefault($meta,'duration_distance_min',0);
+		CHBSHelper::setDefault($meta,'duration_distance_max',0);
+		CHBSHelper::setDefault($meta,'duration_distance_step',1);
+		CHBSHelper::setDefault($meta,'duration_distance_list','');
+		CHBSHelper::setDefault($meta,'duration_distance_included_enable',0);
+		
 		CHBSHelper::setDefault($meta,'waypoint_duration_enable',0);
 		CHBSHelper::setDefault($meta,'waypoint_duration_minimum_value',1);
 		CHBSHelper::setDefault($meta,'waypoint_duration_maximum_value',60);
@@ -1566,11 +1771,18 @@ class CHBSBookingForm
 		
 		CHBSHelper::setDefault($meta,'booking_vehicle_interval',0);
 		
-		CHBSHelper::setDefault($meta,'booking_summary_hide_fee',0);
+		CHBSHelper::setDefault($meta,'booking_summary_hide_fee',2);
 		CHBSHelper::setDefault($meta,'price_hide',0);	   
 		CHBSHelper::setDefault($meta,'order_sum_split',0);	   
+		CHBSHelper::setDefault($meta,'vehicle_sum_split',array(-1));	   
+		
 		CHBSHelper::setDefault($meta,'show_net_price_hide_tax',0);  
+		CHBSHelper::setDefault($meta,'show_price_before_discount',0);  
+		
 		CHBSHelper::setDefault($meta,'tax_rate_geofence_enable',0);  
+		
+		CHBSHelper::setDefault($meta,'coupon_enable',0);
+		CHBSHelper::setDefault($meta,'coupon_discount_value_show',0);
 		
 		CHBSHelper::setDefault($meta,'gratuity_enable',0);
 		CHBSHelper::setDefault($meta,'gratuity_admin_type',1);
@@ -1630,12 +1842,16 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'suitcase_number_vehicle_list_enable',1);
 		CHBSHelper::setDefault($meta,'use_my_location_link_enable',0);
 		CHBSHelper::setDefault($meta,'pickup_time_field_write_enable',1);
+		CHBSHelper::setDefault($meta,'vehicle_price_calculation_first_step_enable',0);
 		
 		CHBSHelper::setDefault($meta,'booking_extra_button_toggle_visibility_enable',0);
 		CHBSHelper::setDefault($meta,'booking_extra_visibility_status',1);
 		
 		CHBSHelper::setDefault($meta,'booking_extra_note_display_enable',0);
 		CHBSHelper::setDefault($meta,'booking_extra_note_mandatory_enable',0);
+		
+		CHBSHelper::setDefault($meta,'booking_extra_price_change_return_percentage',100);
+		CHBSHelper::setDefault($meta,'booking_extra_price_change_return_new_ride_percentage',100);
 
 		$fieldMandatory=array();
 		foreach($this->fieldMandatory as $index=>$value)
@@ -1649,8 +1865,10 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'woocommerce_enable',0);
 		CHBSHelper::setDefault($meta,'woocommerce_account_enable_type',1);
 		CHBSHelper::setDefault($meta,'woocommerce_add_to_cart_enable',0);
-		
-		CHBSHelper::setDefault($meta,'coupon_enable',0);
+		CHBSHelper::setDefault($meta,'woocommerce_add_to_cart_process_booking_enable',0);
+		CHBSHelper::setDefault($meta,'woocommerce_add_to_cart_update_client_detail_enable',0);
+		CHBSHelper::setDefault($meta,'woocommerce_add_to_cart_update_client_billing_details_enable',0);
+		CHBSHelper::setDefault($meta,'woocommerce_add_to_cart_product_category',-1);
 		
 		CHBSHelper::setDefault($meta,'passenger_adult_enable_service_type_1',0);
 		CHBSHelper::setDefault($meta,'passenger_children_enable_service_type_1',0);
@@ -1703,6 +1921,7 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'google_recaptcha_enable',0);
 		
 		CHBSHelper::setDefault($meta,'step_third_enable',1);
+		CHBSHelper::setDefault($meta,'phone_number_iti_library_enable',1);
 		
 		/***/
 		
@@ -1771,20 +1990,24 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_country','-1');
 
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_pickup_location_area','');
-		CHBSHelper::setDefault($meta,'driving_zone_restriction_pickup_location_area_radius','50');
+		CHBSHelper::setDefault($meta,'driving_zone_restriction_pickup_location_area_radius',((int)CHBSOption::getOption('length_unit')===1 ? 50 : 80.4672));
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_pickup_location_area_coordinate_lat','');
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_pickup_location_area_coordinate_lng','');
 
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_waypoint_location_area','');
-		CHBSHelper::setDefault($meta,'driving_zone_restriction_waypoint_location_area_radius','50');
+		CHBSHelper::setDefault($meta,'driving_zone_restriction_waypoint_location_area_radius',((int)CHBSOption::getOption('length_unit')===1 ? 50 : 80.4672));
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_waypoint_location_area_coordinate_lat','');
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_waypoint_location_area_coordinate_lng','');
 		
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_area','');
-		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_area_radius','50');
+		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_area_radius',((int)CHBSOption::getOption('length_unit')===1 ? 50 : 80.4672));
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_area_coordinate_lat','');
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_dropoff_location_area_coordinate_lng','');
-			  
+		
+		CHBSHelper::setDefault($meta,'driving_zone_restriction_location_field_relation_type',1);
+		
+		CHBSHelper::setDefault($meta,'location_replace',array());
+		
 		/***/
 		
 		CHBSHelper::setDefault($meta,'booking_new_sender_email_account_id',-1);
@@ -1820,6 +2043,8 @@ class CHBSBookingForm
 		
 		/***/
 				
+		CHBSHelper::setDefault($meta,'google_map_map_id','');
+		
 		CHBSHelper::setDefault($meta,'google_map_default_location_type',1);
 		CHBSHelper::setDefault($meta,'google_map_default_location_fixed','');
 		CHBSHelper::setDefault($meta,'google_map_default_location_fixed_coordinate_lat','');
@@ -1829,10 +2054,7 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'google_map_route_type',1);
 		
 		CHBSHelper::setDefault($meta,'google_map_draggable_enable',1);
-		CHBSHelper::setDefault($meta,'google_map_scrollwheel_enable',1);
 		CHBSHelper::setDefault($meta,'google_map_traffic_layer_enable',0);
-		
-		CHBSHelper::setDefault($meta,'google_map_draggable_location_enable',0);
 		
 		CHBSHelper::setDefault($meta,'google_map_map_type_control_enable',0);
 		CHBSHelper::setDefault($meta,'google_map_map_type_control_id','SATELLITE');
@@ -1842,7 +2064,6 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'google_map_zoom_control_enable',0);
 		CHBSHelper::setDefault($meta,'google_map_zoom_control_style','DEFAULT');
 		CHBSHelper::setDefault($meta,'google_map_zoom_control_position','TOP_CENTER');
-		CHBSHelper::setDefault($meta,'google_map_zoom_control_level',6);
 		
 		CHBSHelper::setDefault($meta,'google_map_pan_control_enable',0);
 		CHBSHelper::setDefault($meta,'google_map_pan_control_position','TOP_CENTER');		
@@ -1859,10 +2080,15 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'google_calendar_id','');
 		CHBSHelper::setDefault($meta,'google_calendar_regenerate_token_enable',1);
 		CHBSHelper::setDefault($meta,'google_calendar_settings','');
+		CHBSHelper::setDefault($meta,'google_calendar_event_title','');
+		CHBSHelper::setDefault($meta,'google_calendar_event_description','');
 		
 		/***/
 		
 		CHBSHelper::setDefault($meta,'style_color',array_fill(1,count($BookingFormStyle->getColor()),''));   
+		
+		$metaTemp=apply_filters(PLUGIN_CHBS_CONTEXT.'_set_post_meta_default',null,$meta);
+		if(is_array($metaTemp)) $meta=$metaTemp;
 	}
 	
 	/**************************************************************************/
@@ -1961,20 +2187,24 @@ class CHBSBookingForm
 			'widget_booking_form_url'=>'',
 			'widget_booking_form_new_window'=>0,
             'widget_second_step'=>1,
+			'fixed_location_pickup_id'=>0,
+			'fixed_location_dropoff_id'=>0,
 			'css_class'=>''
 		);
 		
 		$data=array();
 		
-		$attribute=shortcode_atts($default,$attr);			   
-
-		if(!is_array($data=$this->checkBookingForm($attribute['booking_form_id'],$attribute['currency'],true))) return;
+		$attribute=shortcode_atts($default,$attr);	
 		
+		if(!is_array($data=$this->checkBookingForm($attribute['booking_form_id'],$attribute['currency'],true))) return;
+
 		if(!CHBSPlugin::isAutoRideTheme())
 		{
 			$Plugin=new CHBSPlugin();
 			$Plugin->addLibrarySingle('script','chbs-google-map');
 		}
+		
+		$data['shortcode_attribute']=$attribute;
 		
 		$data['ajax_url']=admin_url('admin-ajax.php');
 		
@@ -2038,7 +2268,9 @@ class CHBSBookingForm
 		
 		$data=array();
 		
+		$Date=new CHBSDate();
 		$Driver=new CHBSDriver();
+		$License=new CHBSLicense();
 		$Validation=new CHBSValidation();
 		$WooCommerce=new CHBSWooCommerce();
 		$BookingEdit=new CHBSBookingEdit();
@@ -2057,6 +2289,8 @@ class CHBSBookingForm
 		$data['dictionary']['geofence']=$Geofence->getDictionary();
 		$data['dictionary']['tax_rate']=$TaxRate->getDictionary();
 
+		$data['license_verified']=$License->isVerified();
+		
 		/***/
 		
 		$BookingEdit->setBooking();
@@ -2073,7 +2307,31 @@ class CHBSBookingForm
 		
 		$data['post']=$bookingForm[$bookingFormId]['post'];
 		$data['meta']=$bookingForm[$bookingFormId]['meta'];
+		
+		/***/
+		
+		if((array_key_exists('location_replace',$data['meta'])) && (is_array($data['meta']['location_replace'])) && (count($data['meta']['location_replace'])))
+		{
+			foreach($data['meta']['location_replace'] as $index=>$value)
+			{
+				if(!array_key_exists($value['geofence_id'],$data['dictionary']['geofence'])) continue;
+				
+				$data['meta']['location_replace'][$index]['geofence_shape_coordinate']=$data['dictionary']['geofence'][$value['geofence_id']]['meta']['shape_coordinate'];
+			}
+		}
 	   
+		/***/
+		
+		if(is_array($data['meta']['business_hour']))
+		{
+			foreach($data['meta']['business_hour'] as $index=>$value)
+			{
+				$data['meta']['business_hour'][$index]['default_format']='';
+				if((array_key_exists('default',$value)) && ($Validation->isTime($value['default'])))
+					$data['meta']['business_hour'][$index]['default_format']=$Date->formatTimeToDisplay($value['default']);
+			}
+		}
+		
 		/***/
 				
 		if($Validation->isNotEmpty(CHBSHelper::getGetValue('currency',false)))
@@ -2200,7 +2458,7 @@ class CHBSBookingForm
 				'button'=>array
 				(
 					'prev'=>__('Enter contact details','chauffeur-booking-system'),
-					'next'=>((int)$data['meta']['price_hide']===1 ? __('Send now','chauffeur-booking-system') : __('Book now','chauffeur-booking-system'))
+					'next'=>((int)$data['meta']['price_hide']===1 ? __('Send now','chauffeur-booking-system') : ($WooCommerce->isAddToCartEnable($data) ? __('Add to cart','chauffeur-booking-system') : __('Book now','chauffeur-booking-system')))
 				)
 			)			
 		);
@@ -2336,6 +2594,8 @@ class CHBSBookingForm
 		
 		$data['meta']['waypoint_enable']=($data['meta']['waypoint_enable']==1) && (!count($data['meta']['location_fixed_pickup_service_type_1'])) && (!count($data['meta']['location_fixed_dropoff_service_type_1']));
 
+		$data['duration_distance']=$this->getBookingFormDurationDistance($data['meta']);
+		
 		/***/
 		
 		$GoogleReCaptcha=new CHBSGoogleReCaptcha();
@@ -2384,10 +2644,37 @@ class CHBSBookingForm
 		
 		$vehicleIdDefault=0;
 		
-		$dictionary=$Vehicle->getDictionary(array(),1,true);
+		$dictionary=$Vehicle->getDictionary(array(),$bookingForm['meta']['vehicle_sorting_type'],true);
 		
 		$dictionary=$this->getBookingFormVehicleFilter($bookingForm,$dictionary);
 				
+		/****/
+		
+		$data=CHBSHelper::getPostOption();
+		
+		$passengerSum=0;
+		
+		if(array_key_exists('service_type_id',$data))
+		{
+			if(CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$data['service_type_id'],'adult'))
+				$passengerSum+=(int)$data['passenger_adult_service_type_'.$data['service_type_id']];
+			if(CHBSBookingHelper::isPassengerEnable($bookingForm['meta'],$data['service_type_id'],'children'))
+				$passengerSum+=(int)$data['passenger_children_service_type_'.$data['service_type_id']];
+		}
+		
+		if($passengerSum>0)
+		{
+			foreach($dictionary as $index=>$value)
+			{
+				if($passengerSum>$value['meta']['passenger_count'])
+				{
+					unset($dictionary[$index]);
+				}
+			}
+		}
+
+		/***/
+		
 		if(count($dictionary)===1) $vehicleIdDefault=key($dictionary);
 		else
 		{
@@ -2411,11 +2698,34 @@ class CHBSBookingForm
 		
 		/***/
 		
+		$category=array();
+		
 		if(count($bookingForm['meta']['vehicle_category_id']))
 			$category=array_diff($bookingForm['meta']['vehicle_category_id'],array(-1));
 		
-		$dictionary=$Vehicle->getDictionary(array('category_id'=>$category),$bookingForm['meta']['vehicle_sorting_type']);
-			
+		if(count($category))
+		{
+			foreach($dictionary as $vehicleIndex=>$vehicleValue)
+			{
+				$vehicleCategory=wp_get_post_terms($vehicleIndex,CHBSVehicle::getCPTCategoryName());
+
+				$found=false;
+
+				foreach($vehicleCategory as $vehicleCategoryIndex=>$vehicleCategoryValue)
+				{
+					if(in_array((int)$vehicleCategoryValue->{'term_id'},$category))
+					{
+						$found=true;
+						break;
+					}
+				}
+
+				if(!$found) unset($dictionary[$vehicleIndex]);
+			}
+		}
+
+		/***/
+		
 		$data=CHBSHelper::getPostOption();
 				
 		if(isset($data['service_type_id']))
@@ -2551,7 +2861,8 @@ class CHBSBookingForm
 		$AVRule=new CHBSAVRule();
 		$ServiceType=new CHBSServiceType();
 		$TransferType=new CHBSTransferType();
-		
+		$GeofenceChecker=new CHBSGeofenceChecker();
+			
 		if(in_array(-2,$bookingForm['meta']['booking_extra_category_id']))
 			return(array());
 		
@@ -2599,7 +2910,21 @@ class CHBSBookingForm
 						if(!in_array($transferTypeId,$value['meta']['transfer_type_id_enable']))
 							unset($dictionary[$index]);
 					}
-				}			
+				}	
+				if(!in_array(-1,$value['meta']['geofence_pickup']))
+				{
+					if($GeofenceChecker->locationInGeofence($value['meta']['geofence_pickup'],$bookingForm['dictionary']['geofence'],$data['pickup_location_coordinate_service_type_'.$serviceTypeId])===false)
+					{
+						unset($dictionary[$index]);
+					}
+				}
+				if(!in_array(-1,$value['meta']['geofence_dropoff']))
+				{				
+					if($GeofenceChecker->locationInGeofence($value['meta']['geofence_dropoff'],$bookingForm['dictionary']['geofence'],$data['dropoff_location_coordinate_service_type_'.$serviceTypeId])===false)
+					{
+						unset($dictionary[$index]);
+					}
+				}
 			}
 		}
 		
@@ -2683,7 +3008,7 @@ class CHBSBookingForm
 			if($bookingForm===-3)
 			{
 				$response['step']=1;
-				$this->setErrorGlobal($response,__('Cannot find at least one vehicle available in selected time period.','chauffeur-booking-system'));
+				$this->setErrorGlobal($response,__('No vehicles available in the selected time period.','chauffeur-booking-system'));
 				$this->createFormResponse($response);
 			}
 		}
@@ -2711,6 +3036,34 @@ class CHBSBookingForm
 		$data['step_request']=$this->getAvailableStepNumber($data['step'],$data['step_request'],$bookingForm);
 		
 		/***/
+		/***/
+		
+		if((int)$data['vehicle_price_calculation_first_step_action']!==0)
+		{
+			$data=CHBSBookingHelper::fillBookingFormSampleData($data);
+		}
+		
+		/***/
+		
+		if((int)CHBSOption::getOption('google_map_server_data_validation_enable')===1)
+		{
+			if($data['step_request']>4)
+			{
+				$GoogleMapAPI=new CHBSGoogleMapAPI();
+				$result=$GoogleMapAPI->validateBookingFormData($bookingForm,$data);
+
+				if($result<0)
+				{
+					$this->setErrorGlobal($response,__('Invalid ride details.','chauffeur-booking-system'));
+
+					$response['step']=1;
+					$response['step_request']=1;
+
+					$this->createFormResponse($response);	
+				}
+			}
+		}
+		
 		/***/
 		
 		if($data['step_request']>1)
@@ -2789,7 +3142,7 @@ class CHBSBookingForm
 				if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$data['pickup_time_service_type_'.$data['service_type_id']],date_i18n('Y-m-d H:i')),array(2)))
 				{
 					$dateTimeError=true;
-					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_date_service_type_'.$data['service_type_id'],false),__('Pickup date and time has to be later than current one.','chauffeur-booking-system'));					
+					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_date_service_type_'.$data['service_type_id'],false),__('Pickup date and time have to be later than the current time.','chauffeur-booking-system'));					
 				}					
 			}			
 			
@@ -2803,7 +3156,7 @@ class CHBSBookingForm
 					if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$data['pickup_time_service_type_'.$data['service_type_id']],$data['return_date_service_type_'.$data['service_type_id']].' '.$data['return_time_service_type_'.$data['service_type_id']]),array(0,1)))
 					{
 						$dateTimeError=true;
-						$this->setErrorLocal($response,CHBSHelper::getFormName('return_date_service_type_'.$data['service_type_id'],false),__('Return date and time has to be later than pick up date and time.','chauffeur-booking-system'));					
+						$this->setErrorLocal($response,CHBSHelper::getFormName('return_date_service_type_'.$data['service_type_id'],false),__('Return date and time have to be later than pickup date and time.','chauffeur-booking-system'));					
 					}
 				}
 			}		  
@@ -2832,6 +3185,7 @@ class CHBSBookingForm
 					$bookingPeriodFrom=0;
 				
 				list($date1,$date2)=$this->getDatePeriod($data,$bookingForm,'pickup',$bookingPeriodFrom,$bookingPeriodType);
+				
 				if($Date->compareDate($date1,$date2)===2)
 				{
 					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_date_service_type_'.$data['service_type_id'],false),__('Enter a valid date.','chauffeur-booking-system'));
@@ -2959,7 +3313,7 @@ class CHBSBookingForm
 					{
 						if(!$Date->timeInRange($data['return_time_service_type_'.$data['service_type_id']],$bookingForm['meta']['business_hour'][$number]['start'],$bookingForm['meta']['business_hour'][$number]['stop']))
 						{
-							$this->setErrorLocal($response,CHBSHelper::getFormName('return_time_service_type_'.$data['service_type_id'],false),__('Enter a valid time in format.','chauffeur-booking-system'));
+							$this->setErrorLocal($response,CHBSHelper::getFormName('return_time_service_type_'.$data['service_type_id'],false),__('Enter a valid time in the correct format.','chauffeur-booking-system'));
 							$dateTimeError=true;
 						}
 					}
@@ -3026,7 +3380,7 @@ class CHBSBookingForm
 									if(!in_array(-1,$t[$bookingFormId]))
 									{
 										if(in_array($data['fixed_location_dropoff_service_type_'.$data['service_type_id']],$t[$bookingFormId]))
-											$this->setErrorLocal($response,CHBSHelper::getFormName('fixed_location_dropoff_service_type_'.$data['service_type_id'],false),__('This drop-off location is not available for selected pickup location.','chauffeur-booking-system'));
+											$this->setErrorLocal($response,CHBSHelper::getFormName('fixed_location_dropoff_service_type_'.$data['service_type_id'],false),__('This drop-off location is not available for the selected pickup location.','chauffeur-booking-system'));
 									}
 								}
 							}
@@ -3281,11 +3635,13 @@ class CHBSBookingForm
 		}		
 		
 		/***/
-						
+		
 		if($data['step_request']>2)
 		{
 			$error=false;
-			
+		
+			/***/
+
 			if(!array_key_exists($data['vehicle_id'],$bookingForm['dictionary']['vehicle']))
 			{
 				$error=true;
@@ -3423,7 +3779,7 @@ class CHBSBookingForm
 		{
 			if($data['step_request']>3)
 			{
-				if((int)$bookingForm['meta']['step_third_enable']===1)
+				if(!in_array(3,$bookingForm['step']['disable']))
 				{
 					$error=false;
 
@@ -3532,15 +3888,18 @@ class CHBSBookingForm
 
 						if(!CHBSBookingHelper::isPayment($data['payment_id'],$bookingForm['meta'],3))
 							$this->setErrorGlobal($response,__('Select a payment method.','chauffeur-booking-system'));		
-
-						$BookingFormElement=new CHBSBookingFormElement();
-						$response['agreement_html']=$BookingFormElement->createAgreement($bookingForm['meta'],$data['service_type_id']);
 					}
 
 					if(isset($response['error']))
 					{
 						$data['step']=$data['step_request']=$response['step']=3;
 					} 
+				}
+				
+				if(!$WooCommerce->isAddToCartEnable($bookingForm))
+				{
+					$BookingFormElement=new CHBSBookingFormElement();
+					$response['agreement_html']=$BookingFormElement->createAgreement($bookingForm['meta'],$data['service_type_id']);
 				}
 			}
 		}
@@ -3553,9 +3912,12 @@ class CHBSBookingForm
 			{
 				if(!in_array(4,$bookingForm['step']['disable']))
 				{
-					$error=$BookingFormElement->validateAgreement($bookingForm['meta'],$data);
-					if($error)
-						$this->setErrorGlobal($response,__('Approve all agreements.','chauffeur-booking-system'));
+					if(!$WooCommerce->isAddToCartEnable($bookingForm))
+					{
+						$error=$BookingFormElement->validateAgreement($bookingForm['meta'],$data);
+						if($error)
+							$this->setErrorGlobal($response,__('Approve all agreements.','chauffeur-booking-system'));
+					}
 				}
 				
 				if(isset($response['error']))
@@ -3568,6 +3930,8 @@ class CHBSBookingForm
 
 					$bookingId=$Booking->sendBooking($data,$bookingForm);
 					
+					$response['booking_id']=$bookingId;  
+					
 					/***/
 					
 					$booking=$Booking->getBooking($bookingId);
@@ -3577,9 +3941,18 @@ class CHBSBookingForm
 						if(!$WooCommerce->isEnable($bookingForm['meta']))
 						{
 							if(!$Payment->isPayment($data['payment_id']))
+							{
 								$data['payment_id']=0;
+							}
+							
+							/***/
+							
+							$response['step']=5;
+							$response['payment_id']=(int)$data['payment_id'];  
 
-							if($data['payment_id']!=0)
+							$bookingBilling=$Booking->createBilling($bookingId);			  
+							
+							if($response['payment_id']!==0)
 							{
 								$payment=$Payment->getPayment($data['payment_id']);
 
@@ -3591,48 +3964,55 @@ class CHBSBookingForm
 								$response['payment_prefix']=preg_replace('/_/','-',$payment[1]);
 							}
 							
-							$response['step']=5;
-							$response['payment_id']=$data['payment_id'];  
-
-							if(in_array($data['payment_id'],array(2,3)))
-							{
-								$bookingBilling=$Booking->createBilling($bookingId);			  
-							}
+							/***/
 							
-							if(in_array($data['payment_id'],array(1,4,5)))
-							{
-								$response['payment_'.$Payment->getPaymentPrefix($data['payment_id']).'_success_url_address']=esc_url($bookingForm['meta']['payment_'.$Payment->getPaymentPrefix($data['payment_id']).'_success_url_address']);
-							}
-							elseif($data['payment_id']==2)
-							{
-								$PaymentStripe=new CHBSPaymentStripe();
+							$r=apply_filters('chbs_payment_prepare_request_data',null,$response,$bookingForm,$booking,$bookingBilling,$data['post_id']);
 							
-								$sessionId=$PaymentStripe->createSession($booking,$bookingBilling,$bookingForm);
-							
-								$response['stripe_session_id']=$sessionId;
-								$response['stripe_redirect_duration']=$bookingForm['meta']['payment_stripe_redirect_duration'];
-								$response['stripe_publishable_key']=$bookingForm['meta']['payment_stripe_api_key_publishable'];
-								
-								if($sessionId===false)
-								{
-									$this->setErrorGlobal($response,__('An error occurs during processing this payment. Plugin cannot continue the work.','chauffeur-booking-system'));
-								}
-							}
-							elseif($data['payment_id']==3)
+							if($r===false)
 							{
-								$response['form']['item_name']=$booking['post']->post_title;
-								$response['form']['item_number']=$booking['post']->ID;
-
-								$response['form']['currency_code']=$booking['meta']['currency_id'];
-								
-								$response['form']['amount']=$bookingBilling['summary']['pay'];
-								
-								$response['payment_paypal_redirect_duration']=$bookingForm['meta']['payment_paypal_redirect_duration'];
+								$this->setErrorGlobal($response,__('An error occurs during processing this payment. Plugin cannot continue the work.','chauffeur-booking-system'));
+							}
+							else if((is_array($r)) && (array_key_exists('payment_process',$r)))
+							{
+								$response=$r;
 							}
 							else
 							{
-								$response['payment_id']=-2;
-								$response['payment_disable_success_url_address']=esc_url($bookingForm['meta']['payment_disable_success_url_address']);
+								if(!$Payment->isPaymentOnline($response['payment_id']))
+								{
+									$response['payment_'.$Payment->getPaymentPrefix($data['payment_id']).'_success_url_address']=esc_url($bookingForm['meta']['payment_'.$Payment->getPaymentPrefix($data['payment_id']).'_success_url_address']);
+								}
+								elseif($data['payment_id']==2)
+								{
+									$PaymentStripe=new CHBSPaymentStripe();
+
+									$sessionId=$PaymentStripe->createSession($booking,$bookingBilling,$bookingForm);
+
+									$response['stripe_session_id']=$sessionId;
+									$response['stripe_redirect_duration']=$bookingForm['meta']['payment_stripe_redirect_duration'];
+									$response['stripe_publishable_key']=$bookingForm['meta']['payment_stripe_api_key_publishable'];
+
+									if($sessionId===false)
+									{
+										$this->setErrorGlobal($response,__('An error occurs during processing this payment. Plugin cannot continue the work.','chauffeur-booking-system'));
+									}
+								}
+								elseif($data['payment_id']==3)
+								{
+									$response['form']['item_name']=$booking['post']->post_title;
+									$response['form']['item_number']=$booking['post']->ID;
+
+									$response['form']['currency_code']=$booking['meta']['currency_id'];
+
+									$response['form']['amount']=$bookingBilling['summary']['pay'];
+
+									$response['payment_paypal_redirect_duration']=$bookingForm['meta']['payment_paypal_redirect_duration'];
+								}
+								else
+								{
+									$response['payment_id']=-2;
+									$response['payment_disable_success_url_address']=esc_url($bookingForm['meta']['payment_disable_success_url_address']);
+								}
 							}
 						}
 						else
@@ -3648,8 +4028,8 @@ class CHBSBookingForm
 					}
 					else
 					{
-						$response['step']=5;
-						$response['payment_id']=1;						
+						$response['payment_id']=-2;
+						$response['payment_disable_success_url_address']=esc_url($bookingForm['meta']['payment_disable_success_url_address']);					
 					}
 				}
 			}
@@ -3658,17 +4038,19 @@ class CHBSBookingForm
 		/***/
 		/***/
 		
-		if($data['step_request']==2)
+		if(($data['step_request']==2) || (($data['step']==1) && ((int)$data['vehicle_price_calculation_first_step_action']!=0)))
 		{
 			$redirectToUrlAddress=null;
 			
-			$vehicleHtml=$this->vehicleFilter(false,$redirectToUrlAddress);
+			$vehicleHtml=$this->vehicleFilter(false,$redirectToUrlAddress,$vehiclePriceCalculationStepFirst);
 			
 			if($Validation->isNotEmpty($vehicleHtml))
 			{
 				$response['vehicle']=$vehicleHtml;
 				$response['vehicle_passenger_filter_field']=$this->createVehiclePassengerFilterField($bookingForm['vehicle_passenger_count_range']['min'],$bookingForm['vehicle_passenger_count_range']['max'],$passengerSum);
 			
+				$response['vehicle_price_calculation_step_first']=$vehiclePriceCalculationStepFirst;
+				
 				if(!is_null($redirectToUrlAddress))
 				{
 					$response['redirect_to_url_address']=$redirectToUrlAddress;
@@ -3677,7 +4059,7 @@ class CHBSBookingForm
 			else 
 			{
 				$response['step']=1;
-				$this->setErrorGlobal($response,__('There are no vehicles which match your filter criteria.','chauffeur-booking-system'));
+				$this->setErrorGlobal($response,__('There are no vehicles that match your filter criteria.','chauffeur-booking-system'));
 				$this->createFormResponse($response);
 			}
 
@@ -3743,7 +4125,7 @@ class CHBSBookingForm
 		
 		if($bookingPeriodType===-1)
 			$bookingPeriodType=$bookingForm['meta']['booking_period_type'];
-		
+
 		if((int)$bookingPeriodType===1)
 		{
 			$date[0]=$data[$type.'_date_service_type_'.$data['service_type_id']];
@@ -3850,15 +4232,27 @@ class CHBSBookingForm
 			return(null);
 		}
 		
+		$Coupon=new CHBSCoupon();
 		$Booking=new CHBSBooking();
 		
 		$data['booking_form']=$bookingForm;
 			  
 		if(($price=$Booking->calculatePrice($data,null,$data['booking_form']['meta']['booking_summary_hide_fee'],true))===false) return(null);
 		
+		$priceWithoutCoupon=null;
+		if((int)$data['booking_form']['meta']['coupon_discount_value_show']===1)
+		{
+			$coupon=$Coupon->checkCode();
+			
+			if($coupon!==false)
+			{
+				if(($priceWithoutCoupon=$Booking->calculatePrice($data,null,$data['booking_form']['meta']['booking_summary_hide_fee'],true,false))===false) return(null);
+			}
+		}
+		
 		CHBSBookingHelper::getPriceType($data['booking_form'],$priceType,$sumType,$showTax,$data['step']);
 		
-		if((int)$data['booking_form']['meta']['booking_summary_hide_fee']===0)
+		if(in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(0,2)))
 		{
 			if($price['initial']['sum'][$priceType]['value']!=0)
 			{
@@ -3924,13 +4318,33 @@ class CHBSBookingForm
 		
 		if($price['vehicle']['sum'][$priceType]['value']!=0)
 		{
+			$priceVehicleIndex=in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(2)) ? 'vehicle_exclude_fee' : 'vehicle';
+		
 			$html.=
 			'
 				<div class="chbs-summary-price-element-vehicle-fee">
 					<span>'.__('Selected vehicle','chauffeur-booking-system').'</span>
-					<span>'.$price['vehicle']['sum'][$priceType]['format'].'</span>
+					<span>'.$price[$priceVehicleIndex]['sum'][$priceType]['format'].'</span>
 				</div>
 			';
+			
+			if(in_array($data['service_type_id'],array(1,3)))
+			{
+				if(in_array($data['transfer_type_service_type_'.$data['service_type_id']],$bookingForm['meta']['vehicle_sum_split']))
+				{
+					$html.=
+					'
+						<div class="chbs-summary-price-element-vehicle-fee-one-way">
+							<span>'.__('One way','chauffeur-booking-system').'</span>
+							<span>'.$price['vehicle']['sum_one_way'][$priceType]['format'].'</span>
+						</div>
+						<div class="chbs-summary-price-element-vehicle-fee-return">
+							<span>'.__('Return','chauffeur-booking-system').'</span>
+							<span>'.$price['vehicle']['sum_return'][$priceType]['format'].'</span>
+						</div>
+					';
+				}
+			}
 		}
 		
 		if($price['booking_extra']['sum'][$priceType]['value']!=0)
@@ -3988,15 +4402,29 @@ class CHBSBookingForm
 					<span>'.$price['stripe_fee']['format'].'</span>
 				</div>
 			';				   
-		}		
+		}	
+		
+		/****/
+		
+		$totalLabel=__('Total','chauffeur-booking-system');
+		
+		$discount=CHBSBookingHelper::calculateCouponDiscount($price,$priceWithoutCoupon);
+		if($discount!==false)
+		{
+			$totalLabel=sprintf(__('Total <span>(incl. %s discount)</span>','chauffeur-booking-system'),$discount);
+		}
+		
+		/****/
 		
 		$html.=
 		'
 			<div class="chbs-summary-price-element-total">
-				<span>'.__('Total','chauffeur-booking-system').'</span>
+				<span>'.$totalLabel.'</span>
 				<span>'.$price['total']['sum'][$sumType]['format'].'</span>
 			</div>
-		';			
+		';	
+
+		/***/
 		
 		if(CHBSBookingHelper::isPaymentDepositEnable($data['booking_form']['meta']))
 		{
@@ -4048,8 +4476,10 @@ class CHBSBookingForm
 		/***/
   
 		$price=array();
-		$priceHtml=$this->createSummaryPriceElement($data,$bookingForm,$price);
-   
+		
+		$priceHtml=apply_filters('chbs_booking_summary_before_price',null,$data['booking_form_id'],$data['step']);
+		$priceHtml.=$this->createSummaryPriceElement($data,$bookingForm,$price);
+		
 		/***/
 		
 		$pickupDate=$Date->formatDateToDisplay($data['pickup_date_service_type_'.$data['service_type_id']]);
@@ -4067,9 +4497,13 @@ class CHBSBookingForm
 				$dictionary=$bookingForm['dictionary']['booking_extra'][$value['id']];
 				$dictionary['quantity']=$value['quantity'];
 
-				$bookingExtraPrice=$BookingExtra->calculatePrice($dictionary,$taxRateDictionary);
+				$bookingExtraPrice=$BookingExtra->calculatePrice($dictionary,$bookingForm,$data);
+				
+				$note=null;
+				if($Validation->isNotEmpty($value['note']))
+					$note=' - <span class="chbs-summary-field-value-booking-extra-note">'.esc_html($value['note']).'</span>';
 
-				array_push($bookingExtraHtml,$value['quantity'].' x '.$value['name'].' - '.$bookingExtraPrice['sum']['gross']['format']);
+				array_push($bookingExtraHtml,$value['quantity'].' x '.$value['name'].' - '.$bookingExtraPrice['sum']['gross']['format'].$note);
 			}
 		}
 		
@@ -4112,13 +4546,18 @@ class CHBSBookingForm
 				{
 					if(is_array($data['waypoint_location_coordinate_service_type_1']))
 					{
-						foreach($data['waypoint_location_coordinate_service_type_1'] as $value)
+						foreach($data['waypoint_location_coordinate_service_type_1'] as $index=>$value)
 						{
 							$waypointLocation=json_decode($value);
 							
 							if($Validation->isNotEmpty($waypointLocationHtml)) $waypointLocationHtml.="\n";
+														
+							$waypointLocationHtml.=$waypointLocation->{'address'};	
 							
-							$waypointLocationHtml.=$waypointLocation->{'address'};					   
+							if((int)$bookingForm['meta']['waypoint_duration_enable']===1)
+							{
+								$waypointLocationHtml.=sprintf(__(' (%s minutes)','chauffeur-booking-system'),(int)$data['waypoint_duration_service_type_1'][$index]);
+							}
 						}
 					}
 				}
@@ -4145,7 +4584,29 @@ class CHBSBookingForm
 		}
 		else
 		{
-			$routeHtml[0]=array('label'=>__('Route','chauffeur-booking-system'),'value'=>$bookingForm['dictionary']['route'][$data['route_service_type_3']]['post']->post_title);
+			if((int)$bookingForm['meta']['route_pickup_location_field_enable']===1)
+			{
+				if($Validation->isNotEmpty($data['pickup_location_coordinate_service_type_3']))
+				{
+					$location=json_decode($data['pickup_location_coordinate_service_type_3']);
+					$locationHtml=$location->{'address'};
+					
+					$routeHtml[]=array('label'=>__('Pickup location','chauffeur-booking-system'),'value'=>$locationHtml);
+				}
+			}
+			
+			$routeHtml[]=array('label'=>__('Route','chauffeur-booking-system'),'value'=>$bookingForm['dictionary']['route'][$data['route_service_type_3']]['post']->post_title);
+			
+			if((int)$bookingForm['meta']['route_dropoff_location_field_enable']===1)
+			{
+				if($Validation->isNotEmpty($data['dropoff_location_coordinate_service_type_3']))
+				{
+					$location=json_decode($data['dropoff_location_coordinate_service_type_3']);
+					$locationHtml=$location->{'address'};
+					
+					$routeHtml[]=array('label'=>__('Drop-off location','chauffeur-booking-system'),'value'=>$locationHtml);
+				}
+			}
 		}
 
 		/***/
@@ -4177,6 +4638,8 @@ class CHBSBookingForm
 			$passengerHtml=CHBSBookingHelper::getPassengerLabel($data['passenger_adult_service_type_'.$data['service_type_id']],$data['passenger_children_service_type_'.$data['service_type_id']],1,$bookingForm['meta']['passenger_use_person_label']);
 		
 		/***/
+		
+		$distanceIncluded=CHBSBookingHelper::getDistanceIncluded($data,$bookingForm);
 		
 		switch($data['step_request'])
 		{
@@ -4254,31 +4717,26 @@ class CHBSBookingForm
 					}
 				}
 				
-// Zakładając, że $pickupTime jest w formacie 'H:i'
-$pickupDateTime = DateTime::createFromFormat('H:i', $pickupTime);
-
-// Stwórz kopię obiektu $pickupDateTime, aby zachować oryginalną godzinę odbioru
-$endPickupDateTime = clone $pickupDateTime;
-
-// Dodaj 2 godziny do skopiowanego czasu odbioru, aby utworzyć końcowy czas przedziału
-$endPickupDateTime->modify('+2 hours');
-
-// Formatuj oba czasy do formatu godziny
-$modifiedPickupTime = $pickupDateTime->format('H:i');
-$modifiedEndPickupTime = $endPickupDateTime->format('H:i');
-
-// Utwórz przedział czasowy łącząc oba formatowane czasy
-$timeRange = $modifiedPickupTime . ' - ' . $modifiedEndPickupTime;
-
-$BookingFormSummary->add
-(
-    array
-    (
-        __('Pickup date, time','chauffeur-booking-system'),
-        $pickupDate . ', ' . $timeRange // Użyj przedziału czasowego
-    )
-);
-
+				$BookingFormSummary->add
+				(
+					array
+					(
+						__('Pickup date, time','chauffeur-booking-system'),
+						$pickupDate.', '.$pickupTime
+					)
+				);
+				
+				if(($Validation->isNotEmpty($returnDate)) && ($Validation->isNotEmpty($returnTime)))
+				{
+					$BookingFormSummary->add
+					(
+						array
+						(
+							__('Return date, time','chauffeur-booking-system'),
+							$returnDate.', '.$returnTime
+						)
+					);
+				}
 				
 				if(($bookingForm['meta']['extra_time_enable']==1) && (in_array($data['service_type_id'],array(1,3))))
 				{
@@ -4299,14 +4757,28 @@ $BookingFormSummary->add
 				
 				/***/
 				
-				$field=array
-				(
-					array
+				if($distanceIncluded===-1)
+				{
+					$field=array
 					(
-						__('Total distance','chauffeur-booking-system'),
-						$Length->format($data['distance_sum'])
-					)
-				);
+						array
+						(
+							__('Total distance','chauffeur-booking-system'),
+							$Length->format($data['distance_sum'])
+						)
+					);
+				}
+				else
+				{
+					$field=array
+					(
+						array
+						(
+							__('Incl. distance','chauffeur-booking-system'),
+							$distanceIncluded
+						)
+					);					
+				}
 				
 				if((int)$bookingForm['meta']['total_time_display_enable']===1)
 				{
@@ -4407,24 +4879,14 @@ $BookingFormSummary->add
 					}
 				}
 				
-				// Zakładając, że $pickupTime jest w formacie 'H:i'
-$pickupDateTime = DateTime::createFromFormat('H:i', $pickupTime);
-
-// Dodaj 2 godziny do czasu odbioru
-$pickupDateTime->modify('+2 hours');
-
-// Formatuj z powrotem do formatu godziny
-$modifiedPickupTime = $pickupDateTime->format('H:i');
-
-$BookingFormSummary->add
-(
-    array
-    (
-        __('Pickup date, time','chauffeur-booking-system'),
-        $pickupDate.', '.$modifiedPickupTime // Użyj zmodyfikowanego czasu odbioru
-    )
-);
-
+				$BookingFormSummary->add
+				(
+					array
+					(
+						__('Pickup date, time','chauffeur-booking-system'),
+						$pickupDate.', '.$pickupTime
+					)
+				);
 				
 				if(($Validation->isNotEmpty($returnDate)) && ($Validation->isNotEmpty($returnTime)))
 				{
@@ -4457,14 +4919,28 @@ $BookingFormSummary->add
 				
 				/***/
 				
-				$field=array
-				(
-					array
+				if($distanceIncluded===-1)
+				{
+					$field=array
 					(
-						__('Total distance','chauffeur-booking-system'),
-						$Length->format($data['distance_sum'])
-					)
-				);
+						array
+						(
+							__('Total distance','chauffeur-booking-system'),
+							$Length->format($data['distance_sum'])
+						)
+					);
+				}
+				else
+				{
+					$field=array
+					(
+						array
+						(
+							__('Incl. distance','chauffeur-booking-system'),
+							$distanceIncluded
+						)
+					);					
+				}
 				
 				if((int)$bookingForm['meta']['total_time_display_enable']===1)
 				{
@@ -4591,15 +5067,6 @@ $BookingFormSummary->add
 						{
 							if($fieldValue['panel_id']==$panelValue['id'])
 							{
-								if(array_key_exists('service_type_id_enable',$fieldValue))
-								{
-									if(is_array($fieldValue['service_type_id_enable']))
-									{
-										if(!in_array($data['service_type_id'],$fieldValue['service_type_id_enable']))
-											continue;
-									}
-								}
-								
 								$fieldName='form_element_field_'.$fieldValue['id'];
 
 								$BookingFormSummary->add
@@ -4661,15 +5128,6 @@ $BookingFormSummary->add
 						{
 							if($fieldValue['panel_id']==$panelValue['id'])
 							{
-								if(array_key_exists('service_type_id_enable',$fieldValue))
-								{
-									if(is_array($fieldValue['service_type_id_enable']))
-									{
-										if(!in_array($data['service_type_id'],$fieldValue['service_type_id_enable']))
-											continue;
-									}
-								}
-																
 								$fieldName='form_element_field_'.$fieldValue['id'];
 
 								$BookingFormSummary->add
@@ -4734,22 +5192,13 @@ $BookingFormSummary->add
 				/***/
 								
 				foreach($panel as $panelValue)
-				{
+				{	
 					if(in_array($panelValue['id'],array(1,2))) continue;
 					
 					foreach($bookingForm['meta']['form_element_field'] as $fieldValue)
 					{
 						if($fieldValue['panel_id']==$panelValue['id'])
 						{
-							if(array_key_exists('service_type_id_enable',$fieldValue))
-							{
-								if(is_array($fieldValue['service_type_id_enable']))
-								{
-									if(!in_array($data['service_type_id'],$fieldValue['service_type_id_enable']))
-										continue;
-								}
-							}						  
-							
 							$fieldName='form_element_field_'.$fieldValue['id'];
 					
 							$BookingFormSummary->add
@@ -4816,30 +5265,14 @@ $BookingFormSummary->add
 					}
 				}
 				
-// Zakładając, że $pickupTime jest w formacie 'H:i'
-$pickupDateTime = DateTime::createFromFormat('H:i', $pickupTime);
-
-// Stwórz kopię obiektu $pickupDateTime, aby zachować oryginalną godzinę odbioru
-$endPickupDateTime = clone $pickupDateTime;
-
-// Dodaj 2 godziny do skopiowanego czasu odbioru, aby utworzyć końcowy czas przedziału
-$endPickupDateTime->modify('+2 hours');
-
-// Formatuj oba czasy do formatu godziny
-$modifiedPickupTime = $pickupDateTime->format('H:i');
-$modifiedEndPickupTime = $endPickupDateTime->format('H:i');
-
-// Utwórz przedział czasowy jako pełny zakres czasowy (np. 10:00 - 11:00)
-$timeRange = $modifiedPickupTime . ' - ' . $modifiedEndPickupTime;
-
-$BookingFormSummary->add(
-    array(
-        __('Pickup date, time','chauffeur-booking-system'),
-        $pickupDate . ', ' . $timeRange // Użyj przedziału czasowego
-    )
-);
-
-
+				$BookingFormSummary->add
+				(
+					array
+					(
+						__('Pickup date, time','chauffeur-booking-system'),
+						$pickupDate.', '.$pickupTime
+					)
+				);
 				
 				if(($Validation->isNotEmpty($returnDate)) && ($Validation->isNotEmpty($returnTime)))
 				{
@@ -4870,14 +5303,28 @@ $BookingFormSummary->add(
 					}
 				}
 				
-				$field=array
-				(
-					array
+				if($distanceIncluded===-1)
+				{
+					$field=array
 					(
-						__('Total distance','chauffeur-booking-system'),
-						$Length->format($data['distance_sum'])
-					)
-				);
+						array
+						(
+							__('Total distance','chauffeur-booking-system'),
+							$Length->format($data['distance_sum'])
+						)
+					);
+				}
+				else
+				{
+					$field=array
+					(
+						array
+						(
+							__('Incl. distance','chauffeur-booking-system'),
+							$distanceIncluded
+						)
+					);					
+				}
 				
 				if((int)$bookingForm['meta']['total_time_display_enable']===1)
 				{
@@ -5056,6 +5503,12 @@ $BookingFormSummary->add(
             'waypoint_count'=>$data['waypoint_count']
 		);
 		
+		$priceWithoutRule=array();
+		if(CHBSBookingHelper::isPriceBeforeDiscountEnable($data['booking_form']))
+		{
+			$priceWithoutRule=$Vehicle->calculatePrice($argument,true,true,array('enable'=>0),false);
+		}
+		
 		$price=$Vehicle->calculatePrice($argument,true,true,array('enable'=>0));
 		
 		/***/
@@ -5130,7 +5583,17 @@ $BookingFormSummary->add(
 			CHBSBookingHelper::getPriceType($data['booking_form'],$priceType,$sumType,$taxShow,$data['step']);
 			
 			$priceToDisplay=$price['price']['sum'][$priceType]['formatHtml'];
-						
+			
+			/***/
+			
+			$priceBeforeDiscount=null;
+			if(CHBSBookingHelper::isPriceBeforeDiscountEnable($data['booking_form'],$priceWithoutRule['price']['sum'][$priceType]['value'],$price['price']['sum'][$priceType]['value']))
+			{
+				$priceBeforeDiscount='<span class="chbs-vehicle-content-price-before-discount">'.$priceWithoutRule['price']['sum'][$priceType]['formatHtml'].'</span>';
+			}
+			
+			/***/
+			
 			if((int)$data['booking_form']['meta']['show_price_per_single_passenger']===1)
 			{
 				if(CHBSBookingHelper::isPassengerEnable($data['booking_form']['meta'],$data['service_type_id'],-1))
@@ -5156,6 +5619,7 @@ $BookingFormSummary->add(
 				<div class="chbs-vehicle-content-price">
 					<span>
 						<span>'.$priceToDisplay.'</span>
+						'.$priceBeforeDiscount.'	
 					</span>
 				</div>  
 			';
@@ -5211,7 +5675,7 @@ $BookingFormSummary->add(
 					'.esc_html($price['price']['base']['custom_vehicle_selection_button_label']).'
 				</a>			   
 			';
-		} /* disable car select button
+		}
 		else 
 		{
 			$htmlSelect=
@@ -5259,16 +5723,18 @@ $BookingFormSummary->add(
 		
 		/***/
 		
+		$vehicleName=get_the_title($data['vehicle_id']);
+		
 		$html=
 		'
-			<div class="chbs-vehicle chbs-clear-fix" data-id="'.esc_attr($data['vehicle_id']).'" data-base_location_cooridnate_lat="'.esc_attr($data['vehicle']['meta']['base_location_coordinate_lat']).'"  data-base_location_cooridnate_lng="'.esc_attr($data['vehicle']['meta']['base_location_coordinate_lng']).'">
+			<div class="chbs-vehicle chbs-clear-fix" data-id="'.esc_attr($data['vehicle_id']).'" data-name="'.esc_attr($vehicleName).'" data-base_location_cooridnate_lat="'.esc_attr($data['vehicle']['meta']['base_location_coordinate_lat']).'"  data-base_location_cooridnate_lng="'.esc_attr($data['vehicle']['meta']['base_location_coordinate_lng']).'">
 
 				'.$html[0].'
 
 				<div class="chbs-vehicle-content">
 				
 					<div class="chbs-vehicle-content-header"> 
-						<span>'.get_the_title($data['vehicle_id']).'</span>
+						<span>'.$vehicleName.'</span>
 						'.$htmlSelect.'
 					</div>
 					
@@ -5341,11 +5807,12 @@ $BookingFormSummary->add(
 	
 	/**************************************************************************/
 	
-	function vehicleFilter($ajax=true,&$redirectToUrlAddress=null)
+	function vehicleFilter($ajax=true,&$redirectToUrlAddress=null,&$vehiclePriceCalculationStepFirst=array())
 	{		   
 		if(!is_bool($ajax)) $ajax=true;
 			
 		$redirectToUrlAddress=null;
+		$vehiclePriceCalculationStepFirst=array();
 		
 		$html=null;
 		$response=array();
@@ -5364,7 +5831,7 @@ $BookingFormSummary->add(
 		{
 			if(!$ajax) return($html);
 			
-			$this->setErrorGlobal($response,__('There are no vehicles which match your filter criteria.','chauffeur-booking-system'));
+			$this->setErrorGlobal($response,__('There are no vehicles that match your filter criteria.','chauffeur-booking-system'));
 			$this->createFormResponse($response);
 		}
 		
@@ -5518,11 +5985,42 @@ $BookingFormSummary->add(
 		
 		$response['html']=$html;
 		
+		/***/
+		
+		$vehiclePriceCalculationStepFirst=array('price_min'=>0.00,'price_max'=>0.00,'show'=>1);
+		
+		if(count($vehiclePrice))
+		{
+			$vehiclePriceCalculationStepFirst['price_min']=min($vehiclePrice);
+			$vehiclePriceCalculationStepFirst['price_max']=max($vehiclePrice);			
+		}
+		
+		$vehiclePriceCalculationStepFirst['price_min']=CHBSPrice::format($vehiclePriceCalculationStepFirst['price_min'],CHBSCurrency::getFormCurrency());
+		$vehiclePriceCalculationStepFirst['price_max']=CHBSPrice::format($vehiclePriceCalculationStepFirst['price_max'],CHBSCurrency::getFormCurrency());
+		
+		if($vehiclePriceCalculationStepFirst['price_min']!=$vehiclePriceCalculationStepFirst['price_max'])
+		{
+			$vehiclePriceCalculationStepFirst['message']=sprintf(__('Price for a vehicle is from <span>%s</span> to <span>%s</span>.','chauffeur-booking-system'),$vehiclePriceCalculationStepFirst['price_min'],$vehiclePriceCalculationStepFirst['price_max']);
+		}
+		else
+		{
+			if($vehiclePriceCalculationStepFirst['price_min']==0.00)
+			{
+				$vehiclePriceCalculationStepFirst['show']=0;
+			}
+			
+			$vehiclePriceCalculationStepFirst['message']=sprintf(__('Price for a vehicle is <span>%s</span>.','chauffeur-booking-system'),$vehiclePriceCalculationStepFirst['price_min']);
+		}
+		
+		$response['vehicle_price_calculation_step_first']=$vehiclePriceCalculationStepFirst;
+		
+		/***/
+
 		if($Validation->isEmpty($html))
 		{
 			if($ajax)
 			{
-				$this->setErrorGlobal($response,__('There are no vehicles which match your filter criteria.','chauffeur-booking-system'));
+				$this->setErrorGlobal($response,__('There are no vehicles that match your filter criteria.','chauffeur-booking-system'));
 				$this->createFormResponse($response);
 			}
 		}
@@ -5553,15 +6051,15 @@ $BookingFormSummary->add(
 		foreach($bookingForm['dictionary']['country'] as $index=>$value)
 			$htmlElement[0].='<option value="'.esc_attr($index).'" '.($data['client_billing_detail_country_code']==$index ? 'selected' : null).'>'.esc_html($value[0]).'</option>';
 		
-		$htmlElement[1]=$BookingFormElement->createField(1,$data['service_type_id'],$bookingForm);
+		$htmlElement[1]=$BookingFormElement->createField(1,$data['service_type_id'],$data['transfer_type_service_type_'.$data['service_type_id']],$bookingForm);
 		
-		$htmlElement[2]=$BookingFormElement->createField(2,$data['service_type_id'],$bookingForm);
+		$htmlElement[2]=$BookingFormElement->createField(2,$data['service_type_id'],$data['transfer_type_service_type_'.$data['service_type_id']],$bookingForm);
 		
 		$panel=$BookingFormElement->getPanel($bookingForm['meta']);
 		foreach($panel as $index=>$value)
 		{
 			if(in_array($value['id'],array(1,2))) continue;
-			$htmlElement[3].=$BookingFormElement->createField($value['id'],$data['service_type_id'],$bookingForm);
+			$htmlElement[3].=$BookingFormElement->createField($value['id'],$data['service_type_id'],$data['transfer_type_service_type_'.$data['service_type_id']],$bookingForm);
 		}
 		
 		if($WooCommerce->isEnable($bookingForm['meta']))
@@ -6114,7 +6612,7 @@ $BookingFormSummary->add(
 			
 			foreach($bookingForm['dictionary']['booking_extra'] as $index=>$value)
 			{
-				$price=$BookingExtra->calculatePrice($value,$bookingForm['dictionary']['tax_rate']);
+				$price=$BookingExtra->calculatePrice($value,$bookingForm,$data);
 								
 				$htmlColumn=array(null,null,null);
 				
@@ -6130,7 +6628,7 @@ $BookingFormSummary->add(
 				
 				$html.=
 				'
-						<li'.CHBSHelper::createCSSClassAttribute($class).' data-category_id="'.esc_attr($category).'" data-vehicle_id="'.esc_attr(join(',',$value['meta']['vehicle_id'])).'">
+						<li'.CHBSHelper::createCSSClassAttribute($class).' data-category_id="'.esc_attr($category).'" data-vehicle_id="'.esc_attr(join(',',$value['meta']['vehicle_id'])).'" data-booking_extra_id="'.esc_attr($index).'" data-booking_extra_name="'.esc_attr($value['post']->post_title).'">
 				';
 				
 				/***/
@@ -6180,7 +6678,21 @@ $BookingFormSummary->add(
 						$buttonSelected=true;
 						array_push($class[1],'chbs-state-selected');
 					}
-					else if($fieldValue==0) array_push($class[0],'chbs-state-selected');
+					elseif($fieldValue==0) 
+					{	
+						array_push($class[0],'chbs-state-selected');
+					}
+					else
+					{
+						if((int)CHBSGlobalData::getGlobalData('booking_extra_created')!==1)
+						{
+							if((int)$value['meta']['state_default']===1)
+							{
+								$buttonSelected=true;
+								array_push($class[1],'chbs-state-selected');	
+							}
+						}
+					}
 					
 					$htmlColumn[2].=
 					'
@@ -6208,6 +6720,17 @@ $BookingFormSummary->add(
 					{
 						$buttonSelected=true;
 						array_push($class,'chbs-state-selected');
+					}
+					else
+					{
+						if((int)CHBSGlobalData::getGlobalData('booking_extra_created')!==1)
+						{
+							if((int)$value['meta']['state_default']===1)
+							{
+								$buttonSelected=true;
+								array_push($class,'chbs-state-selected');	
+							}
+						}
 					}
 					
 					$htmlColumn[2].=
@@ -6305,13 +6828,15 @@ $BookingFormSummary->add(
 				</div>
 			';
 		}
+		
+		CHBSGlobalData::setGlobalData('booking_extra_created',1);
 
 		return($html);
 	}
 	
 	/**************************************************************************/
 	
-function getBookingFormDateAvailable($meta)
+	function getBookingFormDateAvailable($meta)
 	{
 		$date=array();
 		
@@ -6476,9 +7001,9 @@ function getBookingFormDateAvailable($meta)
 						$htmlItem.=
 						'
 							<li>
-								<a href="#" class="chbs-payment-type-woocommerce-'.esc_attr($value->{'id'}).'" data-payment-id="'.esc_attr($value->{'id'}).'">			   
+								<a href="#" class="chbs-payment-type-woocommerce-'.esc_attr($value->{'id'}).'" data-payment-id="'.esc_attr($value->{'id'}).'" data-payment-name="'.esc_attr($value->{'title'}).'">			   
 									<span class="chbs-payment-name">'.esc_html($value->{'title'}).'</span>
-									<span></span>
+									<span class="chbs-meta-icon-tick"></span>
 								</a>
 							</li>
 						';
@@ -6500,6 +7025,8 @@ function getBookingFormDateAvailable($meta)
 						$style=array();
 						$class=array('chbs-payment-type-'.$index);
 						
+						$paymentName=$Payment->getPaymentName($index);
+						
 						if($Validation->isNotEmpty($bookingForm['meta']['payment_'.$value[1].'_logo_src']))
 						{
 							$class[]='chbs-payment-background-image';
@@ -6509,7 +7036,7 @@ function getBookingFormDateAvailable($meta)
 						$htmlItem.=
 						'
 							<li>
-								<a href="#" data-payment-id="'.esc_attr($index).'" '.CHBSHelper::createCSSClassAttribute($class).' '.CHBSHelper::createStyleAttribute($style).'>			   
+								<a href="#" data-payment-id="'.esc_attr($index).'" data-payment-name="'.esc_attr($paymentName).'" '.CHBSHelper::createCSSClassAttribute($class).' '.CHBSHelper::createStyleAttribute($style).'>			   
 						';
 								
 						if($index==1)
@@ -6517,7 +7044,7 @@ function getBookingFormDateAvailable($meta)
 							$htmlItem.=
 							'
 									<span class="chbs-meta-icon-wallet"></span>
-									<span class="chbs-payment-name">'.esc_html($Payment->getPaymentName($index)).'</span>
+									<span class="chbs-payment-name">'.esc_html($paymentName).'</span>
 							';
 						}
 						else if($index==4)
@@ -6540,7 +7067,7 @@ function getBookingFormDateAvailable($meta)
 						
 						$htmlItem.=
 						'	
-									<span></span>
+									<span class="chbs-meta-icon-tick"></span>
 								</a>
 							</li>	
 						';
@@ -6600,16 +7127,26 @@ function getBookingFormDateAvailable($meta)
 	
 	function fileUpload()
 	{			
-		$response=array();
+		$response=array('error'=>0);
 		
 		if(!is_array($_FILES))
 			CHBSHelper::createJSONResponse($response);
    
 		$name=key($_FILES);
-		
+			
 		if(!is_array($_FILES[$name]))
 			CHBSHelper::createJSONResponse($response);
 	  
+		/***/
+		
+		if(!CHBSFile::checkFileExtensionToUpload($_FILES[$name]['name']))
+		{
+			$response=array('error'=>1,'message'=>sprintf(esc_html__('Uploaded file type is not allowed. You can upload files with such a extensions like: %s.','chauffeur-booking-system'),preg_replace('/;/',', ',CHBSOption::getOption('file_extension_to_upload'))));
+			CHBSHelper::createJSONResponse($response);			
+		}
+
+		/***/
+		
 		$fileName=CHBSHelper::createId();
 		
 		move_uploaded_file($_FILES[$name]['tmp_name'],dirname($_FILES[$name]['tmp_name']).'/'.$fileName);
@@ -6622,6 +7159,45 @@ function getBookingFormDateAvailable($meta)
 		CHBSHelper::createJSONResponse($response);
 	}
 	
+	/**************************************************************************/
+	
+	function getBookingFormDurationDistance($meta)
+	{
+		$Length=new CHBSLength();
+		$Validation=new CHBSValidation();
+		
+		/***/
+		
+		$distance=array();
+		$durationDistance=array();
+		
+		/***/
+		
+		if($Validation->isNotEmpty($meta['duration_distance_list']))
+			$distance=preg_split('/;/',$meta['duration_distance_list']);
+		else
+		{
+			if($meta['duration_distance_max']>$meta['duration_distance_min'])
+			{
+				for($i=$meta['duration_distance_min'];$i<=$meta['duration_distance_max'];$i+=$meta['duration_distance_step']) $distance[]=$i;
+			}
+		}
+
+		/***/
+		
+		$j=0;
+		for($i=$meta['duration_min'];$i<=$meta['duration_max'];$i+=$meta['duration_step'])
+		{
+			$durationDistance[$i]['distance']=(int)$distance[$j];
+			$durationDistance[$i]['label']=array_key_exists($j,$distance) ? sprintf(esc_html__('%d hours (%s %s)','chauffeur-booking-system'),$i,$distance[$j],$Length->label(CHBSOption::getOption('length_unit'),7)) : sprintf(esc_html__('%d hours','chauffeur-booking-system'),$i);
+			$j++;
+		}
+		
+		/***/
+		
+		return($durationDistance);
+	}
+		
 	/**************************************************************************/
 }
 

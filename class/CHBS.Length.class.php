@@ -7,6 +7,10 @@ class CHBSLength
 {
 	/**************************************************************************/
 	
+	public $unit;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->unit=array
@@ -64,20 +68,24 @@ class CHBSLength
 	
 	/**************************************************************************/
 	
-	function convertUnit($value,$from=1,$to=2)
+	function convertUnit($value,$from=1,$to=2,$roundPrecision=1)
 	{
-		if(($from==1) && ($to=2))
+		$Validation=new CHBSValidation();
+		
+		if($Validation->isEmpty($value)) return($value);
+		
+		if(($from==1) && ($to==2))
 		{
 			$value/=1.609344;
 		}
-		else if(($from==2) && ($to=1))
+		else if(($from==2) && ($to==1))
 		{
 			$value*=1.609344;
 		}
 		
-		return(round($value,1));
+		return(round($value,$roundPrecision));
 	}
-	
+		
 	/**************************************************************************/
 	
 	function label($unit=-1,$type=1)
@@ -119,9 +127,42 @@ class CHBSLength
 				$label=$unit==2 ? esc_html__('Per mile (return, new ride)','chauffeur-booking-system') : esc_html__('Per kilometer (return, new ride)','chauffeur-booking-system');
 				
 			break;
+		
+			case 6:
+				
+				$label=$unit==2 ? esc_html__('in miles','chauffeur-booking-system') : esc_html__('in kilometers','chauffeur-booking-system');
+				
+			break;
+		
+			case 7:
+				
+				$label=$unit==2 ? esc_html__('miles','chauffeur-booking-system') : esc_html__('kilometers','chauffeur-booking-system');
+				
+			break;
+		
+			case 8:
+				
+				$label=$unit==2 ? esc_html__('per mile','chauffeur-booking-system') : esc_html__('per kilometer','chauffeur-booking-system');
+				
+			break;
 		}
 
 		return($label);
+	}
+	
+	/**************************************************************************/
+	
+	static function formatToSave($value,$empty=false,$roundPrecision=-1)
+	{
+		$Validation=new CHBSValidation();
+		
+		if(($Validation->isEmpty($value)) && ($empty)) return('');
+		
+		$value=preg_replace('/,/','.',$value);
+		
+		if($roundPrecision>0) $value=round($value,$roundPrecision);
+		
+		return($value);		
 	}
 	
 	/**************************************************************************/

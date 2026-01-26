@@ -70,11 +70,15 @@ class CHBSBookingServiceNotification
 				{
 					$data['booking']=$value;
 					$data['booking']['billing']=$Booking->createBilling($index);
+					
+					$data['template']='customer_before_service';
 
 					$Template=new CHBSTemplate($data,PLUGIN_CHBS_TEMPLATE_PATH.'email_customer_before_service.php');
 					$body=$Template->output();		
 
-					$Email->send(array($value['meta']['client_contact_detail_email_address']),__('Chauffeur Service Reminder','chauffeur-booking-system'),$body);
+					$subject=apply_filters('chbs_email_template_subject',__('Chauffeur Service Reminder','chauffeur-booking-system'),$data['booking'],$data['template']);
+					
+					$Email->send(array($value['meta']['client_contact_detail_email_address']),$subject,$body);
 				}	
 			}
 		}
@@ -99,11 +103,15 @@ class CHBSBookingServiceNotification
 						
 						$data['booking']=$value;
 						$data['booking']['billing']=$Booking->createBilling($index);
+						
+						$data['template']='driver_before_service';
 
 						$Template=new CHBSTemplate($data,PLUGIN_CHBS_TEMPLATE_PATH.'email_driver_before_service.php');
-						$body=$Template->output();		
+						$body=$Template->output();
+						
+						$subject=apply_filters('chbs_email_template_subject',__('Chauffeur Service Reminder','chauffeur-booking-system'),$data['booking'],$data['template']);
 
-						$Email->send(array($driver[$driverId]['meta']['contact_email_address']),__('Chauffeur Service Reminder','chauffeur-booking-system'),$body);
+						$Email->send(array($driver[$driverId]['meta']['contact_email_address']),$subject,$body);
 					}	
 				}
 			}			
@@ -124,6 +132,8 @@ class CHBSBookingServiceNotification
 						
 						$data['booking']=$value;
 						$data['booking']['billing']=$Booking->createBilling($index);
+						
+						$data['template']='customer_after_service';
 						
 						if(in_array(CHBSOption::getOption('email_service_post_arrival_message_customer_duration_unit'),array(1,2,3)))
 						{
@@ -157,9 +167,11 @@ class CHBSBookingServiceNotification
 						if($dateStop==trim($this->currentDate.' '.$currentTime))
 						{
 							$Template=new CHBSTemplate($data,PLUGIN_CHBS_TEMPLATE_PATH.'email_customer_after_service.php');
-							$body=$Template->output();		
+							$body=$Template->output();	
+							
+							$subject=apply_filters('chbs_email_template_subject',__('Thank you for using our services','chauffeur-booking-system'),$data['booking'],$data['template']);
 
-							$Email->send(array($value['meta']['client_contact_detail_email_address']),__('Thank you for using our services','chauffeur-booking-system'),$body);							
+							$Email->send(array($value['meta']['client_contact_detail_email_address']),$subject,$body);							
 						
 							CHBSPostMeta::updatePostMeta($value['post']->ID,'email_service_post_arrival_message_customer_send',1); 
 						}

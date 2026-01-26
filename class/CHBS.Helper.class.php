@@ -7,19 +7,12 @@ class CHBSHelper
 {
 	/**************************************************************************/
 	
-	static function setDefault(&$data,$index,$value)
+	static function setDefault(&$address,$index,$value)
 	{	
-		if(array_key_exists($index,(array)$data)) return;
-		$data[$index]=$value;		
+		if(array_key_exists($index,(array)$address)) return;
+		$address[$index]=$value;		
 	}
-	
-	/**************************************************************************/
-	
-	static function createNonceField($name)
-	{
-		return(wp_nonce_field('savePost',$name.'_noncename',false,false));
-	}
-	
+		
 	/**************************************************************************/
 	
 	static function createId($prefix=null)
@@ -43,21 +36,23 @@ class CHBSHelper
 	
 	/**************************************************************************/
 	
-	static function getPostOption($prefix=null)
+	static function getPostOption($prefix=null,$extensionPrefix=PLUGIN_CHBS_PREFIX)
 	{
 		if(!is_null($prefix)) $prefix='_'.$prefix.'_';
 		
 		$option=array();
 		$result=array();
 		
-		$data=filter_input_array(INPUT_POST);
-		if(!is_array($data)) $data=array();
+		$address=filter_input_array(INPUT_POST);
+		if(!is_array($address)) $address=array();
 		
-		foreach($data as $key=>$value)
+		$constant=CHBSConstant::get('option_prefix',true,$extensionPrefix);
+		
+		foreach($address as $key=>$value)
 		{
-			if(preg_match('/^'.PLUGIN_CHBS_OPTION_PREFIX.$prefix.'/',$key,$result)) 
+			if(preg_match('/^'.$constant.$prefix.'/',$key,$result)) 
 			{
-				$index=preg_replace('/^'.PLUGIN_CHBS_OPTION_PREFIX.'_/','',$key);
+				$index=preg_replace('/^'.$constant.'_/','',$key);
 				$option[$index]=$value;
 			}
 		}	
@@ -78,10 +73,12 @@ class CHBSHelper
 
 	/**************************************************************************/
 	
-	static function getFormName($name,$display=true)
+	static function getFormName($name,$display=true,$extensionPrefix=PLUGIN_CHBS_PREFIX)
 	{
-		if(!$display) return(PLUGIN_CHBS_OPTION_PREFIX.'_'.$name);
-		echo PLUGIN_CHBS_OPTION_PREFIX.'_'.$name;
+		$constant=CHBSConstant::get('option_prefix',true,$extensionPrefix);
+		
+		if(!$display) return($constant.'_'.$name);
+		echo $constant.'_'.$name;
 	}
 	
 	/**************************************************************************/
@@ -135,23 +132,23 @@ class CHBSHelper
 		
 	/**************************************************************************/
 	
-	static function removeUIndex(&$data)
+	static function removeUIndex(&$address)
 	{
 		$argument=array_slice(func_get_args(),1);
 		
-		$data=(array)$data;
+		$address=(array)$address;
 		
 		foreach($argument as $index)
 		{
 			if(!is_array($index))
 			{
-				if(!array_key_exists($index,$data))
-					$data[$index]='';
+				if(!array_key_exists($index,$address))
+					$address[$index]='';
 			}
 			else
 			{
-				if(!array_key_exists($index[0],$data))
-					$data[$index[0]]=$index[1];				
+				if(!array_key_exists($index[0],$address))
+					$address[$index[0]]=$index[1];				
 			}
 		}
 	}
@@ -180,9 +177,9 @@ class CHBSHelper
 
 	/**************************************************************************/
 	
-	static function getPostValue($name,$prefix=true)
+	static function getPostValue($name,$prefix=true,$extensionPrefix=PLUGIN_CHBS_PREFIX)
 	{
-		if($prefix) $name=PLUGIN_CHBS_CONTEXT.'_'.$name;
+		if($prefix) $name=CHBSConstant::get('context',true,$extensionPrefix).'_'.$name;
 		
 		if(!array_key_exists($name,$_POST)) return(null);
 		
@@ -191,9 +188,9 @@ class CHBSHelper
 	
 	/**************************************************************************/
 	
-	static function getGetValue($name,$prefix=true)
+	static function getGetValue($name,$prefix=true,$extensionPrefix=PLUGIN_CHBS_PREFIX)
 	{
-		if($prefix) $name=PLUGIN_CHBS_CONTEXT.'_'.$name;
+		if($prefix) $name=CHBSConstant::get('context',true,$extensionPrefix).'_'.$name;
 		
 		if(!array_key_exists($name,$_GET)) return(null);
 		
@@ -237,8 +234,6 @@ class CHBSHelper
 
 		if(!wp_verify_nonce($_POST[$name],$action)) return(false);
 
-		unset($_POST[$name]);
-		
 		if(!current_user_can('edit_post',$post_id)) return(false);
 		
 		return(true);
@@ -335,19 +330,19 @@ class CHBSHelper
 	
 	/**************************************************************************/
 	
-	static function splitBy($data,$char=';')
+	static function splitBy($address,$char=';')
 	{
 		$Validation=new CHBSValidation();
 		
-		$data=preg_split('/'.$char.'/',$data);
+		$address=preg_split('/'.$char.'/',$address);
 		
-		foreach($data as $index=>$value)
+		foreach($address as $index=>$value)
 		{
 			if($Validation->isEmpty($value))
-				unset($data[$index]);
+				unset($address[$index]);
 		}
 		
-		return($data);
+		return($address);
 	}
 	
 	/**************************************************************************/
@@ -391,40 +386,113 @@ class CHBSHelper
 	
 	/**************************************************************************/
 	
-	static function displayAddress($data)
+	static function displayAddress($data,$prefix=null,$additionalData=array())
 	{
 		$Country=new CHBSCountry();
 		$Validation=new CHBSValidation();
+
+		/***/
+		
+		$address=array();
+		if(!is_null($prefix))
+		{
+			foreach($data as $index=>$value)
+			{
+				if(preg_match('/^'.$prefix.'/',$index))
+				{
+					$index=preg_replace('/'.$prefix.'/','',$index);
+					$address[$index]=$value;
+				}
+			}
+		}
+		else $address=$data;
+		
+		/***/
 		
 		$html=null;
-		if(array_key_exists('name',$data))
-			$html=$data['name'];
+		if(array_key_exists('name',$address))
+			$html=$address['name'];
+		elseif(array_key_exists('company_name',$address))
+			$html=$address['company_name'];		
 		
-		if(array_key_exists('postal_code',$data))
-			$data['postcode']=$data['postal_code'];
+		/***/
 		
-		if($Validation->isNotEmpty($data['street']))
+		$streetName='';
+		if(array_key_exists('street',$address))
+			$streetName=$address['street'];
+		elseif(array_key_exists('street_name',$address)) 
+			$streetName=$address['street_name'];
+			
+		if($Validation->isNotEmpty($streetName))
 		{
 			if($Validation->isNotEmpty($html)) $html.='<br>';
-			$html.=trim($data['street'].' '.$data['street_number']);
+			
+			if((int)CHBSOption::getOption('address_format_type')===2)
+				$html.=trim($address['street_number'].' '.$streetName);
+			else $html.=trim($streetName.' '.$address['street_number']);
+		}		
+
+		/***/
+		
+		if(array_key_exists('postal_code',$address))
+			$address['postcode']=$address['postal_code'];
+		
+		if((int)CHBSOption::getOption('address_format_type')===2)
+		{
+			if(($Validation->isNotEmpty($address['postcode'])) || ($Validation->isNotEmpty($address['city'])) || ($Validation->isNotEmpty($address['state'])))
+			{
+				if($Validation->isNotEmpty($html)) $html.='<br>';
+				
+				$city=$address['city'];
+				$statePostcode=trim($address['state'].' '.$address['postcode']);
+				
+				if(($Validation->isNotEmpty($city)) && ($Validation->isNotEmpty($statePostcode)))
+					$html.=trim($city.', '.$statePostcode);
+				else $html.=trim($city.' '.$statePostcode);
+			}
+		}
+		else
+		{
+			if($Validation->isNotEmpty($address['postcode']) || $Validation->isNotEmpty($address['city']))
+			{
+				if($Validation->isNotEmpty($html)) $html.='<br>';
+				$html.=trim($address['postcode'].' '.$address['city']);
+			}
+			
+			if($Validation->isNotEmpty($address['state']))
+			{
+				if($Validation->isNotEmpty($html)) $html.='<br>';
+				$html.=$address['state'];
+			}
 		}
 		
-		if($Validation->isNotEmpty($data['postcode']) || $Validation->isNotEmpty($data['city']))
+		/***/
+		
+		$country='';
+		$countryCode='';
+		
+		if(array_key_exists('country',$address)) 
+			$countryCode=$address['country'];
+		elseif(array_key_exists('country_code',$address)) 
+			$countryCode=$address['country_code'];
+			
+		if($Country->isCountry($countryCode))
+			$country=$Country->getCountryName($countryCode);
+		
+		if($Validation->isNotEmpty($country))
 		{
 			if($Validation->isNotEmpty($html)) $html.='<br>';
-			$html.=trim($data['postcode'].' '.$data['city']);
+			$html.=$country;			
 		}
 		
-		if($Validation->isNotEmpty($data['state']))
+		foreach($additionalData as $index=>$value)
 		{
-			if($Validation->isNotEmpty($html)) $html.='<br>';
-			$html.=$data['state'];
-		}
-		
-		if($Country->isCountry($data['country']))
-		{
-			if($Validation->isNotEmpty($html)) $html.='<br>';
-			$html.=$Country->getCountryName($data['country']);			
+			if($Validation->isNotEmpty($value['value']))
+			{
+				if($Validation->isNotEmpty($html)) $html.='<br>';
+				if(array_key_exists('label',$value)) $html.=$value['label'];
+				$html.=$value['value'];
+			}
 		}
 		
 		return($html);
@@ -439,6 +507,174 @@ class CHBSHelper
 		if((is_array($bookingMeta)) && (array_key_exists('address',$bookingMeta)) && ($Validation->isNotEmpty($bookingMeta['address']))) return($bookingMeta['address']);
 				
 		return($bookingMeta['formatted_address']);
+	}
+	
+	/**************************************************************************/
+	
+	static function addInlineScript($name,$script,$type=1)
+	{
+		if((int)$type===1)
+		{
+			wp_add_inline_script($name,$script);
+		}
+		else
+		{
+			echo 
+			'
+				<script>
+					'.$script.'
+				</script>
+			';
+		}
+	}
+	
+	/**************************************************************************/
+	
+	static function addInlineStyle($name,$style,$type=1)
+	{
+		if((int)$type===1)
+		{
+			wp_add_inline_style($name,$style);
+		}
+		else
+		{
+			echo 
+			'
+				<style>
+					'.$style.'
+				</style>
+			';
+		}
+	}
+	
+	/**************************************************************************/
+	
+	static function editPostLink($postId,$label=null,$target='_blank')
+	{
+		$Validation=new CHBSValidation();
+		
+		if($Validation->isEmpty($label)) $label=__('Edit','chauffeur-booking-system');
+		
+		$link='<a href="'.esc_url(self::editPostURLAddress($postId)).'" target="'.esc_attr($target).'">'.esc_html($label).'</a>';
+		return($link);
+	}
+	
+	/**************************************************************************/
+	
+	static function editPostURLAddress($postId)
+	{
+		$url=admin_url('post.php?action=edit&post='.$postId);
+		return($url);		
+	}
+	
+	/**************************************************************************/
+	
+	static function displayDictionary($data,$dictionary,$link=false,$sort=false)
+	{
+		if(in_array(-1,$data)) return('');
+		
+		$html=null;
+		$dataSort=array();
+		
+		$Validation=new CHBSValidation();
+
+		foreach($data as $value)
+		{
+			if(!array_key_exists($value,$dictionary)) continue;
+
+			if(array_key_exists('post',$dictionary[$value]))
+				$label=$dictionary[$value]['post']->post_title;
+			else if(array_key_exists('name',$dictionary[$value]))
+				$label=$dictionary[$value]['name'];	
+			else $label=$dictionary[$value][0];			
+
+			$dataSort[$value]=$label;
+		}
+
+		if($sort) asort($dataSort);
+
+		$data=$dataSort;
+		
+		foreach($data as $index=>$value)
+		{
+			$label=$value;
+			
+			if($link) $label='<a href="'.esc_url(CHBSHelper::editPostURLAddress($index)).'">'.$value.'</a>';
+			if($Validation->isNotEmpty($html)) $html.=', ';
+			$html.=$label;
+		}
+		
+		return($html);
+	}
+	
+	/**************************************************************************/
+	
+	static function displayBoolValue($value,$type=1)
+	{
+		$label=array
+		(
+			1=>array
+			(
+				1=>__('Enable','chauffeur-booking-system'),
+				0=>__('Disable','chauffeur-booking-system'),
+			),
+			2=>array
+			(
+				1=>__('Yes','chauffeur-booking-system'),
+				0=>__('No','chauffeur-booking-system'),
+			)
+		);
+		
+		if(!in_array($value,array(1,0))) $value=0;
+		
+		return($label[$type][$value]);
+	}
+	
+	/**************************************************************************/
+	
+	static function createShortcode($name)
+	{
+		return('['.$name.']');
+	}
+
+	/**************************************************************************/
+	
+	static function createNonceField($name,$action='savePost')
+	{
+		return(wp_nonce_field($action,$name.'_noncename',false,false));
+	}	
+	
+	/**************************************************************************/
+	
+	static function verifyNonce($name,$action=null,$prefix=PLUGIN_CHBS_CONTEXT)
+	{
+		if(is_null($action)) $action=$name;
+		
+		if(!preg_match('/\_noncename$/',$name)) $name.='_noncename';
+		if(!preg_match('/^'.$prefix.'\_/',$name)) $name=$prefix.'_'.$name;
+		
+		if(array_key_exists($name,$_POST))
+		{
+			if(!wp_verify_nonce($_POST[$name],$action)) return(false);
+			unset($_POST[$name]);
+		}
+		else if(array_key_exists($name,$_GET))
+		{
+			if(!wp_verify_nonce($_GET[$name],$action)) return(false);
+			unset($_GET[$name]);
+		}		
+		
+		return(true);
+	}
+	
+	/**************************************************************************/
+	
+	static function displayNonce($data)
+	{
+		if(array_key_exists('nonce',$data))
+			return($data['nonce']);
+		
+		return('');
 	}
 	
 	/**************************************************************************/

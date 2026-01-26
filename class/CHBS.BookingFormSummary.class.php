@@ -21,28 +21,16 @@ class CHBSBookingFormSummary
 	
 	/**************************************************************************/
 	
-function createField($name, $value, $html = false)
-{
-    // Sprawdzenie, czy pole jest związane z czasem i czy zawiera przedział
-    if (strpos(strtolower($name), 'time') !== false && strpos($value, ' - ') !== false) {
-        // Zakładamy, że wartość już jest w formacie przedziału czasowego 'HH:MM - HH:MM'
-        // Tutaj możesz dodać dodatkową logikę, jeśli format przedziału czasowego wymaga dostosowania
-        $timeRange = $value;
-    } else {
-        // Dla wszystkich innych pól zachowaj oryginalne zachowanie
-        $timeRange = $html ? $value : nl2br(esc_html($value));
-    }
-
-    // Generowanie HTML dla pola
-    $html =
-        '
-        <div class="chbs-summary-field-name">' . ($html ? $name : nl2br(esc_html($name))) . '</div>
-        <div class="chbs-summary-field-value">' . $timeRange . '</div>
-    ';
-
-    return $html;
-}
-
+	function createField($name,$value,$html=false)
+	{
+		$html=
+		'
+			<div class="chbs-summary-field-name">'.($html ? $name : nl2br(esc_html($name))).'</div>
+			<div class="chbs-summary-field-value">'.($html ? $value : nl2br(esc_html($value))).'</div>
+		';
+		
+		return($html);
+	}
 	
 	/**************************************************************************/
 	
@@ -62,7 +50,7 @@ function createField($name, $value, $html = false)
 					$html.=
 					'
 						<div class="chbs-summary-field">
-							'.$this->createField($data['data'][0],$data['data'][1]).'
+							'.$this->createField($data['data'][0],$data['data'][1],true).'
 						</div>
 					';
 

@@ -5,13 +5,16 @@
 
 class CHBSPriceRule
 {
-	public $priceType;
-    public $priceAlterType;
-    public $priceUseType;
-    public $priceSourceType;
 	/**************************************************************************/
 	
-	public function __construct()
+	public $priceType;
+	public $priceUseType;
+	public $priceAlterType;
+	public $priceSourceType;
+
+	/**************************************************************************/
+	
+	function __construct()
 	{
 		$this->priceType=array
 		(
@@ -86,10 +89,24 @@ class CHBSPriceRule
 	
 	/**************************************************************************/
 	
-	function getPriceSourceTypeName($type)
+	function getPriceSourceTypeName($type,$separator=', ')
 	{
-		if(!$this->isPriceSourceType($type)) return('');
-		return($this->priceSourceType[$type][0]);
+		$name=null;
+		
+		$Validation=new CHBSValidation();
+		
+		if(!is_array($type)) $type=array($type);
+		
+		foreach($this->getPriceSourceType() as $index=>$value)
+		{
+			if(in_array($index,$type))
+			{
+				if($Validation->isNotEmpty($name)) $name.=$separator;
+				$name.=$value[0];
+			}
+		}
+		
+		return($name);
 	}
 	
 	/**************************************************************************/
@@ -313,12 +330,15 @@ class CHBSPriceRule
 		
 		CHBSHelper::setDefault($meta,'location_swap_enable',0);
 
-		CHBSHelper::setDefault($meta,'price_source_type',1);
+		CHBSHelper::setDefault($meta,'price_source_type',array(1));
 		
 		CHBSHelper::setDefault($meta,'process_next_rule_enable',0);
         CHBSHelper::setDefault($meta,'rule_level','');
 		
 		CHBSHelper::setDefault($meta,'minimum_order_value',CHBSPrice::getDefaultPrice());
+		CHBSHelper::setDefault($meta,'minimum_order_booking_extra_include',1);
+		CHBSHelper::setDefault($meta,'minimum_order_extra_time_include',1);
+		CHBSHelper::setDefault($meta,'minimum_order_waypoint_duration_include',1);
 		
 		CHBSHelper::setDefault($meta,'custom_vehicle_selection_enable',0);
 		CHBSHelper::setDefault($meta,'custom_vehicle_selection_button_url_address','');
@@ -332,7 +352,7 @@ class CHBSPriceRule
 		foreach($this->getPriceUseType() as $index=>$value)
 		{
 			CHBSHelper::setDefault($meta,'price_'.$index.'_value',CHBSPrice::getDefaultPrice());
-			CHBSHelper::setDefault($meta,'price_'.$index.'_alter_type_id',2);
+			CHBSHelper::setDefault($meta,'price_'.$index.'_alter_type_id',1);
 			
 			if((int)$value['use_tax']===1)
 				CHBSHelper::setDefault($meta,'price_'.$index.'_tax_rate_id',$TaxRate->getDefaultTaxPostId());			
@@ -666,14 +686,20 @@ class CHBSPriceRule
         }
         else $option['rule_level']='';
         
-		if(!$this->isPriceSourceType($option['price_source_type']))
-			$option['price_source_type']=1; 
+		$option['price_source_type']=$this->validatePriceSourceType($option['price_source_type']);
 		
 		if(!$Validation->isPrice($option['minimum_order_value'],false))
 		   $option['minimum_order_value']=0.00;
 		
 		$option['minimum_order_value']=CHBSPrice::formatToSave($option['minimum_order_value'],true);
 	   
+		if(!$Validation->isBool($option['minimum_order_booking_extra_include']))
+		   $option['minimum_order_booking_extra_include']=1;		
+		if(!$Validation->isBool($option['minimum_order_extra_time_include']))
+		   $option['minimum_order_extra_time_include']=1;
+		if(!$Validation->isBool($option['minimum_order_waypoint_duration_include']))
+		   $option['minimum_order_waypoint_duration_include']=1;
+		
 		/***/
 		
 		if(!$Validation->isBool($option['custom_vehicle_selection_enable']))
@@ -754,6 +780,9 @@ class CHBSPriceRule
             'rule_level',
 			'price_source_type',
 			'minimum_order_value',
+			'minimum_order_booking_extra_include',
+			'minimum_order_extra_time_include',
+			'minimum_order_waypoint_duration_include',
 			'custom_vehicle_selection_enable',
 			'custom_vehicle_selection_button_url_address',
 			'custom_vehicle_selection_button_label',
@@ -824,7 +853,7 @@ class CHBSPriceRule
 	
 	function displayPricingRuleAdminListValue($data,$dictionary,$link=false,$sort=false)
 	{
-		if(in_array(-1,$data)) return(__('','chauffeur-booking-system'));
+		if(in_array(-1,$data)) return('');
 		
 		$html=null;
 		
@@ -851,7 +880,7 @@ class CHBSPriceRule
 		{
 			$label=$value;
 			
-			if($link) $label='<a href="'.get_edit_post_link($index).'">'.$value.'</a>';
+			if($link) $label='<a href="'.esc_url(CHBSHelper::editPostURLAddress($index)).'">'.$value.'</a>';
 			if($Validation->isNotEmpty($html)) $html.=', ';
 			$html.=$label;
 		}
@@ -940,7 +969,7 @@ class CHBSPriceRule
 						if(!$Validation->isEmpty($html['distance'])) $html['distance'].=', ';
 						$html['distance'].=$value['start'].' - '.$value['stop'].' '.$Length->getUnitShortName(CHBSOption::getOption('length_unit'));
 						
-						if(in_array($meta['price_source_type'],array(2,3)))
+						if($this->testPriceSourceType($meta['price_source_type'],array(2,3)))
 							$html['distance'].=' ('.self::displayPriceAlter($value['price'],$value['price_alter_type_id']).')';
 					}
 				}  
@@ -958,7 +987,7 @@ class CHBSPriceRule
 						if(!$Validation->isEmpty($html['distance_base_to_pickup'])) $html['distance_base_to_pickup'].=', ';
 						$html['distance_base_to_pickup'].=$value['start'].' - '.$value['stop'].' '.$Length->getUnitShortName(CHBSOption::getOption('length_unit'));
 						
-						if(in_array($meta['price_source_type'],array(4,5)))
+						if($this->testPriceSourceType($meta['price_source_type'],array(4,5)))
 							$html['distance_base_to_pickup'].=' ('.CHBSPrice::format($value['price'],CHBSOption::getOption('currency')).')';
 					}
 				}   
@@ -976,7 +1005,7 @@ class CHBSPriceRule
 						if(!$Validation->isEmpty($html['distance_drop_off_to_base'])) $html['distance_drop_off_to_base'].=', ';
 						$html['distance_drop_off_to_base'].=$value['start'].' - '.$value['stop'].' '.$Length->getUnitShortName(CHBSOption::getOption('length_unit'));
 						
-						if(in_array($meta['price_source_type'],array(4,5)))
+						if($this->testPriceSourceType($meta['price_source_type'],array(4,5)))
 							$html['distance_drop_off_to_base'].=' ('.CHBSPrice::format($value['price'],CHBSOption::getOption('currency')).')';
 					}
 				} 				
@@ -997,7 +1026,7 @@ class CHBSPriceRule
 						if(!$Validation->isEmpty($html['duration'])) $html['duration'].=', ';
 						$html['duration'].=$value['start'].' - '.$value['stop'];	
 
-						if(in_array($meta['price_source_type'],array(6,7)))
+						if($this->testPriceSourceType($meta['price_source_type'],array(6,7)))
 							$html['duration'].=' ('.CHBSPrice::format($value['price'],CHBSOption::getOption('currency')).')';						
 					}
 				}	
@@ -1096,7 +1125,7 @@ class CHBSPriceRule
 							<td>'.$html['distance_base_to_pickup'].'</td>
 						</tr>
 						<tr>
-							<td>'.esc_html__('Distance from dropoff to base location','chauffeur-booking-system').'</td>
+							<td>'.esc_html__('Distance from drop-off to base location','chauffeur-booking-system').'</td>
 							<td>'.$html['distance_drop_off_to_base'].'</td>
 						</tr>						
 						<tr>
@@ -1121,7 +1150,7 @@ class CHBSPriceRule
 					<table class="to-table-post-list">
 						<tr>
 							<td>'.esc_html__('Price source','chauffeur-booking-system').'</td>
-							<td>'.$this->getPriceSourceTypeName($meta['price_source_type']).'</td>
+							<td>'.$this->getPriceSourceTypeName($meta['price_source_type'],'<br>').'</td>
 						</tr>
 						<tr>
 							<td>'.esc_html__('Booking sum type','chauffeur-booking-system').'</td>
@@ -1256,7 +1285,7 @@ class CHBSPriceRule
 							<td>'.esc_html($meta['rule_level']).'</td>
 						</tr>
 						<tr>
-							<td>'.__('Priority','chauffeur-booking-system').'</td>
+							<td>'.__('Order','chauffeur-booking-system').'</td>
 							<td>'.(int)$post->menu_order.'</td>
 						</tr>
 						<tr>
@@ -1721,7 +1750,7 @@ class CHBSPriceRule
 					
 					$bookingData[$key]=round($bookingData[$key],1);
 					
-					if((int)$ruleData['meta']['price_source_type']===2)
+					if($this->testPriceSourceType($ruleData['meta']['price_source_type'],2))
 					{
 						$match=true;
 						
@@ -1750,7 +1779,7 @@ class CHBSPriceRule
 								$pricePerDistance=$sum/$bookingData[$key];
 						}
 					}
-					if((int)$ruleData['meta']['price_source_type']===3)
+					if($this->testPriceSourceType($ruleData['meta']['price_source_type'],3))
 					{
 						foreach($ruleData['meta']['distance'] as $value)
 						{
@@ -1764,7 +1793,7 @@ class CHBSPriceRule
 								$pricePerDistance=$priceTemp;
 								break;
 							}
-						}		
+						}
 					}
 					else
 					{
@@ -1791,7 +1820,7 @@ class CHBSPriceRule
 			{
 				$match=!count($ruleData['meta']['distance_base_to_pickup']);
 
-				if((int)$ruleData['meta']['price_source_type']===4)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],4))
 				{
 					$sum=0;
 					$match=true;
@@ -1820,7 +1849,7 @@ class CHBSPriceRule
 							$pricePerDelivery=$sum/$bookingData['base_location_distance'];
 					}
 				}
-				if((int)$ruleData['meta']['price_source_type']===5)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],5))
 				{
 					foreach($ruleData['meta']['distance_base_to_pickup'] as $value)
 					{
@@ -1859,11 +1888,11 @@ class CHBSPriceRule
 			{
 				$match=!count($ruleData['meta']['distance_drop_off_to_base']);
 				
-				if((int)$ruleData['meta']['price_source_type']===8)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],8))
 				{
 					$sum=0;
 					$match=true;
-					$pricePerDelivery=0;
+					$pricePerDeliveryReturn=0;
 
 					$bookingData['base_location_return_distance']=round($bookingData['base_location_return_distance'],1);
 					
@@ -1888,7 +1917,7 @@ class CHBSPriceRule
 							$pricePerDeliveryReturn=$sum/$bookingData['base_location_return_distance'];
 					}
 				}
-				if((int)$ruleData['meta']['price_source_type']===9)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],9))
 				{
 					foreach($ruleData['meta']['distance_drop_off_to_base'] as $value)
 					{
@@ -1932,7 +1961,7 @@ class CHBSPriceRule
 
 				$bookingDuration=$bookingData[$key];
 				
-				if((int)$ruleData['meta']['price_source_type']===6)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],6))
 				{
 					$sum=0;
 					$match=true;
@@ -1954,7 +1983,7 @@ class CHBSPriceRule
 					
 					if($bookingDuration>0) $pricePerHour=($sum/$bookingDuration)*60;
 				}				
-				if((int)$ruleData['meta']['price_source_type']===7)
+				if($this->testPriceSourceType($ruleData['meta']['price_source_type'],7))
 				{	
 					foreach($ruleData['meta']['duration'] as $value)
 					{
@@ -2010,25 +2039,28 @@ class CHBSPriceRule
 				}
 			}
 			
-			if($pricePerDistance!=-1)
+			if(($pricePerDistance!=-1) || ($pricePerHour!=-1) || ($pricePerDelivery!=-1) || ($pricePerDeliveryReturn!=-1))
 			{
-				$priceRule['price_distance_value']=$priceRule['price_distance_return_value']=$priceRule['price_distance_return_new_ride_value']=$pricePerDistance;
-				$pricePerDistance=-1;
-			}	
-			elseif($pricePerHour!=-1)
-			{
-				$priceRule['price_hour_value']=$priceRule['price_hour_return_value']=$priceRule['price_hour_return_new_ride_value']=$pricePerHour;
-				$pricePerHour=-1;
-			}		
-			elseif($pricePerDelivery!=-1)
-			{
-				$priceRule['price_delivery_value']=$pricePerDelivery;
-				$pricePerDelivery=-1;				
-			}
-			elseif($pricePerDeliveryReturn!=-1)
-			{
-				$priceRule['price_delivery_return_value']=$pricePerDeliveryReturn;
-				$pricePerDeliveryReturn=-1;				
+				if($pricePerDistance!=-1)
+				{
+					$priceRule['price_distance_value']=$priceRule['price_distance_return_value']=$priceRule['price_distance_return_new_ride_value']=$pricePerDistance;
+					$pricePerDistance=-1;
+				}	
+				if($pricePerHour!=-1)
+				{
+					$priceRule['price_hour_value']=$priceRule['price_hour_return_value']=$priceRule['price_hour_return_new_ride_value']=$pricePerHour;
+					$pricePerHour=-1;
+				}		
+				if($pricePerDelivery!=-1)
+				{
+					$priceRule['price_delivery_value']=$pricePerDelivery;
+					$pricePerDelivery=-1;				
+				}
+				if($pricePerDeliveryReturn!=-1)
+				{
+					$priceRule['price_delivery_return_value']=$pricePerDeliveryReturn;
+					$pricePerDeliveryReturn=-1;				
+				}
 			}			
 			else
 			{
@@ -2076,6 +2108,9 @@ class CHBSPriceRule
 			
 			$priceRule['price_type']=$ruleData['meta']['price_type'];
 			$priceRule['minimum_order_value']=$ruleData['meta']['minimum_order_value'];
+			$priceRule['minimum_order_booking_extra_include']=$ruleData['meta']['minimum_order_booking_extra_include'];
+			$priceRule['minimum_order_extra_time_include']=$ruleData['meta']['minimum_order_extra_time_include'];
+			$priceRule['minimum_order_waypoint_duration_include']=$ruleData['meta']['minimum_order_waypoint_duration_include'];
 
 			$priceRule['custom_vehicle_selection_enable']=$ruleData['meta']['custom_vehicle_selection_enable'];
 			$priceRule['custom_vehicle_selection_button_url_address']=$ruleData['meta']['custom_vehicle_selection_button_url_address'];
@@ -2090,7 +2125,7 @@ class CHBSPriceRule
             }
             else $processNextRuleEnable=0;  
 		}
-
+	
 		return($priceRule);
 	}
 	
@@ -2227,6 +2262,66 @@ class CHBSPriceRule
 		}
 		
 		return($zipCodeResult);
+	}
+	
+	/**************************************************************************/
+	
+	function validatePriceSourceType($priceSourceType)
+	{
+		$priceSourceTypeCheck=array(array(2,3),array(4,5),array(6,7),array(8,9));
+		
+		/***/
+		
+		if((!is_array($priceSourceType)) || (!count($priceSourceType))) $priceSourceType=array(1);
+		
+		/***/
+		
+		foreach($priceSourceType as $priceSourceTypeIndex=>$priceSourceTypeValue)
+		{
+			if(!array_key_exists($priceSourceTypeValue,$this->priceSourceType))
+			{
+				unset($priceSourceType[$priceSourceTypeIndex]);
+			}
+		}
+		
+		/****/
+		
+		if(in_array(1,$priceSourceType))
+			$priceSourceType=array(1);
+		else
+		{			
+			foreach($priceSourceTypeCheck as $priceSourceTypeCheckValue)
+			{
+				if((($index1=array_search($priceSourceTypeCheckValue[0],$priceSourceType))!==false) && (($index2=array_search($priceSourceTypeCheckValue[1],$priceSourceType))!==false))
+				{
+					unset($priceSourceType[$index1],$priceSourceType[$index2]);
+				}
+			}
+		}
+		
+		/****/
+		
+		if(!count($priceSourceType)) $priceSourceType=array(1);
+		
+		return($priceSourceType);
+	}
+	
+	/**************************************************************************/
+	
+	function testPriceSourceType($priceSourceTypeToTest,$priceSourceTypeSet)
+	{
+		if(!is_array($priceSourceTypeToTest)) $priceSourceTypeToTest=array((int)$priceSourceTypeToTest);
+		if(!is_array($priceSourceTypeSet)) $priceSourceTypeSet=array((int)$priceSourceTypeSet);
+		
+		foreach($priceSourceTypeToTest as $value)
+		{
+			if(in_array($value,$priceSourceTypeSet))
+			{
+				return(true);
+			}
+		}
+		
+		return(false);
 	}
 	
 	/**************************************************************************/

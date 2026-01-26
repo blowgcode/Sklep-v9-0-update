@@ -7,6 +7,10 @@ class CHBSGoogleCalendar
 {
 	/**************************************************************************/
 	
+	public $addEventAction;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$BookingStatus=new CHBSBookingStatus();
@@ -52,6 +56,8 @@ class CHBSGoogleCalendar
 		$Validation=new CHBSValidation();
 		$BookingForm=new CHBSBookingForm();
 		$BookingHelper=new CHBSBookingHelper();
+		
+		$bookingReturnSend=false;
 		
 		/***/
 		
@@ -111,8 +117,6 @@ class CHBSGoogleCalendar
 		
 			$endDate=clone $startDate;
 			$endDate->modify('+'.($duration+ceil($bookingExtraTime/2)).' minutes');   
-			
-			$bookingReturn=false;
 		}
 		else
 		{
@@ -121,10 +125,10 @@ class CHBSGoogleCalendar
 				if(in_array($booking['meta']['transfer_type_id'],array(2)))
 					$duration*=2;
 				if(in_array($booking['meta']['transfer_type_id'],array(3)))
-					$bookingReturn=true;
+					$bookingReturnSend=true;
 			}	
 			
-			if($bookingReturn)
+			if($bookingReturnSend)
 				$bookingExtraTime=ceil($bookingExtraTime/2);
 			
 			$start=$booking['meta']['pickup_date'].' '.$booking['meta']['pickup_time'];
@@ -145,16 +149,26 @@ class CHBSGoogleCalendar
 		
 		$bookingTitle=null;
 		
-		$bookingTitle.=$booking['post']->post_title;
-				
+		if($Validation->isEmpty($bookingForm['meta']['google_calendar_event_title']))
+			$bookingTitle.=$booking['post']->post_title;
+		else $bookingTitle=CHBSBookingHelper::createBookingText($data['booking'],$bookingForm['meta']['google_calendar_event_title']);
+		
 		/***/
-				
-		$bookingDescription=$BookingHelper->createNotification($data);
+		
+		$location=CHBSBookingHelper::getBookingLocation($data['booking']);
+		
+		/***/
+			
+		if($Validation->isEmpty($bookingForm['meta']['google_calendar_event_description']))
+			$bookingDescription=$BookingHelper->createNotification($data);
+		else $bookingDescription=CHBSBookingHelper::createBookingText($data['booking'],$bookingForm['meta']['google_calendar_event_description']);
+			
 		
 		$bookingDetails=array
 		(
 			'summary'=>$bookingTitle,
 			'description'=>$bookingDescription,
+			'location'=>($bookingReturn ? $location['dropoff'] : $location['pickup']),
 			'start'=>array
 			(
 				'dateTime'=>$startDate->format(DateTime::RFC3339),
@@ -164,7 +178,7 @@ class CHBSGoogleCalendar
 				'dateTime'=>$endDate->format(DateTime::RFC3339),
 			),
 		);
-						
+		
 		/***/
 
 		$ch=curl_init();
@@ -188,7 +202,7 @@ class CHBSGoogleCalendar
 		
 		if((is_object($responseDecoded)) && (property_exists($responseDecoded,'kind')) && ($responseDecoded->kind=='calendar#event'))
 		{
-			if($bookingReturn)
+			if($bookingReturnSend)
 			{
 				$this->sendBooking($bookingId,true,$action);
 			}

@@ -169,8 +169,7 @@ class CHBSPaymentPaypal
 							$Booking->sendEmailBookingChangeStatus($bookingOld,$bookingNew);
 					}
 					
-					$GoogleCalendar=new CHBSGoogleCalendar();
-					$GoogleCalendar->sendBooking($bookingId,false,'after_booking_status_change');
+					do_action('chbs_booking_status_change',$bookingNew,$bookingOld);
 				}
 				else
 				{

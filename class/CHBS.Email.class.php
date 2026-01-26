@@ -19,7 +19,18 @@ class CHBSEmail
 		global $chbs_phpmailer;
 		
 		$mail->CharSet='UTF-8';
+		
+		if(array_key_exists('reply_to_email_address',$chbs_phpmailer))
+		{
+			$mail->addReplyTo($chbs_phpmailer['reply_to_email_address'],$chbs_phpmailer['reply_to_email_address']);
+		}
+		
 		$mail->SetFrom($chbs_phpmailer['sender_email_address'],$chbs_phpmailer['sender_name']);
+		
+		if((array_key_exists('attachment_string',$chbs_phpmailer)) && (is_array($chbs_phpmailer['attachment_string'])) && (count($chbs_phpmailer['attachment_string'])))
+		{
+			$mail->addStringAttachment($chbs_phpmailer['attachment_string']['content'],$chbs_phpmailer['attachment_string']['file_name']);
+		}
 		
 		if($chbs_phpmailer['smtp_auth_enable'])
 		{
@@ -44,7 +55,7 @@ class CHBSEmail
 	function send($recipient,$subject,$body)
 	{
 		global $chbs_phpmailer;
-		
+
 		$Validation=new CHBSValidation();
 		
 		foreach($recipient as $recipientIndex=>$recipientData)
@@ -87,7 +98,21 @@ class CHBSEmail
 		$style['list'][1]='style="margin:0px;padding:0px;list-style-position:inside;"';
 		$style['list'][2]='style="margin:0px;padding:0px;"';
 		
+		$style['link'][1]='style="color:#2271B1"';
+		
 		return($style);
+	}
+	
+	/**************************************************************************/
+	
+	static function getEmailStyleS($index1,$index2=null)
+	{
+		$Email=new CHBSEmail();
+		
+		$style=$Email->getEmailStyle();
+		
+		if(is_null($index2)) return($style[$index1]);
+		else return($style[$index1][$index2]);
 	}
 
 	/**************************************************************************/

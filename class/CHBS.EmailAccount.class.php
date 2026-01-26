@@ -5,10 +5,13 @@
 
 class CHBSEmailAccount
 {
-	public $secureConnectionType;
 	/**************************************************************************/
 	
-	public function __construct()
+	public $secureConnectionType;
+	
+	/**************************************************************************/
+	
+	function __construct()
 	{
 		$this->secureConnectionType=array
 		(

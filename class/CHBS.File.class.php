@@ -55,6 +55,26 @@ class CHBSFile
 	}
 	
 	/**************************************************************************/
+	
+	static function checkFileExtensionToUpload($name)
+	{
+		$Validation=new CHBSValidation();
+		
+		$fileExtension=CHBSOption::getOption('file_extension_to_upload');
+		
+		if($Validation->isNotEmpty($fileExtension))
+		{
+			$fileInfo=pathinfo($name);
+
+			$fileExtension=explode(';',$fileExtension);
+
+			if(!in_array($fileInfo['extension'],$fileExtension)) return(false);
+		}	
+		
+		return(true);
+	}
+	
+	/**************************************************************************/
 }
 
 /******************************************************************************/

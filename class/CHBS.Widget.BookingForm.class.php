@@ -56,7 +56,7 @@ class CHBSWidgetBookingForm extends CHBSWidget
 	
 	function register($class=null)
 	{
-		parent::register(is_null($class) ? get_class() : $class);
+		parent::register(is_null($class) ? get_class($this) : $class);
 	}
 	
 	/**************************************************************************/

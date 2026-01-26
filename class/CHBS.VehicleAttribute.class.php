@@ -5,11 +5,13 @@
 
 class CHBSVehicleAttribute
 {
-	public $attributeType;
-    public $priceSource;
 	/**************************************************************************/
 	
-	public function __construct()
+	public $attributeType;
+	
+	/**************************************************************************/
+	
+	function __construct()
 	{
 		$this->attributeType=array
 		(
@@ -113,21 +115,21 @@ class CHBSVehicleAttribute
 	
 	/**************************************************************************/
 	
-	public function getAttributeType()
+	function getAttributeType()
 	{
 		return($this->attributeType);
 	}
 	
 	/**************************************************************************/
 	
-	public function isAttributeType($attributeType)
+	function isAttributeType($attributeType)
 	{
 		return(array_key_exists($attributeType,$this->getAttributeType()));
 	}
 	
 	/**************************************************************************/
 	
-	public function setPostMetaDefault(&$meta)
+	function setPostMetaDefault(&$meta)
 	{
 		CHBSHelper::setDefault($meta,'attribute_type','1');
 		CHBSHelper::setDefault($meta,'attribute_value',array());
@@ -135,7 +137,7 @@ class CHBSVehicleAttribute
 	
 	/**************************************************************************/
 	
-	public function savePost($postId)
+	function savePost($postId)
 	{	  
 		if(!$_POST) return(false);
 		

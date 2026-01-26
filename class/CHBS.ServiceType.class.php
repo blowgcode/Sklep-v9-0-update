@@ -3,44 +3,44 @@
 /******************************************************************************/
 /******************************************************************************/
 
-class CHBSTransferType
+class CHBSServiceType
 {
 	/**************************************************************************/
 	
-	public $transferType;
+	public $serviceType;
 	
 	/**************************************************************************/
 	
 	function __construct()
 	{
-		$this->transferType=array
+		$this->serviceType=array
 		(
-			'1'=>array(__('One Way','chauffeur-booking-system')),
-			'2'=>array(__('Return','chauffeur-booking-system')),
-			'3'=>array(__('Return (new ride)','chauffeur-booking-system')),
+			1=>array(__('Distance','chauffeur-booking-system')),
+			2=>array(__('Hourly','chauffeur-booking-system')),
+			3=>array(__('Flat rate','chauffeur-booking-system'))
 		);
 	}
 	
 	/**************************************************************************/
 	
-	function getTransferType($transferType=null)
+	function getServiceType($serviceType=null)
 	{
-		if(is_null($transferType)) return($this->transferType);
-		else return($this->transferType[$transferType]);
+		if($serviceType===null) return($this->serviceType);
+		else return($this->serviceType[$serviceType]);
 	}
 	
 	/**************************************************************************/
 	
-	function isTransferType($transferType)
+	function isServiceType($serviceType)
 	{
-		return(array_key_exists($transferType,$this->transferType));
+		return(array_key_exists($serviceType,$this->serviceType));
 	}
 	
 	/**************************************************************************/
 	
-	function getTransferTypeName($transferType)
+	function getServiceTypeName($serviceType)
 	{
-		return($this->transferType[$transferType][0]);
+		return($this->serviceType[$serviceType][0]);
 	}
 	
 	/**************************************************************************/
@@ -48,3 +48,9 @@ class CHBSTransferType
 
 /******************************************************************************/
 /******************************************************************************/
+
+
+
+
+
+

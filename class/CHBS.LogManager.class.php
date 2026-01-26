@@ -5,10 +5,13 @@
 
 class CHBSLogManager
 {
-	public $type;
 	/**************************************************************************/
 	
-	public function __construct()
+	public $type;
+	
+	/**************************************************************************/
+	
+	function __construct()
 	{
 		$this->type=array
 		(
@@ -41,6 +44,10 @@ class CHBSLogManager
 				7=>array
 				(
 					'description'=>__('Sending an notification with information about accepting/rejecting booking by driver.','chauffeur-booking-system')
+				),
+				8=>array
+				(
+					'description'=>__('Sending an notification about cancelling booking on defined e-mail addresses.','chauffeur-booking-system')
 				)
 			),
 			'nexmo'=>array
@@ -121,6 +128,10 @@ class CHBSLogManager
 				1=>array
 				(
 					'description'=>esc_html__('Calculating a distance between two points.','chauffeur-booking-system')
+				),
+				2=>array
+				(
+					'description'=>esc_html__('Calculating a distance between two points.','chauffeur-booking-system')
 				)
 			),
 			'fixerio'=>array
@@ -137,7 +148,30 @@ class CHBSLogManager
 					'description'=>__('Verifying the user\'s response.','chauffeur-booking-system')
 				)
 			),
+			'license'=>array
+			(
+				1=>array
+				(
+					'description'=>__('License verification','chauffeur-booking-system')
+				)
+			),
+			'product_info'=>array
+			(
+				1=>array
+				(
+					'description'=>__('Product info checking','chauffeur-booking-system')
+				)
+			),
+			'booking_data_validation'=>array
+			(
+				1=>array
+				(
+					'description'=>__('Booking data validation','chauffeur-booking-system')
+				)
+			)
 		);
+		
+		$this->type=apply_filters(PLUGIN_CHBS_CONTEXT.'_log_manager_type',$this->type);
 	}
 		
 	/**************************************************************************/
@@ -172,7 +206,7 @@ class CHBSLogManager
 	function get($type=null)
 	{
 		$log=get_option(PLUGIN_CHBS_OPTION_PREFIX.'_log');
-
+	
 		if(!is_array($log)) $log=array();
 		if(is_null($type)) return($log);
 		
@@ -204,7 +238,7 @@ class CHBSLogManager
 			$html.=
 			'
 				<li>
-					<div class="to-field-disabled to-field-disabled-full-width">
+					<div class="to-log-entry">
 						['.(++$i).']['.date_i18n('d-m-Y G:i:s',$value['timestamp']).']<br/>
 						<b>'.$this->type[$type][$value['event']]['description'].'</b><br/><br/>
 						'.nl2br(esc_html($value['message'])).'
@@ -216,6 +250,14 @@ class CHBSLogManager
 		$html='<ul>'.$html.'</ul>';
 		
 		return($html);
+	}
+	
+	/**************************************************************************/
+	
+	static function showS($type)
+	{
+		$LogManager=new CHBSLogManager();
+		return($LogManager->show($type));
 	}
 	
 	/**************************************************************************/

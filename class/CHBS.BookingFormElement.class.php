@@ -7,6 +7,11 @@ class CHBSBookingFormElement
 {
 	/**************************************************************************/
 	
+	public $fieldType;
+	public $fieldLayout;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->fieldType=array
@@ -102,7 +107,9 @@ class CHBSBookingFormElement
 		if(isset($formElementFieldPost['id']))
 		{
 			$Validation=new CHBSValidation();
+			
 			$ServiceType=new CHBSServiceType();
+			$TransferType=new CHBSTransferType();
 			
 			$panelDictionary=$this->getPanel($meta);
 			
@@ -148,6 +155,20 @@ class CHBSBookingFormElement
 				
 				/***/
 				
+				$transferTypeIdEnable=preg_split('/\./',$formElementFieldPost['transfer_type_id_enable_hidden'][$index]);
+				if(is_array($transferTypeIdEnable))
+				{
+					foreach($transferTypeIdEnable as $index2=>$value2)
+					{
+						if(!$TransferType->isTransferType($value2))
+							unset($transferTypeIdEnable[$index2]);
+					}
+				}
+				
+				if(!is_array($transferTypeIdEnable)) $transferTypeIdEnable=array();
+				
+				/***/
+				
 				$geofencePickup=preg_split('/\./',$formElementFieldPost['geofence_pickup_hidden'][$index]);
 				if(is_array($geofencePickup))
 				{
@@ -171,7 +192,7 @@ class CHBSBookingFormElement
 				if($Validation->isEmpty($value))
 					$value=CHBSHelper::createId();
 				
-				$formElementField[]=array('id'=>$value,'label'=>$formElementFieldPost['label'][$index],'field_type'=>$formElementFieldPost['field_type'][$index],'mandatory'=>$formElementFieldPost['mandatory'][$index],'dictionary'=>$formElementFieldPost['dictionary'][$index],'field_layout'=>$formElementFieldPost['field_layout'][$index],'message_error'=>$formElementFieldPost['message_error'][$index],'panel_id'=>$formElementFieldPost['panel_id'][$index],'service_type_id_enable'=>$serviceTypeIdEnable,'geofence_pickup'=>$geofencePickup,'geofence_dropoff'=>$geofenceDropoff);
+				$formElementField[]=array('id'=>$value,'label'=>$formElementFieldPost['label'][$index],'field_type'=>$formElementFieldPost['field_type'][$index],'mandatory'=>$formElementFieldPost['mandatory'][$index],'dictionary'=>$formElementFieldPost['dictionary'][$index],'field_layout'=>$formElementFieldPost['field_layout'][$index],'message_error'=>$formElementFieldPost['message_error'][$index],'panel_id'=>$formElementFieldPost['panel_id'][$index],'service_type_id_enable'=>$serviceTypeIdEnable,'transfer_type_id_enable'=>$transferTypeIdEnable,'geofence_pickup'=>$geofencePickup,'geofence_dropoff'=>$geofenceDropoff);
 			}
 		}  
 		
@@ -274,7 +295,7 @@ class CHBSBookingFormElement
 		
 	/**************************************************************************/
 	
-	function createField($panelId,$serviceTypeId,$bookingForm)
+	function createField($panelId,$serviceTypeId,$transferTypeId,$bookingForm)
 	{
 		$html=array(null,null);
 		
@@ -296,7 +317,7 @@ class CHBSBookingFormElement
 		}
 		
 		/***/
-		
+
 		foreach($bookingForm['meta']['form_element_field'] as $value)
 		{	
 			if($value['panel_id']==$panelId)
@@ -310,10 +331,22 @@ class CHBSBookingFormElement
 					}
 				}
 				
-				$pickupLocation=$data['pickup_location_coordinate_service_type_'.$data['service_type_id']];
+				if(in_array($serviceTypeId,array(1,3)))
+				{
+					if(array_key_exists('transfer_type_id_enable',$value))
+					{
+						if(is_array($value['transfer_type_id_enable']))
+						{
+							if(!in_array($transferTypeId,$value['transfer_type_id_enable']))
+								continue;
+						}
+					}
+				}
+				
+				$pickupLocation=CHBSBookingHelper::getLocationFromBookingForm($data,'pickup');
 				if($GeofenceChecker->locationInGeofence($value['geofence_pickup'],$bookingForm['dictionary']['geofence'],$pickupLocation)===false) continue;
 				
-				$dropoffLocation=$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']];
+				$dropoffLocation=CHBSBookingHelper::getLocationFromBookingForm($data,'dropoff');
 				if($GeofenceChecker->locationInGeofence($value['geofence_dropoff'],$bookingForm['dictionary']['geofence'],$dropoffLocation)===false) continue;
 				
 				$i++;
@@ -477,6 +510,8 @@ class CHBSBookingFormElement
 				$class[]='chbs-hidden';
 		}
 		
+		if($Validation->isEmpty($html[1])) return('');
+		
 		return($html[0].'<div'.CHBSHelper::createCSSClassAttribute($class).'>'.$html[1].'</div>');
 	}
 	
@@ -532,6 +567,7 @@ class CHBSBookingFormElement
 	{
 		$error=array();
 		
+		$Date=new CHBSDate();
 		$Geofence=new CHBSGeofence();
 		$Validation=new CHBSValidation();
 		$GeofenceChecker=new CHBSGeofenceChecker();
@@ -567,6 +603,15 @@ class CHBSBookingFormElement
 				}
 			}	
 			
+			if(array_key_exists('transfer_type_id_enable',$value))
+			{
+				if(is_array($value['transfer_type_id_enable']))
+				{
+					if(!in_array($data['transfer_type_service_type_'.$data['service_type_id']],$value['transfer_type_id_enable']))
+						continue;
+				}
+			}	
+			
 			$check=true;
 			if($value['panel_id']!=1)
 			{
@@ -577,10 +622,10 @@ class CHBSBookingFormElement
 				}
 			}
 			
-			$pickupLocation=$data['pickup_location_coordinate_service_type_'.$data['service_type_id']];
+			$pickupLocation=CHBSBookingHelper::getLocationFromBookingForm($data,'pickup');
 			if($GeofenceChecker->locationInGeofence($value['geofence_pickup'],$geofenceDictionary,$pickupLocation)===false) continue;
 				
-			$dropoffLocation=$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']];
+			$dropoffLocation=CHBSBookingHelper::getLocationFromBookingForm($data,'dropoff');
 			if($GeofenceChecker->locationInGeofence($value['geofence_dropoff'],$geofenceDictionary,$dropoffLocation)===false) continue;
 			
 			if((int)$value['mandatory']===1)
@@ -600,6 +645,8 @@ class CHBSBookingFormElement
 						switch($value['field_type'])
 						{
 							case 4:
+								
+								$data[$name1]=$Date->formatDateToStandard($data[$name1]);
 
 								if(!$Validation->isDate($data[$name1]))
 									$error[]=array('name'=>CHBSHelper::getFormName($name2,false),'message_error'=>$value['message_error']);	
@@ -607,6 +654,8 @@ class CHBSBookingFormElement
 							break;
 
 							case 5:
+								
+								$data[$name1]=$Date->formatTimeToStandard($data[$name1]);
 
 								if(!$Validation->isTime($data[$name1]))
 									$error[]=array('name'=>CHBSHelper::getFormName($name2,false),'message_error'=>$value['message_error']);	
@@ -628,6 +677,8 @@ class CHBSBookingFormElement
 					switch($value['field_type'])
 					{
 						case 4:
+							
+							$data[$name1]=$Date->formatDateToStandard($data[$name1]);
 
 							if(!$Validation->isDate($data[$name1],true))
 								$error[]=array('name'=>CHBSHelper::getFormName($name2,false),'message_error'=>__('Date is not valid.','chauffeur-booking-system'));	
@@ -635,6 +686,8 @@ class CHBSBookingFormElement
 						break;
 
 						case 5:
+							
+							$data[$name1]=$Date->formatTimeToStandard($data[$name1]);
 
 							if(!$Validation->isTime($data[$name1],true))
 								$error[]=array('name'=>CHBSHelper::getFormName($name2,false),'message_error'=>__('Time is not valid.','chauffeur-booking-system'));	
@@ -695,6 +748,18 @@ class CHBSBookingFormElement
 				}
 			}	
 			
+			if(array_key_exists('transfer_type_id_enable',$value))
+			{
+				if(is_array($value['transfer_type_id_enable']))
+				{
+					if(!in_array($data['transfer_type_service_type_'.$data['service_type_id']],$value['transfer_type_id_enable']))
+					{
+						unset($meta['form_element_field'][$index]);
+						continue;
+					}
+				}
+			}	
+			
 			$name='form_element_field_'.$value['id']; 
 			$meta['form_element_field'][$index]['value']=$data[$name];
 			
@@ -706,37 +771,54 @@ class CHBSBookingFormElement
 			
 			if(array_key_exists($name.'_tmp_name',$data))
 			{
-				$file1=CHBSFile::getUploadPath().'/'.$data[$name.'_tmp_name'];
-				$file2=CHBSFile::getUploadPath().'/'.$data[$name.'_name'];
-			
-				if(rename($file1,$file2))
+				if(CHBSFile::checkFileExtensionToUpload($data[$name.'_name']))
 				{
-					$upload=wp_upload_bits($data[$name.'_name'],null,file_get_contents($file2));
+					$fileInfo1=pathinfo($data[$name.'_tmp_name']);
+					$fileInfo2=pathinfo($data[$name.'_name']);
+					
+					$file1=realpath(CHBSFile::getUploadPath().'/'.$fileInfo1['basename']);
+					$file2=CHBSFile::getUploadPath().'/'.$fileInfo2['basename'];
 
-					if($upload['error']===false)
+					if($file1!==false)
 					{
-						$attachment=array
-						(
-							'post_title'=>$data[$name.'_name'],
-							'post_mime_type'=>$data[$name.'_type'],
-							'post_content'=>'',
-							'post_status'=>'inherit'
-						);
-
-						$attachmentId=wp_insert_attachment($attachment,$upload['file'],$bookingId);
-
-						if($attachmentId>0)
+						if(rename($file1,$file2))
 						{
-							$attachmentData=wp_generate_attachment_metadata($attachmentId,$upload['file']);
-							wp_update_attachment_metadata($attachmentId,$attachmentData);
+							$file2=realpath($file2);
 							
-							$meta['form_element_field'][$index]['attachment_id']=$attachmentId;
+							if($file2!==false)
+							{
+								$upload=wp_upload_bits($fileInfo2['basename'],null,file_get_contents($file2));
+
+								if($upload['error']===false)
+								{
+									$fileInfo3=pathinfo($upload['file']);
+									
+									$attachment=array
+									(
+										'post_title'=>$fileInfo3['basename'],
+										'post_mime_type'=>$fileInfo3['extension'],
+										'post_content'=>'',
+										'post_status'=>'inherit'
+									);
+
+									$attachmentId=wp_insert_attachment($attachment,$upload['file'],$bookingId);
+
+									if($attachmentId>0)
+									{
+										$attachmentData=wp_generate_attachment_metadata($attachmentId,$upload['file']);
+										wp_update_attachment_metadata($attachmentId,$attachmentData);
+
+										$meta['form_element_field'][$index]['attachment_id']=$attachmentId;
+									}
+								}
+								
+								@unlink($file2);
+							}
 						}
+						
+						@unlink($file1);
 					}
 				}
-				
-				@unlink($file1);
-				@unlink($file2);
 			}
 		}
 		
@@ -804,7 +886,7 @@ class CHBSBookingFormElement
 							if(!is_null($file=get_post($value['attachment_id'])))
 							{
 								if($type===1)
-									$fieldValue='<a href="'.get_edit_post_link($value['attachment_id']).'" target="_blank">'.esc_html($file->post_title).'</a>';
+									$fieldValue='<a href="'.esc_url(CHBSHelper::editPostURLAddress($value['attachment_id'])).'" target="_blank">'.esc_html($file->post_title).'</a>';
 								else $fieldValue=esc_html($file->post_title);
 							}
 							else continue;
@@ -827,7 +909,7 @@ class CHBSBookingFormElement
 					$html.=
 					'
 						<div>
-							<span class="to-legend-field">'.$fieldLabel.'</span>
+							<span class="to-legend-field">'.$fieldLabel.'.</span>
 							<div class="to-field-disabled">'.$fieldValue.'</div>								
 						</div>	
 					';

@@ -7,6 +7,10 @@ class CHBSRoute
 {
 	/**************************************************************************/
 	
+	public $priceSource;
+	
+	/**************************************************************************/
+	
 	function __construct()
 	{
 		$this->priceSource=array
@@ -382,6 +386,28 @@ class CHBSRoute
 	function manageEditSortableColumns($column)
 	{
 		return($column);	   
+	}
+	
+	/**************************************************************************/
+	
+	function formatTimeToDisplayRoute($time)
+	{
+		if((!is_array($time)) || (!count($time))) return($time);
+		
+		$Date=new CHBSDate();
+			
+		foreach($time as $dayIndex=>$dateData)
+		{
+			if((array_key_exists('hour',$dateData)) && (is_array($dateData['hour'])))
+			{
+				foreach($dateData['hour'] as $hourIndex=>$hourValue)
+				{
+					$time[$dayIndex]['hour'][$hourIndex]=$Date->formatTimeToDisplay($hourValue);
+				}
+			}
+		}
+		
+		return($time);
 	}
 
 	/**************************************************************************/
