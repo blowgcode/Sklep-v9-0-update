@@ -17,6 +17,11 @@ html .to .to-width-full
     width:100%;
 }
 
+html .to .to-toggle-details
+{
+	overflow-x:auto;
+}
+
 /******************************************************************************/
 /*	Table																	  */
 /******************************************************************************/
@@ -151,6 +156,24 @@ html .to .to-width-full
 	.to .to-table-form-element-field>table
 	{
 		width:3000px
+	}
+	
+/******************************************************************************/
+/*	Maximum bookings number table 											  */
+/******************************************************************************/ 
+
+.to .to-table-maximum-booking-number
+{
+	width:100%;
+	height:500px;
+	overflow-x:auto;
+	overflow-y:auto;
+}
+
+	.to .to-table-maximum-booking-number>table
+	{
+		
+		width:2000px
 	}
 
 /******************************************************************************/
@@ -340,3 +363,230 @@ body.post-type-chbs_booking_extra .wp-list-table
     {
         padding-left:15px;
     }
+	
+/******************************************************************************/
+/*	Price rule edit								            			      */
+/******************************************************************************/	
+
+.to select[name="chbs_price_source_type[]"]
+{
+	min-width:50%;
+}
+	
+/******************************************************************************/
+/*	Booking search								            			      */
+/******************************************************************************/	
+	
+.to-booking-search
+{
+	display:inline-flex;
+	align-items:baseline;
+}
+
+	.to-booking-search div
+	{
+		
+	}
+	
+/******************************************************************************/
+/*	Booking calendar							            			      */
+/******************************************************************************/
+
+.to-booking-calendar
+{
+	width:100%;
+	margin-left:0px;
+	padding-right:20px;
+}
+
+	.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header
+	{
+		display:flex;
+		margin-bottom:40px;
+	}
+	
+		.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div
+		{
+			flex-basis:50%;
+		}
+	
+		.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child
+		{
+			display:flex;
+			align-items:center;
+		}
+		
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>h1
+			{
+				margin-right:20px;
+				display:inline-block;
+			}
+			
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>a
+			{
+				width:40px;
+				height:40px;
+				display:block;
+				color:#111111;
+				line-height:40px;
+				margin-right:5px;				
+				background:#FFFFFF;
+				border-radius:999em;
+				text-align:center;
+				text-decoration:none;
+				font-size:18px;
+			}
+			
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>a:hover
+			{
+				color:#FFFFFF;
+				background-color:#0073AA;
+			}
+			
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>h1+a:first-child
+			{
+				
+			}
+			
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>h1+a:first-child+a
+			{
+							
+			}
+			
+		.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div+div
+		{
+			display:flex;
+			justify-content:right;
+		}
+		
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div+div select
+			{
+				width:250px;
+			}
+
+	.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table
+	{
+
+	}
+	
+		.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table
+		{
+			width:100%;
+			table-layout:fixed;
+			border-collapse:collapse;
+		}
+		
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table thead
+			{
+				background:#FFFFFF;
+			}
+		
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tbody
+			{
+				top:-1px;
+				position:relative;
+			}
+		
+			.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr
+			{
+				
+			}
+			
+				.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr th,
+				.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td
+				{
+					border:solid 1px transparent;
+				}
+								
+				.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr th
+				{
+					width:15%;
+				}
+				
+					.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr th div
+					{
+						padding:10px;
+						border-bottom:solid 1px #F0F0F1;	
+					}
+					
+				.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td
+				{
+					vertical-align:top;
+				}
+				
+					.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div
+					{
+						padding:5px;
+						height:190px;
+						display:flex;
+						background:#FFFFFF;
+						flex-direction:column;
+					}
+					
+						.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div a,
+						.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div a:hover
+						{
+							color:#3143A0;
+							font-size:12px;
+							text-decoration:none;
+						}
+					
+						.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child
+						{
+							width:100%;
+							text-align:center;
+							margin-bottom:5px;
+						}
+						
+							.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child>a>span
+							{
+								font-size:13px;
+								font-weight:bold;
+							}
+							
+							.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child>a>span.to-booking-calendar-today
+							{
+								padding:2px;
+								color:#FFFFFF;
+								line-height:1;
+								background:#3143A0;
+								border-radius:999em;
+							}
+						
+						.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div
+						{
+							
+						}
+						
+							.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div>ul
+							{
+								margin:0px;
+								padding:0px;
+								list-style:none;
+							}
+							
+								.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div>ul>li
+								{
+									padding:0px;
+									margin:0px 0px 3px 0px;
+								}
+								
+									.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div>ul>li>a
+									{
+										padding:4px;
+										line-height:1;
+										display:block;
+										overflow:hidden;
+										white-space:nowrap;
+										border-radius:5px;
+										text-overflow:ellipsis;
+										background-color:#EDF3FF;
+									}
+									
+										.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div>ul>li>a,
+										.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child+div>ul>li>a:hover
+										{
+											
+										}
+						
+			

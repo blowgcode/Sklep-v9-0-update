@@ -1,0 +1,93 @@
+/******************************************************************************/
+/*	Booking calendar														  */
+/******************************************************************************/
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div a, 
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div a:hover
+{
+    color:#0D0D0D;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child>a>span
+{
+    font-size:14px;
+    font-weight:400;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div a:hover,
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child>a:hover
+{
+    text-decoration:underline;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr th div
+{
+	padding:10px 10px 11px 10px;
+	border-bottom:solid 1px #F0F0F1;
+	font-size:14px;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child>a>span.to-booking-calendar-today
+{
+	padding:0;
+	color:#0D0D0D;
+	background:#D2ECFF;
+	border-radius:999px;
+	display:inline-block;
+	width:19px;
+	line-height:19px;
+	text-align:center;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>h1
+{
+	margin-right:15px;
+    margin-left:15px;
+	display:inline-block;
+	order:2;
+	font-size:24px;
+	position:relative;
+	top:-1px;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child + div>ul>li>a
+{
+	padding:4px 4px 5px 4px;
+	line-height:1;
+	display:block;
+	overflow:hidden;
+	white-space:nowrap;
+	border-radius:5px;
+	text-overflow:ellipsis;
+	background-color:#D2ECFF;
+	font-size:13px;
+    text-decoration:none;
+    transition:all 100ms ease;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-table table tr td>div>div:first-child + div>ul>li>a:hover
+{
+    background:#8FD0FF;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>a
+{
+	width:40px;
+	height:40px;
+	display:block;
+	color:#0D0D0D;
+	line-height:34px;
+	margin-right:5px;
+	background:#FFFFFF;
+	border-radius:999em;
+	text-align:center;
+	text-decoration:none;
+	font-size:26px;
+    transition:all 100ms ease;
+}
+
+.to-booking-calendar.to-chbs-booking-calendar .to-booking-calendar-header>div:first-child>a:hover
+{
+    background:#8FD0FF;
+    color:#0D0D0D;
+}

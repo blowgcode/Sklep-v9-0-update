@@ -1,0 +1,990 @@
+/******************************************************************************/
+/* Base																		  */
+/******************************************************************************/
+
+.to,
+.to td,
+.to th,
+.to input,
+.to select,
+.to textarea,
+.to .dk_container a,
+.to .ui-button,
+.to .ui-widget,
+.to .ui-widget-content a,
+.to .dk_container a.dk_toggle:hover,
+.to .dk_container a.dk_toggle:focus,
+.to .dk_container a.dk_toggle:active,
+.to .dk_container .dk_options_inner li a,
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div *,
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div div.ui-datepicker-title span,
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div th span,
+.to h1,.to h1 a,
+.to h2,.to h2 a,
+.to h3,.to h3 a,
+.to h4,.to h4 a,
+.to h5,.to h5 a,
+.to h6,.to h6 a
+{
+    line-height:1.6em;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Arial',sans-serif;
+}
+
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div div.ui-datepicker-title span,
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div th span
+{
+	font-weight:700;
+}
+
+.to,
+.to td,
+.to th,
+.to input,
+.to select,
+.to textarea,
+.to .dk_container a,
+.to .ui-button,
+.to .ui-widget,
+.to .ui-widget-content a,
+.to .dk_container a.dk_toggle:hover,
+.to .dk_container a.dk_toggle:focus,
+.to .dk_container a.dk_toggle:active,
+.to .dk_container .dk_options_inner li a,
+.to-ui-datepicker.ui-datepicker#ui-datepicker-div *,
+.to h6,.to h6 a
+{
+    font-size:15px;
+}
+
+.to #to_form
+{
+    border-radius:0px 5px 5px 0px;
+}
+
+.to ::placeholder
+{
+	opacity:1;
+}
+
+.to .postbox
+{
+    box-shadow:none;
+}
+
+/******************************************************************************/
+/* Color																	  */
+/******************************************************************************/
+
+	/**************************************************************************/
+	/* Color / Text             											  */
+	/**************************************************************************/
+
+	.to ::placeholder
+	{
+		color:#888C93;
+	}
+	
+	.to input[type="submit"].to-button:hover,
+	.to input[type="button"].to-button:hover,
+	.to ul.to-menu li a.to-menu-select,
+	.to ul.to-menu li a.to-menu-select:hover,
+	.to li.ui-timepicker-selected,
+	.to .dk_options a:hover,
+	.to .dk_options .dk_option_current a,
+	.to .ui-widget-header,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active.ui-state-hover a,
+	.to input[type="submit"].to-button:hover,
+	.to input[type="button"].to-button:hover,
+	.to ul.to-menu li a.to-menu-select,
+	.to ul.to-menu li a.to-menu-select:hover,
+	.to ul.to-menu li a.to-menu-error,
+	.to ul.to-menu li a.to-menu-error:hover,
+	.to .to-qtip,
+	.to .to-header .to-header-left h3,
+	.to .ui-tooltip-error .ui-tooltip-content,
+	.to .ui-autocomplete li.ui-menu-item:hover,
+	.to .ui-timepicker-selected,
+	.to .ui-timepicker-list li:hover,
+	.to .ui-timepicker-list .ui-timepicker-selected:hover,
+	.to .ui-button.ui-state-active,
+	.to .ui-button.ui-state-active:hover,
+	.to .to-content .to-content-left #to_menu li ul li a.to-menu-select,
+	.to .to-content .to-content-left #to_menu li ul li a.to-menu-select:hover,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select:hover,
+	.to .to-content .to-content-left #to_menu>li>a.to-menu-select::before,
+	.to .to-content .to-content-left #to_menu>li>a.to-menu-select:hover::before,
+	.to ul.to-menu li a.to-menu-select.to-menu-error,
+	.to ul.to-menu li a.to-menu-select.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li a.to-menu-error,
+	.to .to-content .to-content-left #to_menu li a.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select.to-menu-error,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li ul li a.to-menu-select.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu>li>a.to-menu-error::before,
+	.to .to-content .to-content-left #to_menu>li>a.to-menu-error:hover::before
+	{
+		color:#FFFFFF;
+	}	
+	
+	.to,
+	.to a:hover,
+	.to .to-preformatted-text,
+	.to .to-form-field-list li span.to-legend,
+	.to .to-form-field-list li span.to-legend-field,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div *,
+	.to input,
+	.to textarea,
+	.to select option,
+	.to select option:hover,
+	.to table.to-table td>div,
+	.to label.to-infield,
+	.to label.to-label-1,
+	.to .dk_container a.dk_toggle:focus,
+	.to .dk_container a.dk_toggle:active,
+	.to .dk_container .dk_options_inner li a,
+	.to .ui-timepicker-list li,
+	.to .ui-tabs .ui-tabs-nav li a,
+	.to .ui-button,
+	.to .to-content #to_panel .to-panel-description,
+	.to .to-slider-range,
+	.to .to-header .to-header-right h6,
+	.to table.to-table th>div span.to-legend,
+	.to .to-form-field-list>li>span.to-legend,
+	.to .to-form-field-list>li span.to-legend-field
+	{
+		color:#4B4F5B;
+	}
+	
+	.to,
+	.to .dk_container a,
+	.to .dk_container a.dk_toggle,
+	.to .dk_container a.dk_toggle:hover,
+	.to .dk_options_inner li a:hover,
+	.to .dk_options_inner li.dk_option_current a,
+	.to .dk_options .dk_option_current a,
+	.to .dk_options .dk_option_current a:hover,
+	.to .dk_options a:hover,
+	.to .dk_toggle,
+	.to .dk_toggle:hover,
+	.to .to-field-disabled,.to [readonly="readonly"],
+	.to h1,.to h1 a,
+	.to h2,.to h2 a,
+	.to h3,.to h3 a,
+	.to h4,.to h4 a,
+	.to h5,.to h5 a,
+	.to h6,.to h6 a,
+	.to .ui-button:hover,
+	.to .ui-button.ui-state-active,
+	.to .ui-button.ui-state-active:hover,
+	.to table.to-table th>div,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active.ui-state-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-prev.ui-datepicker-prev-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-next.ui-datepicker-next-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-prev.ui-datepicker-prev-hover span,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-next.ui-datepicker-next-hover span,	
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div div.ui-datepicker-title span,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div th span,
+	.to li.ui-timepicker-selected,
+	.to .ui-timepicker-list .ui-timepicker-selected:hover,
+	.to .ui-timepicker-list li:hover,
+	.to select option:checked,
+	.to select option:active,
+	.to select option:focus,
+	.to select option:checked:hover,
+	.to select option:hover,
+	.to select,
+	.to textarea,
+	.to input[type="text"],
+	.to input[type="password"]
+	{
+		color:#0D0D0D;
+	}
+	
+	.to a:active
+	{
+		color:#2271B1;
+	}
+	
+	.to .ui-tabs .ui-tabs-nav .ui-state-hover a
+	{
+		color:#0073AA;
+	}
+
+	.to input[type="submit"].to-button,
+	.to input[type="button"].to-button,
+	.to ul.to-menu li a
+	{
+		color:#F0F0F1;
+	}
+
+	.to .to-content .to-content-left #to_menu li a:hover,
+	.to .to-content .to-content-left #to_menu>li>a:hover::before,
+	.to .to-content .to-content-left #to_menu li ul li a:hover
+	{
+		color:#72AEE6;
+	}
+	
+	.to .to-content .to-content-left #to_menu>li>a::before
+	{
+		color:#A7AAAD;
+	}
+	
+	.to .to-header .to-header-left h6,
+	.to .to-content .to-content-left #to_menu li ul li a
+	{
+		color:#C3C4C7;
+	}
+	
+	/**************************************************************************/
+	/* Color / Border color													  */
+	/**************************************************************************/
+
+	.to table.to-table,
+	.to table.to-table td,
+	.to table.to-table th,
+	.to .ui-autocomplete,
+	.to .ui-button,
+	.to .ui-button:hover,
+	.to .ui-button.ui-state-active,
+	.to .dk_toggle:focus,
+	.to .dk_open .dk_toggle,
+	.to .to-content #to_panel .to-panel-description,
+	.to .ui-tabs .ui-tabs-panel,
+	.to .ui-tabs .ui-tabs-nav li,
+	.to .to-buffer-output,
+	.to .ui-slider .ui-slider-handle,
+	.to .to-notice-small,
+	.to .to-preformatted-text,
+	.to table.to-table td,
+	.to .ui-tabs .ui-tabs-nav,
+	.to .ui-tabs .ui-tabs-panel>.ui-widget-content>.ui-widget-content
+	{
+		border-color:#E6E8ED;
+	}
+
+	.to select,
+	.to textarea,
+	.to input[type="text"],
+	.to input[type="password"],
+	.to .dk_toggle,
+	.to .dk_toggle:hover,
+	.to .dk_focus .dk_toggle,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div,
+	.to .ui-timepicker-wrapper,
+	.to .dk_options_inner
+	{
+		border-color:#D1D4DE;
+	}
+	
+	.to .to-header .to-header-left>div
+	{
+		border-color:#1D2327;
+	}
+	
+	.to label.to-label-1,
+	.to .scroll-area,
+	.to .to-form-field-list li,
+	.to .to-header .to-header-right,
+	.to .to-footer .to-footer-right
+	{
+		border-color:#EDEFF0;
+	}
+	
+	.to select:focus,
+	.to textarea:focus,
+	.to input[type="text"]:focus,
+	.to input[type="password"]:focus,
+	.to .dk_open .dk_toggle
+	{
+		border-color:#8FD0FF;
+	}
+
+	/**************************************************************************/
+	/* Color / Background color												  */
+	/**************************************************************************/
+
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-prev.ui-datepicker-prev-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-next.ui-datepicker-next-hover,
+	.to input[type="submit"].to-button:hover,
+	.to input[type="button"].to-button:hover,
+	.to ul.to-menu li a.to-menu-select,
+	.to ul.to-menu li a.to-menu-select:hover,
+	.to li.ui-timepicker-selected,
+	.to .dk_options a:hover,
+	.to .dk_options .dk_option_current a,
+	.to .ui-autocomplete li.ui-menu-item:hover,
+	.to .ui-timepicker-list li:hover,
+	.to .ui-timepicker-list .ui-timepicker-selected:hover,
+	.to .ui-button.ui-state-active,
+	.to .ui-widget-header,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select:hover,
+	.to .to-content .to-content-left #to_menu li ul li a.to-menu-select:hover,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a::after,
+	.to .ui-widget-header,
+	.to .ui-slider .ui-slider-handle
+	{
+		background-color:#2271B1;
+	}	
+
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor
+	{
+		background-color:#0073AA;
+	}
+	
+	.to .ui-button,
+	.to table.to-table th,
+	.to .to-field-disabled,
+	.to .ui-timepicker-list li:hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-prev.ui-datepicker-prev-hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-next.ui-datepicker-next-hover,
+	.to select option:hover,
+	.to .dk_options a:hover
+	{
+		background-color:#F2F4F7;
+	}
+	
+	.to .ui-button.ui-state-active,
+	.to .ui-button.ui-state-active:hover,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active.ui-state-hover,
+	.to li.ui-timepicker-selected,
+	.to .ui-timepicker-list .ui-timepicker-selected:hover,
+	.to select option:checked,
+	.to select option:active,
+	.to select option:focus,
+	.to select option:checked:hover,
+	.to .dk_options .dk_option_current a,
+	.to .dk_options .dk_option_current a:hover
+	{
+		background-color:#8FD0FF;	
+	}
+	
+	.to .to-header .to-header-left,
+	.to .to-footer .to-footer-left,
+	.to .to-content .to-content-left,
+	.to input[type="submit"].to-button,
+	.to input[type="button"].to-button,
+	.to .to-content .to-content-left #to_menu li a:hover,
+	.to input[type="button"].to-button-browse
+	{
+		background-color:#1D2327;
+	}
+	
+	.to .to-content .to-content-left #to_menu li ul li a,
+	.to .to-content .to-content-left #to_menu li ul li a:hover
+	{
+		background-color:#2C3338;
+	}
+	
+	.to .ui-tabs .ui-tabs-panel,
+	.to .ui-tabs .ui-tabs-nav,
+	.to select,
+	.to textarea,
+	.to input[type="text"],
+	.to input[type="password"],
+	.to .dk_toggle,
+	.to .dk_toggle:hover
+	{
+		background-color:#FFFFFF;
+	}
+	
+	.to .ui-slider
+	{
+		background-color:#BCE3FF;
+	}
+	
+	.to ul.to-menu li a.to-menu-select.to-menu-error,
+	.to ul.to-menu li a.to-menu-select.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li a.to-menu-error,
+	.to .to-content .to-content-left #to_menu li a.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select.to-menu-error,
+	.to .to-content .to-content-left #to_menu li a.to-menu-select.to-menu-error:hover,
+	.to .to-content .to-content-left #to_menu li ul li a.to-menu-select.to-menu-error:hover
+	{
+		background-color:#C03D25;
+	}	
+	
+/******************************************************************************/
+/* Panel																	  */
+/******************************************************************************/
+	
+	/**************************************************************************/
+	/* Panel / Form Element													  */
+	/**************************************************************************/
+	
+		/**********************************************************************/
+		/* Panel / Form Element / Buttonset									  */
+		/**********************************************************************/
+
+		.to .ui-button
+		{
+			border:0px;
+			margin:4px 8px 4px 0px;
+			padding:12px 15px 13px 15px;
+			float:left;
+			height:auto;
+			cursor:pointer;
+			box-shadow:none;
+			font-weight:400;
+			font-size:14px;
+			line-height:150%;
+			text-decoration:none;
+			text-align:center;
+			border-radius:3px;
+			overflow:visible;
+			position:relative;
+			user-select:none;
+			min-width:80px;
+			transition:background-color 150ms ease,color 150ms ease;
+		}
+
+		.to .ui-button:hover,
+		.to .ui-button.ui-state-active,
+		.to .ui-button.ui-state-active:hover
+		{
+			border:0;
+			border-radius:3px;
+		}
+		
+		/**********************************************************************/
+		/* Panel / Form Element / Tabs  									  */
+		/**********************************************************************/
+
+		.to .ui-tabs .ui-tabs-nav li
+		{
+			background:none;
+			background-image:none !important;
+			border:0;
+			border-radius:0;
+			margin:0px;
+			padding:0px;
+			top:0px;
+			z-index:1;
+			position:relative;
+			list-style:none;
+			float:left;
+			white-space:nowrap;
+		}
+
+		.to .ui-tabs .ui-tabs-nav li>a
+		{
+			background:none;
+			background-image:none !important;
+			border:0;
+			border-radius:5px 5px 0px 0px;
+			margin:0px;
+			padding:14px 15px 15px 15px;
+			font-size:15px;
+			font-weight:400;
+			display:block;
+			cursor:pointer;
+			user-select:none;
+			text-transform:capitalize;
+			line-height:1.6em;
+		}
+
+	
+		@media(width<=1700px)
+		{
+			.to .ui-tabs .ui-tabs-nav li>a
+			{
+				padding:14px 10px 15px 10px;
+			}
+		}
+
+		
+/******************************************************************************/
+/* Panel																	  */
+/******************************************************************************/
+		
+	/**************************************************************************/
+	/* Panel / Header														  */
+	/**************************************************************************/
+
+	.to .to-header .to-header-left h3,
+	.to .to-header .to-header-right h3
+	{
+		margin-bottom:6px;
+	}
+
+	.to .to-header .to-header-left h6,
+	.to .to-header .to-header-right h6,
+	.to .to-header .to-header-right a
+	{
+		line-height:1.6em;
+	}
+	
+		/**********************************************************************/
+		/* Panel / Header / Left											  */
+		/**********************************************************************/
+		
+		.to .to-header .to-header-left
+		{
+			border-radius:5px 0px 0px 0px;
+		}
+	
+		.to .to-header .to-header-left>div
+		{
+			border-style:solid;
+			border-width:0px 0px 1px 0px;
+			padding:32px 20px 36px 20px;
+		}
+
+		/**********************************************************************/
+		/* Panel / Header / Right											  */
+		/**********************************************************************/
+
+		.to .to-header .to-header-right
+		{
+			border-radius:0px 5px 0px 0px;
+			background:none;
+		}
+		
+		.to .to-header .to-header-right>div
+		{
+			padding:32px 40px 36px 40px;
+		}
+		
+	/**************************************************************************/
+	/* Panel / Content														  */
+	/**************************************************************************/
+	
+		/**********************************************************************/
+		/* Panel / Content / Left											  */
+		/**********************************************************************/
+	
+		.to .to-content .to-content-left #to_menu li a
+		{
+			display:block;
+			text-decoration:none;
+			padding:16px 15px 17px 15px;
+		}
+
+			.to .to-content .to-content-left #to_menu li>a>span
+			{
+				display:none;
+			}
+		
+			.to .to-content .to-content-left #to_menu>li>a::before
+			{
+				content:"\f107";
+				font-family:dashicons;
+				display:inline-block;
+				line-height:1;
+				font-weight:400;
+				font-style:normal;
+				speak:never;
+				text-decoration:inherit;
+				text-transform:none;
+				text-rendering:auto;
+				-webkit-font-smoothing:antialiased;
+				-moz-osx-font-smoothing:grayscale;
+				width:20px;
+				height:20px;
+				font-size:20px;
+				vertical-align:top;
+				text-align:center;
+				margin-right:10px;
+				transition:none;
+			}
+
+				.to .to-content .to-content-left #to_menu li ul li a
+				{
+					padding:10px 15px 11px 15px;
+				}
+				
+	/**************************************************************************/
+	/* Panel / Footer													      */
+	/**************************************************************************/	
+		
+	.to .to-footer,
+	.to .to-footer .to-footer-left,
+	.to .to-footer .to-footer-right
+	{
+		min-height:103px;
+	}
+
+	.to .to-social-list
+	{
+		display:none;
+	}
+	
+		/**********************************************************************/
+		/* Panel / Footer / Left									   		  */
+		/**********************************************************************/
+
+		.to .to-footer .to-footer-left
+		{
+			border-radius:0px 0px 0px 5px;
+		}
+
+		/**********************************************************************/
+		/* Panel / Footer / Roght									   		  */
+		/**********************************************************************/
+	
+		.to .to-footer .to-footer-right
+		{
+			border-radius:0px 0px 5px 0px;
+			background:none;
+		}
+		
+	/**************************************************************************/
+	/* Panel / Form Field List												  */
+	/**************************************************************************/
+		
+	.to .to-form-field-list>li:first-child
+	{
+		margin-top:10px;
+	}
+	
+	.to .to-form-field-list>li:last-child
+	{
+		border:0;
+		padding-bottom:0px;
+	}
+	
+	.to .to-form-field-list>li:has(table)
+	{
+		border-bottom:0px;
+	}
+	
+		.to .to-form-field-list>li>h5
+		{
+			text-transform:capitalize;
+			clear:both;
+			float:left;
+			font-weight:700;
+			font-size:16px;
+		}
+
+		.to .to-form-field-list>li>span.to-legend,
+		.to .to-form-field-list>li span.to-legend-field
+		{
+			margin-bottom:20px;
+			padding-top:6px;
+			clear:both;
+			display:block;
+			line-height:1.6em;
+			font-size:15px;
+			font-weight:400;
+		}
+
+		.to .to-form-field-list>li span.to-legend-field
+		{
+			padding-top:4px;
+			margin-bottom:8px;
+		}
+		
+	/**************************************************************************/
+	/* Panel / Form Element													  */
+	/**************************************************************************/
+
+	.to input[type="submit"].to-button,
+	.to input[type="button"].to-button
+	{
+		padding:8px 20px 10px 20px;
+		border-radius:3px;
+		transition:all 150ms ease;
+	}
+	
+	.to select,
+	.to textarea,
+	.to input[type="text"],
+	.to input[type="password"],
+	.to .dk_toggle,
+	.to .dk_toggle:hover
+	{
+		border-style:solid;
+		border-width:1px;
+		border-radius:3px;
+		padding:8px 10px;
+		box-shadow:none;
+	}
+
+	.to .dk_container .dk_toggle
+	{
+		padding:8px 10px;
+	}
+
+	.to input.to-color-picker
+	{
+		padding-left:50px;
+	}
+
+	.to .dk_container,
+	.to .dk_container .dk_toggle,
+	.to .dk_container .dk_options,
+	.to .dk_container .dk_options .dk_options_inner
+	{
+		border-radius:3px;
+		margin:0px;
+	}
+
+	.to input[type="button"].to-button-browse
+	{
+		margin-left:10px;
+		border-radius:3px;
+		transition:all 150ms ease;
+	}
+
+	.to input[type="button"].to-button-browse.to-margin-right-10
+	{
+		margin-left:0px;
+	}
+
+	.to div + div>input:only-child
+	{
+		margin-top:5px;
+	}
+	
+	.to select:focus,
+	.to input[type="text"]:focus,
+	.to input[type="password"]:focus,
+	.to textarea:focus
+	{
+		box-shadow:0 0 0 3px rgba(143,208,255,0.4);
+	}
+
+	.to .dk_open .dk_toggle
+	{
+		box-shadow:0 0 0 3px rgba(143,208,255,0.4);
+	}
+	
+	.to .dk_container .dk_options,
+	.to .ui-timepicker-wrapper,
+	.to-ui-datepicker.ui-datepicker#ui-datepicker-div
+	{
+		margin-top:9px;
+		margin-bottom:9px;
+		border-radius:3px;
+		box-shadow:0px 20px 10px -15px rgba(0,18,45,0.15);
+	}
+	
+		/**********************************************************************/
+		/* Panel / Form Element / Tabs  									  */
+		/**********************************************************************/
+	
+		.to .ui-tabs .ui-tabs-nav
+		{
+			border-style:solid;
+			border-width:0px 0px 1px 0px;
+			background-image:none !important;
+			margin:0px;
+			padding:0px;
+			user-select:none;
+			border-radius:5px 5px 0px 0px;
+		}
+		
+			.to .ui-tabs .ui-tabs-nav .ui-state-active a::after
+			{
+				width:100%;
+				height:3px;
+				content:"";
+				display:block;
+				position:absolute;
+				left:0px;
+				bottom:-1px;
+			}
+
+
+		.to .ui-tabs .ui-tabs-panel
+		{
+			border:0;
+			background-image:none !important;
+			margin:0px;
+			padding:25px 25px 25px 25px;
+			border-radius:0px 0px 5px 5px;
+		}
+
+			.to .ui-tabs .ui-tabs-panel>.ui-widget-content>.ui-widget-content
+			{
+				border-style:solid;
+				border-width:0px 1px 1px 1px;
+				border-radius:0px 0px 5px 5px;
+			}
+
+			.to .ui-tabs .ui-tabs-nav li.ui-tabs-active .ui-tabs-anchor,
+			.to .ui-tabs .ui-tabs-nav li.ui-tabs-loading .ui-tabs-anchor,
+			.to .ui-tabs .ui-tabs-nav li.ui-state-disabled .ui-tabs-anchor			
+			{
+				cursor:pointer;
+			}
+			
+		/**********************************************************************/
+		/* Panel / Form Element / Slider								  	  */
+		/**********************************************************************/	
+		
+		.to .ui-widget-header
+		{
+			border-radius:999px;
+		}
+
+		.to .ui-slider
+		{
+			float:left;
+			width:300px;
+			margin:20px 22px 20px 9px;
+			border-radius:999px;
+			height:4px;
+		}
+
+		.to .ui-slider .ui-slider-handle
+		{
+			top:-8px;
+			width:20px;
+			height:20px;
+			cursor:pointer;
+			border:0;
+			outline:none !important;
+			-webkit-box-shadow:none;
+			-moz-box-shadow:none;
+			box-shadow:none;
+			border-radius:999px;
+			transition:box-shadow 150ms cubic-bezier(0.65,0,0.35,1);
+		}
+
+		.to .ui-slider .ui-slider-handle.ui-state-active
+		{
+			box-shadow:0 0 0 32px rgba(143,208,255,0.4);
+		}
+
+		.to input.to-slider-range
+		{
+			margin-left:9px;
+		}
+		
+		/**********************************************************************/
+		/* Panel / Form Element / Color Sample								  */
+		/**********************************************************************/
+		
+		.to .to-color-picker-sample
+		{
+			top:6px;
+			width:30px;
+			height:30px;
+			display:block;
+			margin-right:0px;
+			position:relative;
+			left:6px;
+			border-radius:2px;
+			outline:none;
+			border:0;
+		}
+
+		.to-color-picker-sample.to-color-picker-sample-style-1
+		{
+			top:5px;
+			float:none;
+			width:20px;
+			height:20px;
+			position:relative;
+			display:inline-block;
+			margin-right:8px;
+		}
+
+		.to input.to-color-picker
+		{
+			padding-left:46px;
+		}
+		
+		/**********************************************************************/
+		/* Panel / Form Element / Disabled field    						  */
+		/**********************************************************************/
+		
+		.to .to-field-disabled
+		{
+			border:0;
+			border-radius:3px;
+			height:auto;
+			width:100%;
+			padding:9px 10px;
+			box-shadow:none;
+			line-height:1.6em;
+		}
+		
+		/**********************************************************************/
+		/* Panel / Form Element / Log entry		    						  */
+		/**********************************************************************/
+		
+		.to .to-log-entry
+		{
+			padding:9px 10px;
+		}
+		
+		/**********************************************************************/
+		/* Panel / Form Element / Datepicker								  */
+		/**********************************************************************/	
+
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-today a
+		{
+			text-decoration:underline;
+		}
+
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div,
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-hover,
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-prev.ui-datepicker-prev-hover,
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-datepicker-next.ui-datepicker-next-hover,
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active,
+		.to-ui-datepicker.ui-datepicker#ui-datepicker-div .ui-state-default.ui-state-active.ui-state-hover
+		{
+			border-radius:3px;
+		}		
+
+/******************************************************************************/
+/* Table																	  */
+/******************************************************************************/
+
+.to table.to-table
+{
+	table-layout:auto;
+	border-style:inset;
+	border-collapse:collapse;
+    border:0;
+}
+
+	.to table.to-table th
+	{
+		border:0;
+		padding:0px;
+		line-height:150%;
+	}
+
+		.to table.to-table th>div
+		{
+			font-weight:700;
+			padding:12px 10px 13px 10px;
+			font-size:14px;
+		}
+
+			.to table.to-table th>div span.to-legend
+			{
+				font-weight:400;
+				padding-top:4px;
+			}
+
+	.to table.to-table td
+	{    
+		border-style:solid;
+		border-width:1px 1px 1px 0px;
+		padding:0px;
+		line-height:150%;
+	}
+
+		.to table.to-table tr td:not([rowspan]):last-child
+		{
+			border-right:0px;
+		}
