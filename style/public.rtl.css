@@ -1,0 +1,795 @@
+/******************************************************************************/
+/* Base                                                                       */
+/******************************************************************************/
+
+.chbs-main
+{
+	direction:rtl;
+}
+
+.chbs-main .chbs-align-right
+{
+    text-align:left;
+}
+
+/******************************************************************************/
+/* Qtip         															  */
+/******************************************************************************/
+
+.chbs-main .chbs-qtip .qtip-content
+{
+    text-align:right;
+}
+
+/******************************************************************************/
+/* Button                                                                     */
+/******************************************************************************/
+
+    .chbs-main .chbs-button.chbs-button-step-next>span,
+    .chbs-main .chbs-button.chbs-button-step-prev>span
+    {
+		transform:scaleX(-1);
+        -moz-transform:scaleX(-1);
+        -o-transform:scaleX(-1);
+        -webkit-transform:scaleX(-1);
+    }
+    
+    .chbs-main .chbs-button.chbs-button-step-prev>span
+    {
+        transform:scaleX(1);
+        -moz-transform:scaleX(1);
+        -o-transform:scaleX(1);
+        -webkit-transform:scaleX(1);
+    }
+
+.chbs-main .chbs-button.chbs-button-step-prev
+{
+    padding:14px 24px 16px 32px;
+}
+
+.chbs-main .chbs-button.chbs-button-step-next
+{
+    padding:14px 32px 16px 24px;
+}
+
+/******************************************************************************/
+/* Button radio                                                               */
+/******************************************************************************/
+
+.chbs-button-radio a
+{
+	float:left;
+}
+
+/******************************************************************************/
+/* Button navigation                                                          */
+/******************************************************************************/
+
+    .chbs-main .chbs-main-content-navigation-button .chbs-button.chbs-button-step-prev
+    {
+        float:right;
+    }
+
+    .chbs-main .chbs-main-content-navigation-button .chbs-button.chbs-button-step-next
+    {
+        float:left;
+    }
+
+/******************************************************************************/
+/* Selectmenu                                                                 */
+/******************************************************************************/
+
+    .chbs-main .ui-selectmenu-button .chbs-meta-icon-arrow-vertical-large
+    {
+        float:left;
+    }
+	
+	.chbs-main .ui-selectmenu-button .ui-selectmenu-text
+    {
+        text-align:right;
+    }
+    
+/******************************************************************************/
+/* Timepicker                                                                 */
+/******************************************************************************/
+  
+.ui-timepicker-wrapper
+{
+    margin-right:-1px;
+	margin-left:0px;
+}
+
+/******************************************************************************/
+/* Datepicker                                                                 */
+/******************************************************************************/            
+
+.ui-datepicker
+{
+    margin-left:0px;
+    margin-right:-1px;
+    padding:20px 17px 30px 18px;
+}
+
+.ui-datepicker .ui-datepicker-prev,
+.ui-datepicker .ui-datepicker-prev-hover
+{
+    left:auto;
+	right:0px;
+    margin-right:7px;
+	margin-left:0px;
+	transform:scaleX(1);
+	-moz-transform:scaleX(1);
+	-o-transform:scaleX(1);
+	-webkit-transform:scaleX(1);
+}
+
+.ui-datepicker .ui-datepicker-next,
+.ui-datepicker .ui-datepicker-next-hover
+{
+	left:0px;
+    right:auto;
+	margin-left:7px;
+    margin-right:0px;
+	transform:scaleX(-1);
+	-moz-transform:scaleX(-1);
+	-o-transform:scaleX(-1);
+	-webkit-transform:scaleX(-1);
+}
+
+/******************************************************************************/
+/* Preloader                                                                  */
+/******************************************************************************/    
+
+#chbs-preloader
+{
+    right:0px;
+	left:auto;    
+}
+
+/******************************************************************************/
+/* Tab                                                                        */
+/******************************************************************************/
+
+	/**************************************************************************/
+    /* Tab / Navigation                                                       */
+    /**************************************************************************/
+	
+	.chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li
+	{
+		float:right;
+	}
+
+		.chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li>a
+		{
+			border-width:1px 1px 0px 0px;
+		}
+
+		.chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li:last-child>a
+		{
+			border-left-width:1px;
+		}
+/******************************************************************************/
+/* Layout                                                                     */
+/******************************************************************************/
+
+    /**************************************************************************/
+    /* Layout / Layout 50x50                                                  */
+    /**************************************************************************/
+
+        .chbs-main .chbs-layout-50x50>.chbs-layout-column-left
+        {
+            float:right;
+        }
+        
+        .chbs-main .chbs-layout-50x50>.chbs-layout-column-right
+        {
+            float:left;
+        }
+        
+    /**************************************************************************/
+    /* Layout / Layout 33x33x33                                               */
+    /**************************************************************************/
+   
+        .chbs-main .chbs-layout-33x33x33>.chbs-layout-column-left,
+        .chbs-main .chbs-layout-33x33x33>.chbs-layout-column-center,
+        .chbs-main .chbs-layout-33x33x33>.chbs-layout-column-right
+        {
+            float:right;
+        }
+    
+        .chbs-main .chbs-layout-33x33x33>.chbs-layout-column-left,
+        .chbs-main .chbs-layout-33x33x33>.chbs-layout-column-center
+        {
+            margin-left:3.2784%;
+			margin-right:0px;
+        }
+
+    /**************************************************************************/
+    /* Layout / Layout 25x75                                                  */
+    /**************************************************************************/
+
+        .chbs-main .chbs-layout-25x75>.chbs-layout-column-left
+        {
+            float:right;
+        }
+
+        .chbs-main .chbs-layout-25x75>.chbs-layout-column-right
+        {
+            float:left;
+        }
+        
+    /**************************************************************************/
+    /* Layout / Layout 75x25                                                  */
+    /**************************************************************************/
+
+        .chbs-main .chbs-layout-75x25>.chbs-layout-column-left
+        {
+            float:right;
+        }
+
+        .chbs-main .chbs-layout-75x25>.chbs-layout-column-right
+        {
+            float:left;
+        }
+
+/******************************************************************************/
+/* Main navigation                                                            */
+/******************************************************************************/
+
+    /**************************************************************************/
+    /* Main navigation / Default                                              */
+    /**************************************************************************/
+
+            .chbs-main .chbs-main-navigation-default>ul>li
+            {
+                float:right;
+            }
+            
+                .chbs-main .chbs-main-navigation-default>ul>li>div
+                {
+                    right:50%;
+					left:auto;
+                }
+
+/******************************************************************************/
+/* Form checkbox                                                              */
+/******************************************************************************/
+
+.chbs-main .chbs-form-checkbox
+{
+    float:right;
+	margin-right:0px;
+    margin-left:20px;
+}
+
+/******************************************************************************/
+/* Form field                                                                 */
+/******************************************************************************/
+
+.chbs-main .chbs-form-field.chbs-form-field-width-50
+{
+    float:right;
+}
+
+.chbs-main .chbs-form-field.chbs-form-field-width-33
+{
+    float:right;   
+}
+
+.chbs-main .chbs-form-field.chbs-form-field-width-50+.chbs-form-field-width-50,
+.chbs-main .chbs-form-field.chbs-form-field-width-33+.chbs-form-field-width-33
+{
+	border-left-width:1px;
+	border-right-width:0px;
+}
+
+    .chbs-main .chbs-form-field>label
+    {
+        margin-left:0px;
+        margin-right:20px;
+    } 
+    
+    .chbs-main .chbs-form-field.chbs-form-field-location-switch>input
+    {
+        padding-left:110px;
+		padding-right:20px;
+    }
+
+/******************************************************************************/
+/* Vehicle                                                                    */
+/******************************************************************************/
+
+    /**************************************************************************/
+    /* Vehicle / Image                                                        */
+    /**************************************************************************/
+
+    .chbs-main .chbs-vehicle .chbs-vehicle-image
+    {
+        float:right;
+    }
+    
+    /**************************************************************************/
+    /* Vehicle / Content                                                      */
+    /**************************************************************************/    
+    
+	.chbs-main .chbs-vehicle .chbs-vehicle-image+.chbs-vehicle-content, 
+	.chbs-main .chbs-vehicle .chbs-vehicle-image+.chbs-vehicle-gallery+.chbs-vehicle-content
+	{
+		margin-left:0px;
+		margin-right:340px;
+	}
+        
+        /**********************************************************************/
+        /* Vehicle / Content / Header                                         */
+        /**********************************************************************/   
+    
+        .chbs-main .chbs-vehicle .chbs-vehicle-content>div.chbs-vehicle-content-header
+        {
+            text-align:left;
+        }
+        
+            /******************************************************************/
+            /* Vehicle / Content / Header / Name                              */
+            /******************************************************************/   
+        
+            .chbs-main .chbs-vehicle .chbs-vehicle-content>div.chbs-vehicle-content-header>span
+            {
+                float:right;
+                text-align:right;
+            }
+            
+        /**********************************************************************/
+        /* Vehicle / Content / Price                                          */
+        /**********************************************************************/          
+
+                .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-price>span>span:first-child+span
+                {
+                    padding-right:20px;
+					padding-left:0px;
+                }
+            
+        /**********************************************************************/
+        /* Vehicle / Content / Description                                    */
+        /**********************************************************************/   
+        
+                    .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-description>div>.chbs-vehicle-content-description-attribute>ul
+                    {
+                        float:right;
+                    }
+
+                    .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-description>div>.chbs-vehicle-content-description-attribute>ul+ul
+                    {
+                        float:left;
+                    }
+
+                            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-description>div>.chbs-vehicle-content-description-attribute>ul>li>div:first-child
+                            {
+                                float:right;
+                            }
+
+                            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-description>div>.chbs-vehicle-content-description-attribute>ul>li>div:first-child+div
+                            {
+                                float:left;
+                                text-align:left;
+                            }
+
+        /**********************************************************************/
+        /* Vehicle / Content / Meta                                           */
+        /**********************************************************************/     
+        
+                .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info
+                {
+                    text-align:left;
+                }
+                
+                    .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div
+                    {
+                        float:left;
+                    }
+                
+                    .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span
+                    {
+                        float:right;
+                    }
+            
+            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta .chbs-meta-icon-bag
+            {
+                margin-right:10px;
+				margin-left:20px;
+            }
+            
+            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta span
+            {
+                margin-left:20px;
+				margin-right:0px;
+            }
+            
+            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta .chbs-vehicle-content-meta-button span
+            {
+                margin-left:12px;
+				margin-right:0px;
+            }
+            
+            .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta span:last-child
+            {
+                margin-left:0px;
+				margin-right:0px;
+            }
+            
+/******************************************************************************/
+/* Add location                                                               */
+/* Remove location                                                            */
+/******************************************************************************/
+
+.chbs-main .chbs-location-add
+{
+    left:20px;
+	right:auto;
+}
+
+.chbs-main .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-remove
+{
+    left:55px;
+    right:auto;
+}
+
+/******************************************************************************/
+/* Summary                                                                    */
+/******************************************************************************/
+
+        .chbs-main .chbs-summary .chbs-summary-header>a
+        {
+            float:left;
+        }
+
+/******************************************************************************/
+/* Summary price element                                                      */
+/******************************************************************************/
+
+        .chbs-main .chbs-summary-price-element>div>span:first-child+span
+        {
+            float:left;
+        }
+        
+        .chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-total>span:first-child+span
+        {
+            left:0px;
+			right:auto;
+            float:left;
+        }
+
+/******************************************************************************/
+/* Ride info                                                                   */
+/******************************************************************************/
+
+.chbs-main .chbs-ride-info>div
+{
+	padding:30px 40px 28px 30px;
+}
+
+    .chbs-main .chbs-ride-info>div:first-child
+    {
+        border-width:0px 0px 0px 1px;
+    }
+    
+        .chbs-main .chbs-ride-info>div>span
+        {
+            float:right;
+        }
+    
+        .chbs-main .chbs-ride-info>div>span:first-child+span,
+        .chbs-main .chbs-ride-info>div>span:first-child+span+span
+        {
+            margin-right:30px;
+            margin-left:0px;
+        }
+        
+/******************************************************************************/
+/* Payment                                                                    */
+/******************************************************************************/
+
+.chbs-main .chbs-payment
+{
+    margin:50px 0px 0px -20px;
+}
+
+    .chbs-main .chbs-payment>li
+    {
+        margin:15px 0px 15px 20px;
+    }
+    
+    .chbs-main .chbs-payment>li:first-child
+    {
+        margin-right:0px;
+		margin-left:20px;
+    }
+    
+            .chbs-main .chbs-payment>li>a>span.chbs-meta-icon-tick
+            {
+				left:auto;
+                right:50%;
+                margin-left:0px;
+                margin-right:-19px;
+            }
+
+/******************************************************************************/
+/* Agreement                                                                  */
+/******************************************************************************/        
+
+        .chbs-agreement>div>div
+        {
+            margin-right:50px;
+			margin-left:0px;
+        }
+        
+/******************************************************************************/
+/* Booking extra                                                              */
+/******************************************************************************/
+
+    .chbs-main .chbs-booking-extra-header>span:first-child+span
+    {
+		padding-left:0px;
+        padding-right:20px;
+    }
+
+            .chbs-main .chbs-booking-extra-list>ul>li>div
+            {
+                border-width:1px 1px 0px 0px;
+            }
+            
+            .chbs-main .chbs-booking-extra-list>ul>li>div.chbs-column-1
+            {
+				border-right-width:0px;
+                padding-left:20px;
+				padding-right:0px;
+            }
+
+                .chbs-main .chbs-booking-extra-list>ul>li>div.chbs-column-1>div>.booking-form-extra-name
+                {
+                    margin-left:20px;
+					margin-right:0px;
+                }
+                
+            .chbs-main .chbs-booking-extra-list>ul>li>div.chbs-column-2:empty
+            {
+				border-right-width:0px;
+            }
+
+            .chbs-main .chbs-booking-extra-list>ul>li>div.chbs-column-3
+            {
+                text-align:left;
+                border-left-width:0px;
+				border-right-width:1px;
+            }
+			
+			.chbs-main .chbs-booking-extra-list>ul>li.chbs-booking-extra-list-item-quantity-enable .chbs-form-field>label
+			{
+				padding-right:30px;
+			}
+            
+/******************************************************************************/
+/* Booking complete                                                           */
+/******************************************************************************/
+
+        .chbs-main .chbs-booking-complete .chbs-meta-icon-tick>div:first-child
+        {
+            right:0px;
+            left:auto;
+        }
+        
+        .chbs-main .chbs-booking-complete .chbs-meta-icon-tick>div:first-child+div
+        {
+            right:10px;
+			left:auto;
+        }
+		
+/******************************************************************************/
+/* Intl Tel Input                                                             */
+/******************************************************************************/
+
+html .iti--allow-dropdown .iti__flag-container
+{
+	right:0px;
+}
+
+html .iti.iti--allow-dropdown input
+{
+	padding-right:70px;
+}
+
+.iti--separate-dial-code .iti__selected-dial-code
+{
+	margin-right:6px;
+}
+
+.iti__country-list
+{
+	text-align:right;
+}
+
+.iti__country-list .iti__flag-box
+{
+	margin-left:10px;
+}
+
+/******************************************************************************/
+/* Responsive                                                                 */
+/******************************************************************************/
+
+    /**************************************************************************/
+    /* Responsive / Button                                                    */
+    /**************************************************************************/
+
+    .chbs-main.chbs-width-300 .chbs-button.chbs-button-step-prev,
+    .chbs-main.chbs-width-480 .chbs-button.chbs-button-step-prev
+    {
+        padding:10px 18px 12px 26px;
+    }
+    
+    .chbs-main.chbs-width-300 .chbs-button.chbs-button-step-next,
+    .chbs-main.chbs-width-480 .chbs-button.chbs-button-step-next
+    {
+        padding:10px 26px 12px 18px;
+    }
+	
+	/**************************************************************************/
+    /* Responsive / Main navigation                                           */
+    /**************************************************************************/
+
+        .chbs-main.chbs-width-300 .chbs-tab.ui-tabs .ui-tabs-nav>li>a
+        {
+			border-left-width:1px;
+        }
+
+    /**************************************************************************/
+    /* Responsive / Vehicle                                                   */
+    /**************************************************************************/
+	
+	.chbs-main.chbs-width-480 .chbs-vehicle .chbs-vehicle-image+.chbs-vehicle-content, 
+	.chbs-main.chbs-width-480 .chbs-vehicle .chbs-vehicle-image+.chbs-vehicle-gallery+.chbs-vehicle-content
+    {
+		margin-left:0px;
+        margin-right:200px;
+    }
+		
+						.chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content
+						{
+							margin-right:0px;
+						}
+	
+                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span
+                        {
+                            float:right;
+                        }
+
+                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-bag,
+                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-people
+                        {
+                            margin-right:0px;
+                            margin-left:20px;
+                        }
+
+                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-circle
+                        {
+                            margin-left:0px;
+							margin-right:0px;
+                        }
+
+    /**************************************************************************/
+    /* Responsive / Booking extra                                             */
+    /**************************************************************************/
+
+    .chbs-main.chbs-width-480 .chbs-booking-extra-list>ul>li>div.chbs-column-1,
+    .chbs-main.chbs-width-300 .chbs-booking-extra-list>ul>li>div.chbs-column-1
+    {
+        padding-left:0px;
+		padding-right:0px;
+    }
+    
+    .chbs-main.chbs-width-300 .chbs-booking-extra-list>ul>li.chbs-booking-extra-list-item-quantity-enable>div.chbs-column-2
+    {
+        border-left-width:1px;
+    }
+    
+    /**************************************************************************/
+    /* Responsive / Add location                                              */
+    /* Responsive / Remove location                                           */
+    /**************************************************************************/
+    
+    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-add,
+    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-remove
+    {
+        left:-1px;
+		right:auto;
+    }
+
+    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch>input
+    {
+        padding-left:55px;
+		padding-right:20px;
+    }
+
+    /**************************************************************************/
+    /* Responsive / Form field                                                */
+    /**************************************************************************/    
+    
+    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-width-50+.chbs-form-field.chbs-form-field-width-50,
+	.chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-width-33+.chbs-form-field.chbs-form-field-width-33
+    {
+        border-right-width:1px;
+    }
+    
+    .chbs-width-300.chbs-main .chbs-form-field-width-33
+    {
+        border-right-width:1px;
+    }
+    
+    /**************************************************************************/
+    /* Responsive / Ride info                                                 */
+    /**************************************************************************/  
+
+    .chbs-main.chbs-width-300 .chbs-ride-info>div:first-child
+    {
+		border-left-width:0px;
+    }
+    
+    .chbs-main.chbs-width-768 .chbs-ride-info>div>span:first-child+span,
+    .chbs-main.chbs-width-768 .chbs-ride-info>div>span:first-child+span+span,
+    .chbs-main.chbs-width-300 .chbs-ride-info>div>span:first-child+span,
+    .chbs-main.chbs-width-300 .chbs-ride-info>div>span:first-child+span+span
+    {
+        margin-right:0px;
+		margin-left:0px;
+    } 
+    
+    /**************************************************************************/
+    /* Responsive / Vehicle filter                                            */
+    /**************************************************************************/
+
+    .chbs-main.chbs-width-300 .chbs-vehicle-filter .chbs-form-field.chbs-form-field-width-33+.chbs-form-field-width-33
+    {
+        border-right-width:1px;
+    }
+    
+@media screen and (max-width:460px)
+{
+
+	.ui-datepicker .ui-datepicker-next, 
+	.ui-datepicker .ui-datepicker-next-hover 
+	{
+		margin-right:0px;
+		margin-left:0px;
+	}
+
+	.ui-datepicker .ui-datepicker-prev,
+	.ui-datepicker .ui-datepicker-prev-hover
+	{
+		margin-right:0px;
+		margin-left:0px;
+	}
+}
+
+/******************************************************************************/
+/* Flag icon                                                                  */
+/******************************************************************************/
+
+.flag-icon
+{
+    margin-left:10px;
+	margin-right:0px;
+}
+
+/******************************************************************************/
+/* Google Maps Place Autocomplete                                             */
+/******************************************************************************/
+
+.pac-item
+{
+	text-align:right;
+}
+
+.pac-icon
+{
+	margin-right:0px;
+	margin-left:7px;
+}
