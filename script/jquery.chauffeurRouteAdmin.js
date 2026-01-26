@@ -12,20 +12,23 @@
         var $self=this;
 		var $this=$(object);
 		
-        var $map;
-        
-        var $directionsRenderer;
-        var $directionsService;
+        var $googleMap;
         
         var $startLocation=null;
 
 		var $optionDefault;
 		var $option=$.extend($optionDefault,option);
+		
+		var $GoogleMapAPI;
+		
+		var $marker=[];
 
 		/**********************************************************************/
 		
         this.init=function()
-        {            
+        {          
+			$GoogleMapAPI=new CHBSGoogleMapAPI($option.google_map_api_key);
+			
             if(navigator.geolocation) 
             {
                 navigator.geolocation.getCurrentPosition(function(position)
@@ -33,7 +36,7 @@
                     $startLocation=new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
                     
                     if(!$self.getCoordinate().length)
-                        $map.setCenter($startLocation);
+                        $googleMap.setCenter($startLocation);
                 },
                 function()
                 {
@@ -58,46 +61,64 @@
             $startLocation=new google.maps.LatLng($option.coordinate.lat,$option.coordinate.lng);
             
             if(!$self.getCoordinate().length)
-                $map.setCenter($startLocation);           
+                $googleMap.setCenter($startLocation);           
         };
         
         /**********************************************************************/
         
 		this.create=function()
-		{
-            $directionsRenderer=new google.maps.DirectionsRenderer();
-            $directionsService=new google.maps.DirectionsService();
-            
+		{            
             var option= 
             {
                 zoom:6,
+				mapId:$option.google_map_map_id,
                 mapTypeId:google.maps.MapTypeId.ROADMAP
             };
         
-            $map=new google.maps.Map(document.getElementById('to-google-map'),option);
-            
-            $directionsRenderer.setMap($map);
-
-            $directionsRenderer.setOptions(
-            {
-                draggable   :  false
-            });
+            $googleMap=new google.maps.Map(document.getElementById('to-google-map'),option);
         };
+		
+		/**********************************************************************/
+		
+		this.createMarker=function(position)
+		{	
+			position=new google.maps.LatLng(position.latLng.latitude,position.latLng.longitude);
+
+			var label=$marker.length+1;
+			
+			var marker=new google.maps.marker.AdvancedMarkerElement(
+			{
+				position:position,
+				map:$googleMap,
+				title:''+label
+			});	 
+			
+			$marker.push(marker);
+		};
+		
+		/**********************************************************************/
+		
+		this.clearMarker=function()
+		{
+			for(var i in $marker)
+				$marker[i].setMap(null);
+			
+			$marker=[];
+		};
 
         /**********************************************************************/
         
         this.createRoute=function() 
-        {            
+        {       
             var coordinate=$self.getCoordinate();
            
             if(coordinate.length===0)
             {
-                $directionsRenderer.setDirections({routes:[]});
-                $map.setZoom(6);
+                $googleMap.setZoom(6);
                 
                 if($startLocation!==null)
                 {
-                    $map.setCenter($startLocation);
+                    $googleMap.setCenter($startLocation);
                 }
                 
                 $('#chbs_coordinate').val('');
@@ -124,10 +145,9 @@
                 request= 
                 {
                     origin:c[0],
-                    waypoints:waypoint,
-                    optimizeWaypoints:true,
+                    intermediates:waypoint,
                     destination:c[length-1],
-                    travelMode:google.maps.DirectionsTravelMode.DRIVING
+                    travelMode:'drive'
                 };                     
             }
             else if(length===2)
@@ -136,7 +156,7 @@
                 {
                     origin:c[0],
                     destination:c[length-1],
-                    travelMode:google.maps.DirectionsTravelMode.DRIVING
+                    travelMode:'drive'
                 };          
             }
             else
@@ -145,19 +165,31 @@
                 {
                     origin:c[length-1],
                     destination:c[length-1],
-                    travelMode:google.maps.DirectionsTravelMode.DRIVING
+                    travelMode:'drive'
                 };              
             }
             
-            $directionsService.route(request,function(response,status)
-            {
-                if(status===google.maps.DirectionsStatus.OK)
-                {
-                    $directionsRenderer.setDirections(response);
+			$GoogleMapAPI.computeRoutes(request,function(response)
+			{
+				$self.clearMarker();
+				
+				if($GoogleMapAPI.hasRoute(response))
+                {	
                     $('#chbs_coordinate').val(JSON.stringify(coordinate));
-                    $map.setCenter($directionsRenderer.getDirections().routes[0].bounds.getCenter());
+			
+					for(var i in response.routes[0].legs)
+					{
+						var leg=response.routes[0].legs[i];
+
+						$self.createMarker(leg.startLocation);
+						$self.createMarker(leg.endLocation); 
+					}		
+		
+					$googleMap.fitBounds($GoogleMapAPI.getBound(response));
+					
+					$GoogleMapAPI.drawRoute(response,0,$googleMap);			
                 }
-                else if(status===google.maps.DirectionsStatus.ZERO_RESULTS)
+                else
                 {
                     alert($option.message.designate_route_error);
                        
@@ -175,10 +207,9 @@
                         else $(this).remove();
                     });
                     
-                    $directionsRenderer.setDirections({routes:[]});
-                    $map.setZoom(6);
+                    $googleMap.setZoom(6);
                 
-                    if($startLocation!==null) $map.setCenter($startLocation);
+                    if($startLocation!==null) $googleMap.setCenter($startLocation);
                     
                     $('#chbs_coordinate').val('');
                 
@@ -209,8 +240,8 @@
            
                 text.parents('tr').attr(
                 {
-                    'data-lat'                                                  :   place.geometry.location.lat(),
-                    'data-lng'                                                  :   place.geometry.location.lng()
+                    'data-lat':place.geometry.location.lat(),
+                    'data-lng':place.geometry.location.lng()
                 });
                 
                 $self.setAddress(text.parents('tr'),function()

@@ -10,20 +10,15 @@
 		/**********************************************************************/
 
 		var $this=$(object);
-		
+	
 		var $optionDefault;
 		var $option=$.extend($optionDefault,option);
 		
 		var $marker=[];
-		
+	
 		var $googleMap;
 		
 		var $routeIndex=0;
-		
-		var $directionsRenderer;
-		
-		var $directionsService;
-		var $directionsServiceResponse;
 		
 		var $startLocation;
 		
@@ -34,11 +29,17 @@
 		var $iti;
 		
 		var $sidebar;
-
+		
+		var $autocomplete=[];
+		
+		var $GoogleMapAPI;
+		
 		/**********************************************************************/
 		
 		this.setup=function()
 		{	 
+			$GoogleMapAPI=new CHBSGoogleMapAPI($option.google_map_option.api_key);
+			
 			var helper=new CHBSHelper();
 			helper.getMessageFromConsole();
 			
@@ -180,12 +181,12 @@
 					var serviceTypeId=$self.getServiceTypeId();
 					$self.setServiceTypeId(serviceTypeId);
 					
-					if(parseInt(serviceTypeId,10)===2)
-						$self.e('.chbs-ride-info>div:first').addClass('chbs-hidden');
-					else $self.e('.chbs-ride-info>div:first').removeClass('chbs-hidden');
-					
+					$self.showRideInfo();
+									
 					$self.googleMapCreate();
 					$self.googleMapCreateRoute();
+					
+					$self.addGAEvent('service_type_select',{'service_type_id':serviceTypeId});
 				},
 				active:active
 			});
@@ -199,6 +200,8 @@
 				var navigation=parseInt($(this).parent('li').data('step'),10);
 				var step=parseInt($self.e('input[name="chbs_step"]').val(),10);
 				
+				$self.addGAEvent('navigation_top_select',{'step_current':step,'step_target':navigation});
+
 				if(navigation-step===0) return;
 				
 				$self.goToStep(navigation-step);
@@ -207,12 +210,22 @@
 			$self.e('.chbs-button-step-next').on('click',function(e)
 			{
 				e.preventDefault();
+				
+				var step=parseInt($self.e('input[name="chbs_step"]').val(),10);
+		
+				$self.addGAEvent('navigation_bottom_click',{'step_current':step,'step_target':step+1});
+				
 				$self.goToStep(1);
 			});
 			
 			$self.e('.chbs-button-step-prev').on('click',function(e)
 			{
 				e.preventDefault();
+				
+				var step=parseInt($self.e('input[name="chbs_step"]').val(),10);
+		
+				$self.addGAEvent('navigation_bottom_click',{'step_current':step,'step_target':step-1});
+				
 				$self.goToStep(-1);
 			});
 			
@@ -264,7 +277,9 @@
 					newFieldWaypointDuration.insertAfter(newField);
 					newFieldWaypointDuration.removeClass('chbs-hidden');
 					
-					$self.createSelectMenu(false);
+					newFieldWaypointDuration.find('select').removeClass('chbs-selectmenu-disable');
+					
+					$self.createSelectMenu();
 				}
 				
 				/***/
@@ -308,7 +323,12 @@
 				
 				$self.getGlobalNotice().addClass('chbs-hidden');
 				
-				$self.e('input[name="chbs_payment_id"]').val($(this).attr('data-payment-id'));
+				var paymentId=$(this).attr('data-payment-id');
+				var paymentName=$(this).attr('data-payment-name');
+				
+				$self.e('input[name="chbs_payment_id"]').val(paymentId);
+				
+				$self.addGAEvent('payment_select',{'payment_id':paymentId,'payment_name':paymentName});
 				
 				$self.createSummaryPriceElement();
 			});
@@ -343,6 +363,13 @@
 				
 				var extraNote=$(this).parents('li:first').find('.chbs-booking-form-extra-note');
 				
+				var bookingExtraId=$(this).parents('li:first').attr('data-booking_extra_id');
+				var bookingExtraName=$(this).parents('li:first').attr('data-booking_extra_name');
+				
+				var buttonRadio=false;
+				
+				/****/
+				
 				if(!$(this).parent('.chbs-button-radio').length)
 				{
 					$(this).toggleClass('chbs-state-selected'); 
@@ -353,19 +380,29 @@
 				}
 				else
 				{
+					buttonRadio=true;
+					
 					if(parseInt($(this).attr('data-value'),10)!==0)
 						extraNote.removeClass('chbs-hidden');
 					else extraNote.addClass('chbs-hidden');
 				}
 				
-				var data=[];
-				$self.e('.chbs-booking-extra-list .chbs-button.chbs-button-style-2').each(function()
-				{
-					if($(this).hasClass('chbs-state-selected'))
-						data.push($(this).attr('data-value'));
-				});
+				/****/
 				
-				$self.e('input[name="chbs_booking_extra_id"]').val(data.join(','));
+				$self.getSelectedBookingExtra();
+			
+				/****/
+				
+				if(buttonRadio)
+				{
+					$self.addGAEvent((parseInt($(this).attr('data-value'),10)!==0 ? 'booking_extra_select' : 'booking_extra_deselect'),{'booking_extra_id':bookingExtraId,'booking_extra_name':bookingExtraName});
+				}
+				else
+				{
+					$self.addGAEvent(($(this).hasClass('chbs-state-selected') ? 'booking_extra_select' : 'booking_extra_deselect'),{'booking_extra_id':bookingExtraId,'booking_extra_name':bookingExtraName});
+				}
+				
+				/****/
 				
 				$self.createSummaryPriceElement();
 			});
@@ -391,17 +428,24 @@
 				
 				if($(this).hasClass('chbs-state-selected')) return;
 
-				$self.e('.chbs-vehicle-list .chbs-button.chbs-button-style-2').removeClass('chbs-state-selected');
-
 				$(this).addClass('chbs-state-selected');
 
-				$self.e('input[name="chbs_vehicle_id"]').val(parseInt($(this).parents('.chbs-vehicle').attr('data-id'),10));
+				$self.e('.chbs-vehicle-list .chbs-button.chbs-button-style-2').not($(this)).removeClass('chbs-state-selected');
 
+				var vehicleId=parseInt($(this).parents('.chbs-vehicle').attr('data-id'),10);
+				var vehicleName=$(this).parents('.chbs-vehicle').attr('data-name');
 				
+				$self.addGAEvent('vehicle_select',{'vehicle_id':vehicleId,'vehicle_name':vehicleName});
+				
+				$self.e('input[name="chbs_vehicle_id"]').val(vehicleId);
+
+				$self.e('.chbs-vehicle-content-price-bid>div').addClass('chbs-hidden');
 				$self.e('.chbs-vehicle-list [name="chbs_vehicle_bid_price[]"]').val('');
 				$(this).parents('.chbs-vehicle').find('.chbs-vehicle-content-price-bid>div:first-child').removeClass('chbs-hidden');
 
 				$self.getGlobalNotice().addClass('chbs-hidden');
+				
+				$self.getSelectedBookingExtra(true);
 				
 				$self.calculateBaseLocationDistance(function()
 				{
@@ -410,7 +454,15 @@
 					if(parseInt($option.scroll_to_booking_extra_after_select_vehicle_enable,10)===1)
 					{
 						var header=$self.e('.chbs-booking-extra-header');
-						if(header.length===1) $.scrollTo(header,200,{offset:-50});
+						if(parseInt(header.length,10)===1)
+						{
+							$.scrollTo(header,200,{offset:-50});
+						}
+						else
+						{
+							var navigationButton=$self.e('.chbs-main-content-step-2 .chbs-main-content-navigation-button');
+							$.scrollTo(navigationButton,200,{offset:-1*parseInt($(window).height(),10)+110});
+						}
 					}
 					
 					$self.manageBookingExtra();
@@ -453,7 +505,7 @@
 			$self.e('.chbs-main-content-step-2').on('click','.chbs-booking-extra .chbs-booking-extra-header .chbs-show-more-button a',function(e)
 			{
 				e.preventDefault();
-				
+								
 				$(this).toggleClass('chbs-state-selected');
 				
 				var section=$(this).parents('.chbs-booking-extra:first').children('.chbs-booking-extra-header+div');
@@ -492,6 +544,8 @@
 			$self.e('.chbs-main-content-step-4').on('click','.chbs-coupon-code-section a',function(e)
 			{
 				e.preventDefault();
+				
+				$self.addGAEvent('coupon_apply',{'code':$self.e('.chbs-coupon-code-section [name="chbs_coupon_code"]').val()});
 				
 				$self.setAction('coupon_code_check');
 	   
@@ -532,6 +586,8 @@
 				e.preventDefault();
 				
 				$self.setAction('gratuity_customer_set');
+				
+				$self.addGAEvent('gratuity_apply');
 	   
 				$self.post($self.e('form[name="chbs-form"]').serialize(),function(response)
 				{  
@@ -570,6 +626,7 @@
 			$self.e('.chbs-datepicker:not(.chbs-datepicker-form-element)').datepicker(
 			{
 				autoSize:true,
+				firstDay:$option.first_day_week,
 				minDate:$option.datetime_min_format,
 				maxDate:$option.datetime_max_format,
 				dateFormat:$option.date_format_js,
@@ -629,147 +686,7 @@
 				},
 				onSelect:function(date,object)
 				{
-					var helper=new CHBSHelper();
-
-					var dateSelected=[object.selectedDay,object.selectedMonth+1,object.selectedYear];
-
-					for(var i in dateSelected)
-					{
-						if(new String(dateSelected[i]).length===1) dateSelected[i]='0'+dateSelected[i];
-					}
-
-					dateSelected=dateSelected[0]+'-'+dateSelected[1]+'-'+dateSelected[2];
-					
-					var dayWeek=parseInt($(this).datepicker('getDate').getDay(),10);
-					if(dayWeek===0) dayWeek=7;					
-					
-					var prefix=$(this).attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
-					var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
-					
-					if(parseInt($option.pickup_time_field_write_enable,10)===1 || prefix==='return')
-					{
-						var minTime='';
-						var maxTime='';
-
-						/***/
-
-						if((helper.isEmpty(minTime)) || (helper.isEmpty(maxTime)))
-						{
-							if(new String(typeof($option.business_hour[dayWeek]))!=='undefined')
-							{
-								minTime=$option.business_hour[dayWeek].start;
-								maxTime=$option.business_hour[dayWeek].stop;
-							}
-						}
-
-						/***/
-
-						var t=$option.datetime_min.split(' ');
-
-						if(dateSelected===t[0])
-						{
-							if(Date.parse('01/01/1970 '+t[1])>Date.parse('01/01/1970 '+minTime))
-								minTime=t[1];
-						}
-
-						/***/
-
-						if(!helper.isEmpty($option.datetime_max))
-						{
-							var t=$option.datetime_max.split(' ');
-
-							if(dateSelected===t[0])
-							{
-								if(Date.parse('01/01/1970 '+t[1])<Date.parse('01/01/1970 '+maxTime))
-									maxTime=t[1];
-							}					
-						}
-					
-						/***/
-			
-						var option=
-						{
-							appendTo:$this,
-							showOn:[],
-							showOnFocus:false,
-							timeFormat:$option.time_format,
-							step:$option.timepicker_step,
-							disableTouchKeyboard:true,
-							minTime:minTime,
-							maxTime:maxTime,
-							disableTextInput:parseInt($option.timepicker_field_readonly,10)===1 ? true : false
-						};
-
-						/***/
-
-						if(parseInt($option.timepicker_dropdown_list_enable,10)===1)
-						{
-							try
-							{
-								timeField.timepicker('remove');
-							}
-							catch(e) {}
-
-							if(parseInt($self.getServiceTypeId(),10)===3)
-							{
-								var routeField=$self.e('select[name="chbs_route_service_type_3"]>option:selected');
-
-								try
-								{
-									var timeExclude=JSON.parse(routeField.attr('data-time_exclude'));
-
-									if(timeExclude[dayWeek]!=undefined)
-									{
-										option.step=1;
-										option.disableTextInput=true;
-										option.disableTimeRanges=timeExclude[dayWeek];
-										option.maxTime=timeExclude[dayWeek][timeExclude[dayWeek].length-2][1];
-									}
-								}
-								catch(e) {}
-							}
-
-							/***/
-
-							timeField.timepicker(option);
-
-							timeField.val('').timepicker('show');
-							timeField.blur();
-
-							$self.setTimepicker(timeField);
-
-							if(parseInt($option.timepicker_hour_range_enable,10)===1)
-							{
-								$('.ui-timepicker-list>li').each(function()
-								{
-									var node=[$(this),$(this).next()];
-
-									if(node[1].length===1)
-										node[0].html(node[0].text()+' - '+node[1].text());
-									else node[0].remove();
-								});
-
-								timeField.on('selectTime',function(obj1,obj2) 
-								{
-									var element=$('.ui-timepicker-list>.ui-timepicker-selected');
-
-									if(element.length===1)
-									{
-										$(this).val(element.text());
-									}
-								});
-							}
-						}
-					}
-					/* disable default time for time picker/ uncomment if want on
-					else
-					{	
-						if(new String(typeof($option.business_hour[dayWeek]))!=='undefined')
-						{
-							timeField.val($option.business_hour[dayWeek].default);
-						}
-					}
-					*/
+					$self.createTimePicker($(this),object);
 				}
 			});
 			
@@ -777,7 +694,6 @@
 			
 			if(parseInt($option.timepicker_dropdown_list_enable,10)===1)
 			{
-				$self.e('.chbs-datepicker').datepicker('option', $.datepicker.regional.fa);
 				$this.on('focusin','.chbs-timepicker:not(.chbs-timepicker-form-element)',function()
 				{
 					var helper=new CHBSHelper();
@@ -795,7 +711,16 @@
 					else
 					{
 						if(helper.isEmpty($(this).val()))
-							$(this).timepicker('show');
+						{
+							if($(this).hasClass('ui-timepicker-input'))
+							{
+								$(this).timepicker('show');
+							}
+							else
+							{
+								$self.createTimePicker(field,field.datepicker());
+							}
+						}
 					}
 				});
 			}
@@ -803,7 +728,9 @@
 			/***/
 			
 			$self.createSelectMenu();
-			$self.createFixedLocationAutocomplete();
+			
+			$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');
+			$self.createAutocomplete('.chbs-form-field-route-autocomplete');
 			
 			/***/
 			
@@ -831,6 +758,8 @@
 			{
 				e.preventDefault();
 				
+				$self.addGAEvent('user_sign_up');
+				
 				$self.e('.chbs-client-form-sign-up').removeClass('chbs-hidden');
 				$self.e('input[name="chbs_client_account"]').val(1);
 			});
@@ -850,7 +779,7 @@
 				data.pickup_date=$self.e('[name="chbs_pickup_date_service_type_'+data.service_type_id+'"]').val();
 				data.pickup_time=$self.e('[name="chbs_pickup_time_service_type_'+data.service_type_id+'"]').val();
 				
-				if($.inArray($self.getServiceTypeId(),[1,2])>-1)
+				if($.inArray($self.getServiceTypeId(),[1,2,3])>-1)
 				{
 					var coordinate=$self.e('[name="chbs_pickup_location_coordinate_service_type_'+data.service_type_id+'"]').val();
 					if(!helper.isEmpty(coordinate))
@@ -876,15 +805,19 @@
 						data.dropoff_location_text=$self.e('[name="chbs_dropoff_location_service_type_'+data.service_type_id+'"]').val();
 					}	
 					
-					var pickupLocationId=$self.e('[name="chbs_fixed_location_pickup_service_type_'+data.service_type_id+'"]').val();
-					if(parseInt(pickupLocationId,10)>0)
-						data.fixed_location_pickup_id=pickupLocationId;
-					
-					var dropoffLocationId=$self.e('[name="chbs_fixed_location_dropoff_service_type_'+data.service_type_id+'"]').val();
-					if(parseInt(dropoffLocationId,10)>0)
-						data.fixed_location_dropoff_id=dropoffLocationId;					
+					if($.inArray($self.getServiceTypeId(),[1,2])>-1)
+					{
+						var pickupLocationId=$self.e('[name="chbs_fixed_location_pickup_service_type_'+data.service_type_id+'"]').val();
+						if(parseInt(pickupLocationId,10)>0)
+							data.fixed_location_pickup_id=pickupLocationId;
+
+						var dropoffLocationId=$self.e('[name="chbs_fixed_location_dropoff_service_type_'+data.service_type_id+'"]').val();
+						if(parseInt(dropoffLocationId,10)>0)
+							data.fixed_location_dropoff_id=dropoffLocationId;	
+					}
 				}
-				else
+				
+				if($.inArray($self.getServiceTypeId(),[3])>-1)
 				{
 					data.route_id=$self.e('[name="chbs_route_service_type_'+data.service_type_id+'"]').val();	
 				}
@@ -942,6 +875,8 @@
 				$self.getGlobalNotice().addClass('chbs-hidden');
 				
 				$self.preloader(true);
+				
+				$self.addGAEvent('user_sign_in');
 			
 				$self.setAction('user_sign_in');
 	   
@@ -958,7 +893,9 @@
 							$self.e('.chbs-main-content-step-3>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);						
 						
 						$self.createSelectMenu();
-						$self.createFixedLocationAutocomplete();
+						
+						$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');;
+						$self.createAutocomplete('.chbs-form-field-route-autocomplete');
 					}
 					else
 					{
@@ -990,6 +927,24 @@
 				password.attr('type',(password.attr('type')==='password' ? 'text' : 'password'));
 			});
 			
+			/***/
+			
+			if(parseInt($option.vehicle_price_calculation_first_step_enable,10)===1) 
+			{	
+				$self.e('.chbs-main-content-step-1').on('change',':input',function(e)
+				{
+					$self.doVehiclePriceCalculationStepFirst();
+				});
+			}
+		
+			/***/
+			
+			$self.e('.chbs-notice-fixed a').on('click',function(e) 
+			{
+				e.preventDefault();
+				$(this).parents('.chbs-notice-fixed').addClass('chbs-hidden');
+			});
+		
 			/***/
 			
 			$(document).bind('keypress',function(e) 
@@ -1131,7 +1086,7 @@
 					firstOption.attr('data-coordinate',JSON.stringify(data));
 				}
 			}
-			
+		   
 			$self.googleMapCreateRoute(function()
 			{
 				if((parseInt(helper.urlParam('widget_submit'),10)===1) && (parseInt(helper.urlParam('widget_second_step'),10)===1))	
@@ -1142,7 +1097,6 @@
 						$self.createStickySidebar();
 						$(window).scroll();
 					});
-                   
 				}
 				else $this.removeClass('chbs-hidden');	
 				$self.googleMapStartCustomizeHeight();  
@@ -1150,6 +1104,229 @@
 			
 			$self.moveSubmitButton();
 			$self.setBidPriceVehicle();
+			
+			$self.showRideInfo();			
+		};
+		
+		/**********************************************************************/
+		
+		this.createTimePicker=function(dateField,object)
+		{
+			var helper=new CHBSHelper();
+
+			var dateSelected=[object.selectedDay,object.selectedMonth+1,object.selectedYear];
+
+			for(var i in dateSelected)
+			{
+				if(new String(dateSelected[i]).length===1) dateSelected[i]='0'+dateSelected[i];
+			}
+
+			dateSelected=dateSelected[0]+'-'+dateSelected[1]+'-'+dateSelected[2];
+
+			if(helper.isEmpty(dateField.datepicker('getDate'))) return;
+
+			var dayWeek=parseInt(dateField.datepicker('getDate').getDay(),10);
+			if(dayWeek===0) dayWeek=7;					
+
+			var prefix=dateField.attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
+			var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
+
+			if(parseInt($option.pickup_time_field_write_enable,10)===1 || prefix==='return')
+			{	
+				var minTime='';
+				var maxTime='';
+
+				/***/
+
+				if((helper.isEmpty(minTime)) || (helper.isEmpty(maxTime)))
+				{
+					if(new String(typeof($option.business_hour[dayWeek]))!=='undefined')
+					{
+						minTime=$option.business_hour[dayWeek].start;
+						maxTime=$option.business_hour[dayWeek].stop;
+					}
+				}
+
+				/***/
+
+				var t=$option.datetime_min.split(' ');
+
+				if(dateSelected===t[0])
+				{
+					if(Date.parse('01/01/1970 '+t[1])>Date.parse('01/01/1970 '+minTime))
+						minTime=t[1];
+				}
+
+				/***/
+
+				if(!helper.isEmpty($option.datetime_max))
+				{
+					var t=$option.datetime_max.split(' ');
+
+					if(dateSelected===t[0])
+					{
+						if(Date.parse('01/01/1970 '+t[1])<Date.parse('01/01/1970 '+maxTime))
+							maxTime=t[1];
+					}					
+				}
+
+				/***/
+
+				var option=
+				{
+					appendTo:$this,
+					showOn:[],
+					timeFormat:$option.time_format,
+					step:$option.timepicker_step,
+					disableTouchKeyboard:true,
+					minTime:minTime,
+					maxTime:maxTime,
+					disableTextInput:parseInt($option.timepicker_field_readonly,10)===1 ? true : false
+				};
+
+				/***/
+
+				if(parseInt($option.timepicker_dropdown_list_enable,10)===1)
+				{	
+					try
+					{
+						timeField.timepicker('remove');
+					}
+					catch(e) {}
+
+					/***/
+
+					if(typeof($option.business_hour[dayWeek].default_format)!='undefined')
+					{
+						option.scrollDefault=$option.business_hour[dayWeek].default_format;
+					}
+
+					/***/
+
+					timeField.timepicker(option);
+
+					timeField.val('').timepicker('show');
+					timeField.blur();				
+
+					$self.setTimepicker(timeField);
+
+					/***/			
+
+					if(parseInt($self.getServiceTypeId(),10)===3)
+					{
+						var routeField=$self.e('select[name="chbs_route_service_type_3"]>option:selected');
+
+						try
+						{
+							var pickupHour=JSON.parse(routeField.attr('data-pickup_hour'));
+
+							if((pickupHour[dayWeek]!=undefined) && (pickupHour[dayWeek].hour.length>0))
+							{
+								$('.ui-timepicker-list>li').addClass('ui-timepicker-disabled').each(function()
+								{
+									if($.inArray(dateField.text(),pickupHour[dayWeek].hour)>-1)
+									{
+										dateField.removeClass('ui-timepicker-disabled');
+									}
+								});
+							}
+						}
+						catch(e) {}
+					}
+
+					/***/
+
+					if(parseInt($option.timepicker_hour_range_enable,10)===1)
+					{
+						$('.ui-timepicker-list>li').each(function()
+						{
+							var node=[dateField,dateField.next()];
+
+							if(node[1].length===1)
+								node[0].html(node[0].text()+' - '+node[1].text());
+							else node[0].remove();
+						});
+
+						timeField.on('selectTime',function(obj1,obj2) 
+						{
+							var element=$('.ui-timepicker-list>.ui-timepicker-selected');
+
+							if(element.length===1)
+							{
+								dateField.val(element.text());
+							}
+						});
+					}
+
+					/***/
+
+					if(typeof($option.business_hour[dayWeek].default_format)!='undefined')
+					{
+						$('.ui-timepicker-list>li:contains("'+$option.business_hour[dayWeek].default_format+'"):last').addClass('ui-timepicker-selected');
+					}
+				}
+			}
+			else
+			{	
+				if(new String(typeof($option.business_hour[dayWeek]))!=='undefined')
+				{
+					timeField.val($option.business_hour[dayWeek].default_format);
+				}
+			}			
+		};
+		
+		/**********************************************************************/
+		
+		this.setVehiclePriceCalculationStepFirst=function(state)
+		{
+			$self.e('input[name="chbs_vehicle_price_calculation_first_step_action"]').val(state);
+		};
+		
+		/**********************************************************************/
+
+		this.getVehiclePriceCalculationStepFirst=function()
+		{
+			return(parseInt($self.e('input[name="chbs_vehicle_price_calculation_first_step_action"]').val(),10));
+		};
+		
+		/**********************************************************************/
+		
+		this.increaseVehiclePriceCalculationStepFirst=function(step)
+		{
+			var value=parseInt($self.getVehiclePriceCalculationStepFirst(),10);
+			$self.setVehiclePriceCalculationStepFirst(value+step);
+		};
+		
+		/**********************************************************************/
+		
+		this.doVehiclePriceCalculationStepFirst=function()
+		{
+			if(parseInt($option.vehicle_price_calculation_first_step_enable,10)===1) 
+			{	
+				var distance=$self.e('[name="chbs_distance_sum"]').val();
+				var duration=$self.e('[name="chbs_duration_sum"]').val();	
+				
+				if(distance>0 || duration>0)
+				{
+					$self.increaseVehiclePriceCalculationStepFirst(1);
+
+					$self.goToStep(1,function() 
+					{
+						$self.increaseVehiclePriceCalculationStepFirst(-1);
+					});
+				}
+			}
+		};
+		
+		/**********************************************************************/
+		
+		this.showRideInfo=function()
+		{
+			var serviceTypeId=$self.getServiceTypeId();
+					
+			if(parseInt(serviceTypeId,10)===2)
+				$self.e('.chbs-ride-info>div:first').addClass('chbs-hidden');
+			else $self.e('.chbs-ride-info>div:first').removeClass('chbs-hidden');
 		};
 		
 		/**********************************************************************/
@@ -1330,32 +1507,26 @@
 		
         /**********************************************************************/
         
-		this.createFormElementFieldDatePicker = function() {
-    var option = {
-        autoSize: true,
-        dateFormat: $option.date_format_js,
-        onSelect: function() {
-            // Resetowanie danych adresowych i zmiennych globalnych
-            $('.chbs-form-field-location-autocomplete input[type="text"]').val('');
-            $self.countryFrom = '';
-            $self.countryTo = '';
-            // Dodatkowe akcje resetujące, jeśli to konieczne
-            // Na przykład: resetowanie mapy Google Maps, trasy, itd.
-            // $self.resetGoogleMap(); // Przykładowa funkcja resetująca mapę (jeśli istnieje)
-        },
-        beforeShow: function(date, instance) {
-            var helper = new CHBSHelper();
-            var value = helper.getValueFromClass($(instance.dpDiv), 'chbs-booking-form-id-');
-            
-            if (value !== false) $(instance.dpDiv).removeClass('chbs-booking-form-id-' + value);
-            
-            $(instance.dpDiv).addClass('chbs-booking-form-id-' + $option.booking_form_id).addClass('chbs-datepicker');
-        }
-    };
-    
-    $self.e('.chbs-datepicker.chbs-datepicker-form-element').datepicker(option);
-};
-
+		this.createFormElementFieldDatePicker=function()
+		{
+			var option=
+			{
+				autoSize:true,
+				firstDay:$option.first_day_week,
+				dateFormat:$option.date_format_js,
+				beforeShow:function(date,instance)
+				{
+					var helper=new CHBSHelper();
+					var value=helper.getValueFromClass($(instance.dpDiv),'chbs-booking-form-id-');
+					
+					if(value!==false) $(instance.dpDiv).removeClass('chbs-booking-form-id-'+value);
+					
+					$(instance.dpDiv).addClass('chbs-booking-form-id-'+$option.booking_form_id).addClass('chbs-datepicker');
+				}
+			};
+			
+			$self.e('.chbs-datepicker.chbs-datepicker-form-element').datepicker(option);
+		};
 		
         /**********************************************************************/
         
@@ -1397,7 +1568,7 @@
 				var autocomplete=new google.maps.places.Autocomplete(document.getElementById(id),option);
 				
 				autocomplete.addListener('place_changed',function(id)
-				{
+				{	
 					var place=autocomplete.getPlace();
 					
 					if(!place.geometry)
@@ -1412,7 +1583,8 @@
 						lat:place.geometry.location.lat(),
 						lng:place.geometry.location.lng(),
 						address:$self.removeDoubleQuote(field.val()),
-						zip_code:$self.getZipCode(place)
+						zip_code:$self.getElementFromPlace(place,'postal_code'),
+						country_code:$self.getElementFromPlace(place,'country','short_name')
 					};	
 					
 					$(field).siblings('input[type="hidden"]').val(JSON.stringify(placeData));
@@ -1430,10 +1602,10 @@
 				
 				$(this).fileupload(
 				{
-					url															:   $option.ajax_url,
-					dataType													:   'json',
-					formData													:   {'action':'chbs_file_upload'},
-					done														:   function(e,data) 
+					url:$option.ajax_url,
+					dataType:'json',
+					formData:{'action':'chbs_file_upload'},
+					done:function(e,data) 
 					{
 						$self.setFileUploadField(field,true,data.result);
 					}
@@ -1454,6 +1626,12 @@
 			var name=object.attr('name');
 			var field=$self.e('input[name="'+name+'"]');
 			
+			if(parseInt(data.error,10)===1)
+			{
+				alert(data.message);
+				return;
+			}
+			
 			if(upload)
 			{
 				field.parent('.chbs-file-upload').addClass('chbs-hidden');
@@ -1470,6 +1648,57 @@
 			$self.e('input[name="'+name+'_name"]').val(data.name);
 			$self.e('input[name="'+name+'_type"]').val(data.type);
 			$self.e('input[name="'+name+'_tmp_name"]').val(data.tmp_name);
+		};
+		
+		/**********************************************************************/
+		
+		this.triggerOnSelectDatePicker=function(selector)
+		{
+			var trigger=true;
+			
+			if(selector==='[name="chbs_pickup_date_service_type_3"]')
+			{
+				trigger=false;
+				var routeField=$self.e('select[name="chbs_route_service_type_3"]>option:selected');
+			
+				try
+				{
+			
+					var pickupHour=JSON.parse(routeField.attr('data-pickup_hour'));
+				}
+				catch(e) {}
+					
+				var pickupTime=$self.e('[name="chbs_pickup_time_service_type_3"]').val();
+					
+				var dateField=$self.e('[name="chbs_pickup_date_service_type_3"]');
+								
+				try
+				{
+					var dayWeek=parseInt(dateField.datepicker('getDate').getDay(),10);
+
+					$('.ui-timepicker-list>li').removeClass('ui-timepicker-disabled');
+
+					if((pickupHour[dayWeek]!=undefined) && (pickupHour[dayWeek].hour!=undefined))
+					{
+						$('.ui-timepicker-list>li').addClass('ui-timepicker-disabled').each(function()
+						{
+							if($.inArray($(this).text(),pickupHour[dayWeek].hour)>-1)
+							{
+								$(this).removeClass('ui-timepicker-disabled');
+							}
+						});			
+
+						if($.inArray(pickupTime,pickupHour[dayWeek].hour)==-1) trigger=true;
+					}
+				}
+				catch(e) {}
+			}
+			
+			if(trigger)
+			{
+				var inst=$.datepicker._getInst($(selector)[0]);
+				$.datepicker._get(inst,'onSelect').apply(inst.input[0],[$(selector).datepicker('getDate'),inst]);
+			}
 		};
 		
 		/**********************************************************************/
@@ -1500,7 +1729,7 @@
 				change:function(event,ui)
 				{
 					var name=$(this).attr('name');
-					
+										
 					if(name==='chbs_waypoint_duration_service_type_1[]')
 					{
 						$self.reCalculateRoute();
@@ -1508,6 +1737,11 @@
 					
 					if(name==='chbs_route_service_type_3')
 					{
+						$self.e('[name="chbs_pickup_date_service_type_3"]').val('');
+						$self.e('[name="chbs_pickup_time_service_type_3"]').val('');
+
+						$self.triggerOnSelectDatePicker('[name="chbs_pickup_date_service_type_3"]');
+						
 						$self.googleMapCreate();
 						$self.googleMapCreateRoute();
 					}
@@ -1523,13 +1757,15 @@
 					if($.inArray(name,['chbs_extra_time_service_type_1','chbs_transfer_type_service_type_1','chbs_duration_service_type_2','chbs_extra_time_service_type_3','chbs_transfer_type_service_type_3'])>-1)
 					{
 						$self.reCalculateRoute();
-					}
+					}1
 					
 					if(name==='chbs_navigation_responsive')
 					{
 						var navigation=parseInt($(this).val(),10);
 						
 						var step=parseInt($self.e('input[name="chbs_step"]').val(),10);	
+						
+						$self.addGAEvent('navigation_top_select',{'step_current':step,'step_target':navigation});
 				
 						if(navigation-step===0) return;
 
@@ -1570,15 +1806,6 @@
 						});
 					}
 					
-					if($.inArray(name,['chbs_fixed_location_pickup_service_type_1','chbs_fixed_location_dropoff_service_type_1','chbs_fixed_location_pickup_service_type_2','chbs_fixed_location_dropoff_service_type_3']>-1))
-					{
-						$self.googleMapSetAddress($(this),function()
-						{
-							$self.googleMapCreate();
-							$self.googleMapCreateRoute();   
-						});
-					}
-					
 					if($.inArray(name,['chbs_fixed_location_pickup_service_type_1','chbs_fixed_location_pickup_service_type_2']>-1))
 					{
 						$self.checkFixedLocationPickup(name);
@@ -1592,7 +1819,18 @@
 					if($.inArray(name,['chbs_fixed_location_dropoff_service_type_2']>-1))
 					{
 						$self.checkFixedLocationPickup('chbs_fixed_location_pickup_service_type_2');
-					}	 
+					}
+					
+					if($.inArray(name,['chbs_fixed_location_pickup_service_type_1','chbs_fixed_location_dropoff_service_type_1','chbs_fixed_location_pickup_service_type_2','chbs_fixed_location_dropoff_service_type_3']>-1))
+					{
+						$self.googleMapSetAddress($(this),function()
+						{
+							$self.googleMapCreate();
+							$self.googleMapCreateRoute();   
+						});
+					}
+						
+					/***/
 				}
 			});
 						
@@ -1616,40 +1854,52 @@
 				}	
 			}
 		};
-			
-		/**********************************************************************/
 		
-		this.getFixedLocationSource=function(item)
+		/**********************************************************************/
+			
+		this.getAutocompleteSource=function(item)
 		{
-			var fixedLocation=[];
+			var source=[];
 			$(item).next('select').find('option:not([disabled="disabled"])').each(function(index2,item2)
 			{
-				fixedLocation.push({label:item2.text,value:item2.value});
+				source.push({label:item2.text,value:item2.value});
 			});	  
 		   
-			return(fixedLocation);
+			return(source);
 		};
 		
 		/**********************************************************************/
 		
-		this.createFixedLocationAutocomplete=function()
+		this.createAutocomplete=function(selector)
 		{
-			$self.e('.chbs-form-field-location-fixed-autocomplete').each(function(index,item)
+			$self.e(selector).each(function(index,item)
 			{
-				var fixedLocation=$self.getFixedLocationSource(item);
-				if(fixedLocation.length)
+				var source=$self.getAutocompleteSource(item);
+				if(source.length)
 				{
 					$(item).autocomplete(
 					{
 						appendTo:$this,
-						source:fixedLocation,
+						source:source,
 						minLength:0,
 						focus:function(event,ui)
 						{
 							event.preventDefault();
 						},
-						select:$self.handleFixedLocationAutocompleteChange,
-						change:$self.handleFixedLocationAutocompleteChange
+						select:$self.handleAutocompleteChange,
+						change:$self.handleAutocompleteChange,
+						create:function(event,ui)
+						{
+							var helper=new CHBSHelper();
+							
+							var select=$(event.target).next('select');
+							
+							var selectedId=select.children('option[selected="selected"]').val();
+							
+							var label=select.children('option[value="'+parseInt(selectedId,10)+'"]').text();
+							
+							if(!helper.isEmpty(label)) $(event.target).val(label);
+						}
 					}).focus(function()
 					{
 						$(this).autocomplete('search');
@@ -1657,7 +1907,7 @@
 					
 					$.ui.autocomplete.filter=function(array,term)
 					{
-						var matcher=new RegExp('^'+$.ui.autocomplete.escapeRegex(term),'i');
+						var matcher=new RegExp($.ui.autocomplete.escapeRegex(term),'i');
 						return $.grep(array,function(value) 
 						{
 							return(matcher.test(value.label || value.value || value));
@@ -1669,11 +1919,11 @@
 		
 		/**********************************************************************/
 		
-		this.handleFixedLocationAutocompleteChange=function(event,ui)
-		{
+		this.handleAutocompleteChange=function(event,ui)
+		{		
 			event.preventDefault();
-			var $select=$(event.target).next('select'),
-				name=$select.attr('name');
+			
+			var $select=$(event.target).next('select'),name=$select.attr('name');
 
 			if(ui.item==null)
 			{
@@ -1685,7 +1935,7 @@
 				$(event.target).val(ui.item.label);
 				$select.val(ui.item.value);
 			}
-			
+						
 			if($.inArray(name,['chbs_fixed_location_pickup_service_type_1','chbs_fixed_location_dropoff_service_type_1','chbs_fixed_location_pickup_service_type_2','chbs_fixed_location_dropoff_service_type_3']>-1))
 			{
 				$self.googleMapSetAddress($select,function()
@@ -1709,6 +1959,8 @@
 			{
 				$self.checkFixedLocationPickup('chbs_fixed_location_pickup_service_type_2');
 			}
+			
+			return(true);
 		};
 		
 		/**********************************************************************/
@@ -1747,7 +1999,7 @@
 			
 			$self.e('.chbs-form-field-location-fixed-autocomplete').each(function(index,item)
 			{
-				var fixedLocation=$self.getFixedLocationSource(item);
+				var fixedLocation=$self.getAutocompleteSource(item);
 				$(item).autocomplete({source:fixedLocation});
 			});
 		};
@@ -1807,7 +2059,7 @@
 
 		this.recalculateVehiclePrice=function(response,previousStep)
 		{
-			if((parseInt(response.booking_summary_hide_fee,10)===1) && (parseInt(previousStep,10)===1))
+			if(((parseInt(response.booking_summary_hide_fee,10)===1) || (parseInt(response.booking_summary_hide_fee,10)===2)) && (parseInt(previousStep,10)===1))
 			{
 				var vehicle=[];
 
@@ -1851,14 +2103,17 @@
 
 		/**********************************************************************/
 		
-		this.goToStep=function(stepDelta,callback,useRecaptcha=true)
+		this.goToStep=function(stepDelta,callback,useRecaptcha=true,useScrollToTop=true,usePreloader=true)
 		{   
-			$self.preloader(true);
+			if(usePreloader)
+			{
+				$self.preloader(true);
+			}
 			
 			var step=$self.e('input[name="chbs_step"]');
 			var stepRequest=$self.e('input[name="chbs_step_request"]');
 			
-			if(parseInt($option.recaptcha.enable,10)===1)
+			if((parseInt($option.recaptcha.enable,10)===1) && ($self.getVehiclePriceCalculationStepFirst()===0))
 			{
 				var s=parseInt(step.val(),10)+stepDelta;
 			
@@ -1913,15 +2168,36 @@
 			{   
 				var previousStep=$self.e('input[name="chbs_step"]').val();
 				
+				if($self.getVehiclePriceCalculationStepFirst()!==0)
+				{	
+					response.step=1;
+					
+					if((typeof(response.vehicle_price_calculation_step_first)!=='undefined') && (typeof(response.vehicle_price_calculation_step_first.message)!=='undefined')  && (parseInt(response.vehicle_price_calculation_step_first.show,10)===1))
+					{
+						$self.e('.chbs-notice-fixed').removeClass('chbs-hidden');
+						$self.e('.chbs-notice-fixed span:first').html(response.vehicle_price_calculation_step_first.message);
+					}
+					else
+					{
+						$self.e('.chbs-notice-fixed').addClass('chbs-hidden');
+					}
+					
+					if(typeof(callback)!=='undefined') callback();
+					
+					return;
+				}
+				
+				$self.e('.chbs-notice-fixed').addClass('chbs-hidden');
+				
 				response.step=parseInt(response.step,10);
-				
+			
 				$self.getGlobalNotice().addClass('chbs-hidden');
-				
+					
 				$self.e('.chbs-main-content>div').css('display','none');
 				$self.e('.chbs-main-content>div:eq('+(response.step-1)+')').css('display','block');
 				
-				$self.e('input[name="chbs_step"]').val(response.step);
-				
+				$self.e('input[name="chbs_step"]').val(response.step);			
+
 				$self.setMainNavigation();
 				
 				$self.googleMapDuplicate(-1);
@@ -1966,7 +2242,9 @@
 						$self.createVehicleGallery();
 						
 						$self.createSelectMenu();
-						$self.createFixedLocationAutocomplete();
+					
+						$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');
+						$self.createAutocomplete('.chbs-form-field-route-autocomplete');
 
 						$self.manageBookingExtra();
 
@@ -1993,13 +2271,16 @@
 						
 						$self.setPayment();
 						$self.createFileField();
+						
 						$self.createSelectMenu();
-						$self.createFixedLocationAutocomplete();
+						
+						$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');
+						$self.createAutocomplete('.chbs-form-field-route-autocomplete');
 						
 						$self.createFormElementFieldDatePicker();
 						$self.createFormElementFieldTimePicker();
 						$self.createFormElementFieldAutocomplete();
-						
+
 					break;
 					
 					case 4:
@@ -2020,6 +2301,8 @@
 							$self.e('.chbs-main-content-step-4>.chbs-layout-33x33x33').after(response.agreement_html);
 						}
 						
+						$self.createSelectMenu();
+					
 					break;
 				}
 				
@@ -2027,6 +2310,12 @@
 				$self.createLabelTooltip();
 				
 				$self.createStickySidebar();
+				
+				if($.inArray(response.step,[2,3,4])>-1) 
+				{
+					$self.createCurrencySwitcher();
+				}
+				
 				$(window).scroll();
 				
 				if($.inArray(response.step,[4])>-1)   
@@ -2079,6 +2368,8 @@
 				
 				if(parseInt(response.step,10)===5)
 				{
+					$self.addGAEvent('booking_send',{'booking_id':response.booking_id});
+					
 					$self.e('.chbs-main-navigation-default').addClass('chbs-hidden');
 					$self.e('.chbs-main-navigation-responsive').addClass('chbs-hidden');
 					
@@ -2088,16 +2379,16 @@
 					}
 					else
 					{
+						var helper=new CHBSHelper();
+						
 						if((typeof(response.redirect_to_woocommerce_cart_enable)!=='undefined') && (parseInt(response.redirect_to_woocommerce_cart_enable,10)===1))
 						{
 							$('body').css('display','none');
 							window.location.href=response.redirect_to_woocommerce_cart_url_address;
 						}
 						
-						if($.inArray(parseInt(response.payment_id,10),[1,2,3,4,5])>-1)
+						if(parseInt(response.payment_id,10)>0)
 						{
-							var helper=new CHBSHelper();
-
 							if(!helper.isEmpty(response.payment_info))
 								$self.e('.chbs-booking-complete-payment-'+response.payment_prefix).append('<p>'+response.payment_info+'</p>');
 						}
@@ -2114,9 +2405,7 @@
 
 								$self.e('.chbs-booking-complete-payment-disable').css('display','block');
 							
-							
 							break;
-							
 							
 							case -1:
 								
@@ -2265,20 +2554,34 @@
 								$self.e('.chbs-booking-complete-payment-credit-card-pickup').css('display','block');
 
 							break;
+							
+							default:
+							
+								if(!helper.isEmpty(response.callback_function))
+								{
+									var object=new window[response.callback_object];
+									object[response.callback_function](response,$this);
+								}
 						}
 					}
 				}
 				
-				var offset=20;
-				
-				if($('#wpadminbar').length===1)
-					offset+=$('#wpadminbar').height();
-				
-				$.scrollTo($this,{offset:-1*offset});
-				
+				if(useScrollToTop)
+				{
+					var offset=20;
+
+					if($('#wpadminbar').length===1)
+						offset+=$('#wpadminbar').height();
+
+					$.scrollTo($this,{offset:-1*offset});
+				}
+			
 				if(typeof(callback)!=='undefined') callback();
-				
-				$self.preloader(false);
+			
+				if(usePreloader)
+				{
+					$self.preloader(false);
+				}
 			});
 		};
 		
@@ -2291,20 +2594,32 @@
 			
 			if(parseInt(fieldPlaceholder.length,10)===1)
 			{
-				$iti=window.intlTelInput(fieldPlaceholder[0],
+				if(parseInt($option.phone_number_iti_library_enable,10)===1) 
 				{
-					initialCountry:$option.client_country_code,
-					separateDialCode:true
-				});
-				
-				$iti.setNumber(field.val());
-				
-				fieldPlaceholder[0].addEventListener('countrychange',function()
+					$iti=window.intlTelInput(fieldPlaceholder[0],
+					{
+						initialCountry:$option.client_country_code,
+						separateDialCode:true
+					});
+
+					$iti.setNumber(field.val());
+
+					fieldPlaceholder[0].addEventListener('countrychange',function()
+					{
+						var number=$iti.getNumber();
+						field.val(number);
+					});
+				}
+				else
 				{
-					var number=$iti.getNumber();
-					
-					field.val(number);
-				});
+					fieldPlaceholder.on('change',function()
+					{
+						var number=fieldPlaceholder.val();
+						field.val(number);
+					});		
+				}
+				
+				fieldPlaceholder.trigger('change');
 			}
 		};
 		
@@ -2371,15 +2686,9 @@
 				}
 			});
 			
-			bookingExtraList=$self.e('.chbs-booking-extra-list');
 			
-			var data=[];
-			bookingExtraList.find('.chbs-button.chbs-button-style-2').each(function()
-			{
-				if($(this).hasClass('chbs-state-selected'))
-					data.push($(this).attr('data-value'));
-			});
-			
+			var data=$self.getSelectedBookingExtra(false);
+						
 			var t=[data.join(','),$self.e('input[name="chbs_booking_extra_id"]').val()];
 			
 			if(new String(t[0])!==new String(t[1]))
@@ -2389,6 +2698,44 @@
 			}
 		};
 		
+		/**********************************************************************/
+		
+		this.getSelectedBookingExtra=function(set=true)
+		{
+			var data=[];
+			
+			var bookingExtraList=$self.e('.chbs-booking-extra-list');
+
+			var vehicleIdSelected=parseInt($self.e('[name="chbs_vehicle_id"]').val(),10);
+			
+			bookingExtraList.find('.chbs-button.chbs-button-style-2').each(function()
+			{
+				var vehicleIdBookingExtra=$(this).parents('li:first').attr('data-vehicle_id').split(',').map(function(val) { return parseInt(val,10); });
+				
+				if($(this).hasClass('chbs-state-selected'))
+				{
+					if($.inArray(-1,vehicleIdBookingExtra)>-1)
+					{
+						data.push($(this).attr('data-value'));
+					}
+					else if(vehicleIdSelected>0)
+					{
+						if($.inArray(vehicleIdSelected,vehicleIdBookingExtra)>-1)
+						{
+							data.push($(this).attr('data-value'));
+						}
+					}
+				}
+			});
+			
+			if(set) 
+			{	
+				$self.e('input[name="chbs_booking_extra_id"]').val(data.join(','));
+			}
+			
+			return(data);
+		};
+
 		/**********************************************************************/
 		
 		this.post=function(data,callback)
@@ -2401,8 +2748,14 @@
 		
 		/**********************************************************************/
 		
-		this.preloader=function(action)
+		this.preloader=function(action,forcePreloader=false)
 		{
+			if(!forcePreloader)
+			{
+				if(parseInt($option.form_preloader_enable,10)!==1) return;
+				if($self.getVehiclePriceCalculationStepFirst()!==0) return;
+			}
+		
 			$self.e('#chbs-preloader').css('display',(action ? 'block' : 'none'));
 		};
 		
@@ -2435,6 +2788,8 @@
 				
 				if(parseInt(gallery.length,10)===1)
 				{
+					$.fancybox({'type': 'iframe','scrolling': 'no'});
+					
 					$.fancybox.open(gallery.find('img'));
 				}
 			});
@@ -2474,6 +2829,7 @@
 		this.googleMapCustomizeHeight=function()
 		{
 			if(parseInt($option.widget.mode,10)===1) return;
+			
 			if(parseInt($self.e('input[name="chbs_step"]').val(),10)!==1) return;
 			
 			var rideInfo=$self.e('.chbs-ride-info');
@@ -2502,283 +2858,396 @@
 			{
 				var map=$self.e('.chbs-google-map>#chbs_google_map');
 				if(map.children('div').length)
-					$self.e('.chbs-google-map-summary').append(map);			 
+					$self.e('.chbs-google-map-summary').append(map);		
+				
+				$self.e('#chbs_google_map').height('420px');
 			}
 			else
 			{
-				
 				var map=$self.e('.chbs-google-map-summary>#chbs_google_map');
 				if(map.children('div').length)
 					$self.e('.chbs-google-map').append(map);
 			}
 			
-			google.maps.event.trigger($googleMap,'resize');
+			for(var i in $marker)
+				$marker[i].setMap($googleMap);
 			
-			try
-			{
-				$directionsRenderer.setDirections($directionsServiceResponse);
-				$directionsRenderer.setRouteIndex($self.getRouteIndex());
-				$googleMap.setCenter($directionsRenderer.getDirections().routes[$self.getRouteIndex()].bounds.getCenter());
-			}
-			catch(e)
-			{
+			var bound=new google.maps.LatLngBounds();
+			for(var i in $marker)
+				bound.extend($marker[i].position);
+			$googleMap.fitBounds(bound);
+			
+			google.maps.event.trigger($googleMap,'resize');
+		};
 		
+		/**********************************************************************/
+		
+		this.googleMapSetAddress=function(field,callback,setField=false)
+		{
+			var coordinate;
+			var helper=new CHBSHelper();
+			
+			if(field.prop('tagName').toLowerCase()==='select')
+			{
+				callback();
+				return;
+			}
+			else coordinate=JSON.parse(field.val());
+			
+			if((helper.isEmpty(coordinate.lat)) || (helper.isEmpty(coordinate.lng))) return;
+			
+			var geocoder=new google.maps.Geocoder;
+			
+			geocoder.geocode({'location':new google.maps.LatLng(coordinate.lat,coordinate.lng)},function(result,status) 
+			{
+				if((status==='OK') && (result[0]))
+				{
+					coordinate.address=$self.removeDoubleQuote(result[0].formatted_address);
+						
+					if(setField)
+					{
+                        var textField=field.parent('.chbs-form-field-location-autocomplete').children('input[type="text"]');
+                        if(textField.length===1) textField.val(coordinate.address);						
+					}
+					
+					field.val(JSON.stringify(coordinate));
+					callback();
+				}
+			});			
+		};
+		
+		/**********************************************************************/
+		
+		this.isPointInCircle=function(point,pointCenter,radius)
+		{
+			return(google.maps.geometry.spherical.computeDistanceBetween(point,pointCenter)<=radius);
+		}
+		
+		/**********************************************************************/
+		
+		this.getGoogleMapAutocompleteOption=function(fieldName,reset=0)
+		{
+			var option={};
+			var setting={};
+			var helper=new CHBSHelper();
+			
+			var fieldType,fieldTypeReverse;
+			
+			/***/
+		
+			if(parseInt($option.driving_zone.location_field_relation_type,10)!==2)
+			{
+				reset=0;
+			}
+			
+			/***/
+			
+			if(fieldName.indexOf('pickup')>-1)
+			{
+				fieldType='pickup';
+				fieldTypeReverse='dropoff';
+				setting=$option.driving_zone.pickup;
+			}
+			if(fieldName.indexOf('dropoff')>-1)
+			{
+				fieldType='dropoff';
+				fieldTypeReverse='pickup';
+				setting=$option.driving_zone.dropoff;
+			}
+			if(fieldName.indexOf('waypoint')>-1)
+			{
+				fieldType='waypoint';
+				fieldTypeReverse='waypoint';
+				setting=$option.driving_zone.waypoint;
+			}
+			
+			/***/
+			
+			option.bounds=null;
+			option.strictBounds=false;
+			
+			option.componentRestrictions={};
+			option.componentRestrictions.country=[];
+			
+			option.fieldName=fieldName;
+			option.fieldNameCoordinate=fieldName.replace('location','location_coordinate');
+			
+			option.fieldNameReverse=fieldName.replace(fieldType,fieldTypeReverse);
+			option.fieldNameReverseCoordinate=option.fieldNameReverse.replace('location','location_coordinate');
+			
+			option.fieldType=fieldType;
+			option.fieldTypeReverse=fieldTypeReverse;
+			
+			option.restrictionType=0;
+			
+			option.fields=['address_components','geometry'];
+			
+			/***/
+			
+			if((parseInt(setting.enable,10)===1) && (parseInt(reset,10)===0))
+			{
+				if((!helper.isEmpty(setting.area.coordinate.lat)) && (!helper.isEmpty(setting.area.coordinate.lat)) && (parseInt(setting.area.radius,10)>=0))
+				{
+					var circle=new google.maps.Circle(
+					{
+						center:new google.maps.LatLng(setting.area.coordinate.lat,setting.area.coordinate.lng),
+						radius:setting.area.radius*1000
+					});
+
+					option.circle=circle;
+
+					option.strictBounds=true;
+					option.bounds=circle.getBounds();
+					
+					option.restrictionType=1;
+				}
+
+				if(setting.country.length)
+				{
+					if($.inArray(-1,setting.country)===-1)
+					{
+						option.componentRestrictions={};
+						option.componentRestrictions.country=setting.country;
+						
+						option.restrictionType+=2;
+					}
+				}
+			}	
+			
+			/***/
+			
+			return(option);
+		};
+		
+		/**********************************************************************/
+		
+		this.setGoogleMapAutocompleteOption=function(fieldName)
+		{
+			if(parseInt($option.driving_zone.location_field_relation_type,10)!==2) return;
+			
+			var Helper=new CHBSHelper();
+				
+			var fieldOption=$self.getGoogleMapAutocompleteOption(fieldName);
+			
+			var fieldReverseOption=$self.getGoogleMapAutocompleteOption(fieldOption.fieldNameReverse);
+			
+			var field=$self.e('[name="'+fieldName+'"]');
+			var fieldReverse=$self.e('[name="'+fieldOption.fieldNameReverse+'"]');
+			
+			if((Helper.isEmpty(field.val())) && (Helper.isEmpty(fieldReverse.val())))
+			{
+				if(fieldName in $autocomplete)
+				{	
+					$autocomplete[fieldName].setOptions($self.getGoogleMapAutocompleteOption(fieldName,1));
+				}
+				if(fieldOption.fieldNameReverse in $autocomplete)
+				{	
+					$autocomplete[fieldOption.fieldNameReverse].setOptions($self.getGoogleMapAutocompleteOption(fieldOption.fieldNameReverse,1));
+				}
+			}
+			else if((!Helper.isEmpty(field.val())) && (Helper.isEmpty(fieldReverse.val())))
+			{
+				var fieldCoordinate=JSON.parse($self.e('[name="'+fieldOption.fieldNameCoordinate+'"').val());
+				
+				var r1=true;
+				var r2=true;
+				
+				if(fieldOption.restrictionType==1 || fieldOption.restrictionType==3)
+					r1=$self.isPointInCircle(new google.maps.LatLng(fieldCoordinate.lat,fieldCoordinate.lng),fieldOption.circle.center,fieldOption.circle.radius);
+				if(fieldOption.restrictionType==2 || fieldOption.restrictionType==3)
+				{
+					if($.inArray(fieldCoordinate.country_code,fieldOption.componentRestrictions.country)==-1) r2=false;
+				}
+							
+				if(fieldOption.fieldNameReverse in $autocomplete)
+				{	
+					$autocomplete[fieldOption.fieldNameReverse].setOptions($self.getGoogleMapAutocompleteOption(fieldOption.fieldNameReverse,(r1 && r2 ? 1 : 0)));
+				}
+		
+				if(fieldOption.fieldName in $autocomplete)
+				{	
+					$autocomplete[fieldOption.fieldName].setOptions($self.getGoogleMapAutocompleteOption(fieldOption.fieldName,0));
+				}
+			}
+			else if((Helper.isEmpty(field.val())) && (!Helper.isEmpty(fieldReverse.val())))
+			{
+				var fieldCoordinate=JSON.parse($self.e('[name="'+fieldReverseOption.fieldNameCoordinate+'"').val());
+				
+				var r1=true;
+				var r2=true;
+				
+				if(fieldReverseOption.restrictionType==1 || fieldReverseOption.restrictionType==3)
+					r1=$self.isPointInCircle(new google.maps.LatLng(fieldCoordinate.lat,fieldCoordinate.lng),fieldReverseOption.circle.center,fieldReverseOption.circle.radius);
+				if(fieldReverseOption.restrictionType==2 || fieldReverseOption.restrictionType==3)
+				{
+					if($.inArray(fieldCoordinate.country_code,fieldReverseOption.componentRestrictions.country)==-1) r2=false;
+				}
+				
+				if(fieldOption.fieldName in $autocomplete)
+				{	
+					$autocomplete[fieldOption.fieldName].setOptions($self.getGoogleMapAutocompleteOption(fieldOption.fieldName,(r1 && r2 ? 1 : 0)));
+				}
+				
+				if(fieldOption.fieldNameReverse in $autocomplete)
+				{	
+					$autocomplete[fieldOption.fieldNameReverse].setOptions($self.getGoogleMapAutocompleteOption(fieldOption.fieldNameReverse,0));
+				}
 			}
 		};
 		
-/**********************************************************************
- * Globalne zmienne do przechowywania kraju dla adresów 'skąd' i 'dokąd'.
- **********************************************************************/
-this.countryFrom = '';
-this.countryTo = '';
-
-/**********************************************************************
- * Funkcja do ustawiania adresu na podstawie współrzędnych.
- **********************************************************************/
-this.googleMapSetAddress = function(field, callback, setField = false) {
-    var coordinate;
-    var helper = new CHBSHelper();
-
-    if (field.prop('tagName').toLowerCase() === 'select') {
-        callback();
-        return;
-    } else {
-        coordinate = JSON.parse(field.val());
-    }
-
-    if (helper.isEmpty(coordinate.lat) || helper.isEmpty(coordinate.lng)) return;
-
-    var geocoder = new google.maps.Geocoder();
-
-    geocoder.geocode({ 'location': new google.maps.LatLng(coordinate.lat, coordinate.lng) }, function(result, status) {
-        if (status === 'OK' && result[0]) {
-            coordinate.address = $self.removeDoubleQuote(result[0].formatted_address);
-
-            if (setField) {
-                var textField = field.parent('.chbs-form-field-location-autocomplete').children('input[type="text"]');
-                if (textField.length === 1) textField.val(coordinate.address);
-            }
-
-            field.val(JSON.stringify(coordinate));
-            callback();
-        }
-    });
-};
-
-/**********************************************************************
- * Funkcja do tworzenia autouzupełnienia adresu z Google Maps.
- **********************************************************************/
-this.googleMapAutocompleteCreate = function(text) {
-    if (text.is('[readonly]')) return;
-
-    var id = 'chbs_location_' + (new CHBSHelper()).getRandomString(16);
-    text.attr('id', id).on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            return false;
-        }
-    });
-
-        // Dodanie obsługi zdarzenia 'input' do resetowania zmiennych kraju
-    text.on('input', function() {
-        if ($(this).val().trim() === '') {
-            if ($(this).attr('name').includes('pickup')) {
-                $self.countryFrom = '';
-            } else if ($(this).attr('name').includes('dropoff')) {
-                $self.countryTo = '';
-            }
-        }
-    });
-
-    var option = {
-        fields: ['address_components', 'geometry'],
-        componentRestrictions: { country: ['pl', 'de', 'cz', 'at'] }
-    };
-    var autocomplete = new google.maps.places.Autocomplete(document.getElementById(id), option);
-
-    autocomplete.addListener('place_changed', function() {
-    var place = autocomplete.getPlace();
-
-    if (!place.geometry) {
-        alert($option.message.place_geometry_error);
-        text.val('');
-        return;
-    }
-
-        // Walidacja kompletności adresu
-        var addressComponents = place.address_components;
-        var hasCountry = addressComponents.some(component => component.types.includes('country'));
-		var hasLocality = addressComponents.some(component => component.types.includes('locality'));
-		/**********************************************************************
-        
-        var hasRoute = addressComponents.some(component => component.types.includes('route'));
-        var hasStreetNumber = addressComponents.some(component => component.types.includes('street_number'));
-		&& hasRoute && hasStreetNumber
- **********************************************************************/
-
-        if (!(hasCountry && hasLocality )) {
-            alert('Proszę podać pełny adres, włączając kraj, miejscowość, ulicę, numer domu oraz kod pocztowy.');
-            text.val('');
-            return;
-        }
-
-        processAddressSelection(place, text.attr('name'), text);
-});
-};
-
-/**********************************************************************
- * Funkcja do przetwarzania wybranego adresu i resetowania informacji.
- **********************************************************************/
-function processAddressSelection(place, fieldName, textElement) {
-    var currentCountry = place.address_components.find(component => component.types.includes('country')).short_name;
-    var regionComponent = place.address_components.find(component => component.types.includes('administrative_area_level_1'));
-    var region = regionComponent ? regionComponent.long_name : null;
-
-    if (fieldName.includes('pickup')) {
-        $self.countryFrom = currentCountry;
-    } else if (fieldName.includes('dropoff')) {
-        $self.countryTo = currentCountry;
-    }
-
-    if ($self.countryFrom && $self.countryTo && $self.countryFrom === $self.countryTo) {
-        alert('Brak możliwości rezerwacji on-line na podanej trasie. Skontaktuj się pod numerem +48 510 480 808');
-        textElement.val('');
-        return;
-    }
-
-    if (!isValidRegion(region, currentCountry)) {
-        alert('Proszę podać pełny adres składający się z nazw: miejscowości, ulicy oraz numeru domu');
-        textElement.val('');
-        return;
-    }
-
-        // Ustawienie godziny dla pola "Pickup date, time"
-    setPickupTime(textElement, region, currentCountry);
-
-   
-
-    // Pobranie adresu bezpośrednio z pola tekstowego i dodatkowa walidacja
-    var address = textElement.val().trim();
-    if (!address) {
-        console.error('Nie podano żadnego adresu.');
-        return;
-    }
-
-    var placeData = {
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-        address: $self.removeDoubleQuote(address), // Użycie adresu z pola tekstowego
-    };
-
-    var field = textElement.siblings('input[type="hidden"]');
-    field.val(JSON.stringify(placeData));
-
-    $self.googleMapCreate();
-    $self.googleMapCreateRoute();
-}
-
-
-// Definicja obsługiwanych regionów
-const validRegions = {
-    "PL": ["Województwo dolnośląskie", "Województwo opolskie", "Województwo śląskie", "Województwo łódzkie", "Województwo świętokrzyskie", "Województwo małopolskie", "Województwo podkarpackie"],
-    "DE": ["Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen", "Niedersachsen", "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Nordrhein-Westfalen", "Rheinland-Pfalz", "Saarland", "Sachsen", "Sachsen-Anhalt", "Schleswig-Holstein", "Thüringen"],
-	"CZ": [
-        "Hlavní město Praha", "Středočeský kraj", "Jihočeský kraj", "Plzeňský kraj",
-        "Karlovarský kraj", "Ústecký kraj", "Liberecký kraj", "Královéhradecký kraj",
-        "Pardubický kraj", "Vysočina", "Jihomoravský kraj", "Olomoucký kraj",
-        "Zlínský kraj", "Moravskoslezský kraj"
-    ],
-	"AT": [
-        "Burgenland", "Kärnten", "Niederösterreich", "Oberösterreich", "Salzburg",
-        "Steiermark", "Tirol", "Vorarlberg", "Wien"
-    ]
-};
-
-// Funkcja sprawdzająca, czy region jest w zasięgu
-function isValidRegion(region, country) {
-    // Sprawdzenie, czy w danym kraju istnieje lista obsługiwanych regionów
-    if (!validRegions[country]) {
-        return false; // Jeśli nie ma listy dla danego kraju, zwraca false
-    }
-
-    // Sprawdzenie, czy dany region znajduje się na liście obsługiwanych regionów dla danego kraju
-    return validRegions[country].includes(region);
-}
-
-
-
-/**********************************************************************
- * Funkcja ustawiająca godzinę na podstawie regionu lub landu w Niemczech.
- **********************************************************************/
-     function setPickupTime(textField, region, country) {
-        
-    // Mapowanie województw i niemieckich landów do godzin
-      var validRegions = {
-        // Polskie województwa
-        "Województwo dolnośląskie": "17:00 - 19:00", "Województwo opolskie": "16:00 - 17:00", "Województwo śląskie": "13:00 - 15:00", "Województwo łódzkie": "12:00 - 14:00", "Województwo świętokrzyskie": "12:00 - 14:00", "Województwo małopolskie": "12:00 - 14:00", "Województwo podkarpackie": "11:00 - 13:00",
-        // Niemieckie landy
-        "Baden-Württemberg": "15:00 - 18:00", "Bayern": "16:00 - 19:00", "Berlin": "22:00 - 24:00", "Brandenburg": "21:00 - 23:00", "Bremen": "17:00 - 20:00", "Niedersachsen": "15:00 - 21:00",
-        "Hamburg": "18:00 - 22:00", "Hessen": "18:00 - 20:00", "Mecklenburg-Vorpommern": "22:00 - 24:00", "Nordrhein-Westfalen": "15:00 - 18:00", "Rheinland-Pfalz": "15:00 - 18:00",
-        "Saarland": "15:00 - 17:00", "Sachsen": "23:00 - 02:00", "Sachsen-Anhalt": "21:00 - 23:00", "Schleswig-Holstein": "15:00 - 18:00", "Thüringen": "19:00 - 22:00",
-		// Czechy
-        "Hlavní město Praha": "23:00 - 01:00",
-        "Středočeský kraj": "22:00 - 01:00",
-        "Jihočeský kraj": "22:00 - 01:00",
-        "Plzeňský kraj": "23:00 - 01:00",
-        "Karlovarský kraj": "22:00 - 01:00",
-        "Ústecký kraj": "22:00 - 01:00",
-        "Liberecký kraj": "22:00 - 01:00",
-        "Královéhradecký kraj": "23:00 - 02:00",
-        "Pardubický kraj": "23:00 - 01:00",
-        "Vysočina": "22:00 - 01:00",
-        "Jihomoravský kraj": "23:00 - 01:00",
-        "Olomoucký kraj": "23:00 - 03:00",
-        "Zlínský kraj": "23:00 - 03:00",
-        "Moravskoslezský kraj": "23:00 - 03:00",
-		// Austria
-        "Wien": "18:00 - 20:00",
-        "Niederösterreich": "21:00 - 23:00",
-        "Oberösterreich": "21:00 - 23:00",
-        "Burgenland": "21:00 - 01:00",
-        "Steiermark": "21:00 - 01:00",
-        "Salzburg": "21:00 - 01:00",
-        "Kärnten": "21:00 - 01:00",
-        "Tirol": "21:00 - 01:00",
-        "Vorarlberg": "15:00 - 16:00"
+		/**********************************************************************/
 		
-    };
+		this.googleMapAutocompleteCreate=function(text)
+		{
+			if(text.is('[readonly]')) return;
+			
+			var id='chbs_location_'+(new CHBSHelper()).getRandomString(16);
+				
+			text.attr('id',id).on('keypress',function(e)
+			{
+				if(e.which===13)
+				{
+					e.preventDefault();
+					return(false);
+				}
+			});
+			
+			var event='change';
+			
+			if(parseInt($option.driving_zone.location_field_relation_type,10)===2)
+				event+=' blur';
+			
+			text.on(event,function()
+			{
+				if(!$.trim($(this).val()).length)
+				{
+					text.siblings('input[type="hidden"]').val('');
+	
+					$self.setGoogleMapAutocompleteOption(text.attr('name'));
+					
+					$self.googleMapCreate();
+					$self.googleMapCreateRoute();					
+				}
+			});
+			
+			var fieldName=new String(text.attr('name'));
+			var option=$self.getGoogleMapAutocompleteOption(fieldName,1);
 
-    // Sprawdzenie, czy pole tekstowe dotyczy adresu 'skąd'
-    if (!textField.attr('name').includes('pickup')) return;
+			$autocomplete[fieldName]=new google.maps.places.Autocomplete(document.getElementById(id),option);
+			$autocomplete[fieldName].addListener('place_changed',function()
+			{							
+				var fieldName=this.fieldName;
+				
+				var place=$autocomplete[fieldName].getPlace();
+								
+				/***/
 
-    var timeRange = validRegions[region];
+				if(!place.geometry)
+				{
+					alert($option.message.place_geometry_error);
+					
+					text.val('');
+					
+					$self.setGoogleMapAutocompleteOption(fieldName);
+					
+					return(false);
+				}
+				
+				/***/
+				
+				var placeData=
+				{
+					lat:place.geometry.location.lat(),
+					lng:place.geometry.location.lng(),
+					address:$self.removeDoubleQuote(text.val()),
+					zip_code:$self.getElementFromPlace(place,'postal_code'),
+					country_code:$self.getElementFromPlace(place,'country','short_name'),
+				};
+				
+				/***/
+				
+				var newLocation=$self.getLocationReplace(place.geometry.location.lat(),place.geometry.location.lng());
+				
+				if(newLocation!==false)
+				{
+					placeData.lat=newLocation.coordinate.lat;
+					placeData.lng=newLocation.coordinate.lng;
+				}
+				
+				/***/
+	
+				for(var i in place.address_components)
+				{
+					if($.inArray('locality',place.address_components[i].types)>-1)
+					{
+						placeData.locality=place.address_components[i].long_name;
+						break;
+					}
+				}
 
-    if (timeRange) {
-        $('.chbs-timepicker').val(timeRange);
-    } else {
-        alert('Wybrany adres znajduje się poza zasięgiem naszych usług.'); // Komunikat, jeśli region/land nie znajduje się w mapowaniu
-    }
-}
-
-
-/**********************************************************************
- * Funkcja do pobierania kodu pocztowego z adresu.
- **********************************************************************/
-this.getZipCode = function(place) {
-    for (var i = 0; i < place.address_components.length; i++) {
-        for (var j = 0; j < place.address_components[i].types.length; j++) {
-            if (place.address_components[i].types[j] == 'postal_code') {
-                return (place.address_components[i].long_name);
-            }
-        }
-    }
-
-    return ('');
-};
-
-
+				var field=text.siblings('input[type="hidden"]');
+				
+				field.val(JSON.stringify(placeData));
+				
+				$self.setGoogleMapAutocompleteOption(fieldName);
+		 
+				//$self.googleMapCreate();
+				$self.googleMapCreateRoute();	
+			});					   
+		};
 		
+		/**********************************************************************/
 		
+		this.getLocationReplace=function(coordinateLat,coordinateLng)
+		{
+			if(parseInt($option.location_replace.length,10)===0) return(false);
+			
+			var Helper=new CHBSHelper();
+			
+			for(var i in $option.location_replace)
+			{
+				for(var j in $option.location_replace[i].geofence_shape_coordinate)
+				{
+					var coordinate=[];
+					var point=[coordinateLng,coordinateLat];
+					
+					for(var k in $option.location_replace[i].geofence_shape_coordinate[j])
+					{
+						coordinate.push([$option.location_replace[i].geofence_shape_coordinate[j][k].lng,$option.location_replace[i].geofence_shape_coordinate[j][k].lat]);
+					}
+				
+					var result=Helper.coordinateInsidePolygon(point,coordinate);
+		
+					if(result===true)
+					{
+						return($option.location_replace[i].location);
+					}
+				}
+			}
+			
+			return(false);
+		};
+		
+		/**********************************************************************/
+		
+		this.getElementFromPlace=function(place,element,elementType='long_name')
+		{
+			for(var i=0;i<place.address_components.length;i++)
+			{
+				for(var j=0;j<place.address_components[i].types.length;j++)
+				{
+					if(place.address_components[i].types[j]==element)
+					{
+						var c=place.address_components[i];
+						return(elementType=='long_name' ? c.long_name : c.short_name);
+					}
+				}
+			}	
+			
+			return('');
+		};
+		
+		/**********************************************************************/
 		/**********************************************************************/		
 		
 		this.googleMapInit=function()
@@ -2845,260 +3314,37 @@ this.getZipCode = function(place) {
 		{
 			if($self.e('#chbs_google_map').length!==1) return;
 			
-			$directionsRenderer=new google.maps.DirectionsRenderer();
-			$directionsService=new google.maps.DirectionsService();
+			var Helper=new CHBSHelper();
 								  
 			var option= 
 			{
-				draggable:$option.google_map_option.draggable.enable,
-				scrollwheel:$option.google_map_option.scrollwheel.enable,
+				draggable:Helper.mapToBool($option.google_map_option.draggable.enable),
+				scrollwheel:Helper.mapToBool($option.google_map_option.scrollwheel.enable),
 				mapTypeId:google.maps.MapTypeId[$option.google_map_option.map_control.id],
-				mapTypeControl:$option.google_map_option.map_control.enable,
+				mapTypeControl:Helper.mapToBool($option.google_map_option.map_control.enable),
 				mapTypeControlOptions:
 				{
 					style:google.maps.MapTypeControlStyle[$option.google_map_option.map_control.style],
 					position:google.maps.ControlPosition[$option.google_map_option.map_control.position]
 				},
 				zoom:$option.google_map_option.zoom_control.level,
-				zoomControl:$option.google_map_option.zoom_control.enable,
+				zoomControl:Helper.mapToBool($option.google_map_option.zoom_control.enable),
 				zoomControlOptions:
 				{
 					position:google.maps.ControlPosition[$option.google_map_option.zoom_control.position]
 				},
-				streetViewControl:false
+				streetViewControl:false,
+				styles:$option.google_map_option.style,
+				mapId:$option.google_map_option.map_id
 			};
 					 
 			$googleMap=new google.maps.Map($self.e('#chbs_google_map')[0],option);
-							  
+		
 			if(parseInt($option.google_map_option.traffic_layer.enable,10)===1)
 			{
 				var trafficLayer=new google.maps.TrafficLayer();
 				trafficLayer.setMap($googleMap);
 			}
-			
-			$directionsRenderer.setMap($googleMap);
-
-			if($self.googleMapDraggableLocationAllowed())
-			{
-				$directionsRenderer.setOptions(
-				{
-					draggable:true,
-					suppressMarkers:false
-				});
-			}
-			else
-			{
-				$directionsRenderer.setOptions(
-				{
-					draggable:false,
-					suppressMarkers:true
-				});
-			}
-			
-			if($self.googleMapDraggableLocationAllowed())
-			{
-				$googleMap.addListener('click',function(event) 
-				{
-					var helper=new CHBSHelper();
-					
-					var pickupText=$self.e('[name="chbs_pickup_location_service_type_'+$self.getServiceTypeId()+'"]');
-					var pickupField=pickupText.siblings('input[type="hidden"]');
-					
-					var dropoffText=$self.e('[name="chbs_dropoff_location_service_type_'+$self.getServiceTypeId()+'"]');
-					var dropoffField=dropoffText.siblings('input[type="hidden"]');
-
-					if((!helper.isEmpty(pickupField.val())) && (!helper.isEmpty(dropoffField.val()))) return;
-
-					var geocoder=new google.maps.Geocoder;
-					geocoder.geocode({'location':event.latLng},function(result,status) 
-					{
-						if((status==='OK') && (result[0]))
-						{
-							var locationAddress=$self.removeDoubleQuote(result[0].formatted_address);
-
-							var placeData=
-							{
-								lat:event.latLng.lat(),
-								lng:event.latLng.lng(),
-								address:$self.removeDoubleQuote(result[0].formatted_address)
-							};
-
-							if(helper.isEmpty(pickupField.val()))
-							{
-								pickupText.val(locationAddress);
-								pickupField.val(JSON.stringify(placeData));
-							}
-							else if(helper.isEmpty(dropoffField.val()))
-							{
-								dropoffText.val(locationAddress);
-								dropoffField.val(JSON.stringify(placeData));
-							}
-
-							$self.googleMapCreate();
-							$self.googleMapCreateRoute();
-						}
-					});
-				});
-
-				$directionsRenderer.addListener('directions_changed',function()
-				{
-					var helper=new CHBSHelper();
-					
-					var geocoder=new google.maps.Geocoder;
-					var directions=$directionsRenderer.getDirections();
-					var route=directions.routes[$self.getRouteIndex()];
-					var routePoints=[];
-					
-					route.legs.forEach(function(item,index)
-					{
-						if(parseInt(index,10)===0)
-						{
-							routePoints.push(
-							{
-								'lat':item.start_location.lat(),
-								'lng':item.start_location.lng()
-							});
-						}
-						item.via_waypoints.forEach(function(item2,index2) 
-						{
-							routePoints.push(
-							{
-								'lat':item2.lat(),
-								'lng':item2.lng()
-							});
-						});
-						routePoints.push(
-						{
-							'lat':item.end_location.lat(),
-							'lng':item.end_location.lng()
-						});
-					});
-					
-					var routeLength=routePoints.length;
-
-					var waypoints=$self.e('[name="chbs_waypoint_location_service_type_'+$self.getServiceTypeId()+'[]"]');
-
-					var locationFields=[];
-					locationFields.push($self.e('[name="chbs_pickup_location_service_type_'+$self.getServiceTypeId()+'"]'));
-					
-					$self.e('[name="chbs_waypoint_location_service_type_'+$self.getServiceTypeId()+'[]"]').each(function(index,waypointField) 
-					{
-						if(index>0) locationFields.push($(waypointField));
-					});
-					
-					locationFields.push($self.e('[name="chbs_dropoff_location_service_type_'+$self.getServiceTypeId()+'"]'));
-					
-					var locationFieldsLength=locationFields.length;
-
-					if(routeLength>locationFieldsLength)
-					{
-						var waypointFound;
-						for(var i=1;i<routeLength-1;i++)
-						{
-							waypointFound=false;
-							waypoints.each(function(j,obj) 
-							{
-								if(j>0)
-								{
-									var waypointHidden=$(obj).siblings('input[type="hidden"]').val();
-						 
-									if(!helper.isEmpty(waypointHidden))
-									{
-										var waypointData=JSON.parse(waypointHidden);
-										if((waypointData.lat==routePoints[i].lat) && (waypointData.lng==routePoints[i].lng))
-										{
-											waypointFound=true;
-											return(false);
-										}
-									}
-								}
-							});
-							if(!waypointFound)
-							{
-								var pointIndex=i;
-								
-								geocoder.geocode({'location':new google.maps.LatLng(routePoints[pointIndex].lat,routePoints[pointIndex].lng)},function(result,status) 
-								{
-									if(!((status==='OK') && (result[0]))) return;
-
-									var locationAddress=$self.removeDoubleQuote(result[0].formatted_address);
-
-									var waypointData=
-									{
-										lat:result[0].geometry.location.lat(),
-										lng:result[0].geometry.location.lng(),
-										address:$self.removeDoubleQuote(result[0].formatted_address)
-									};
-									
-									$self.e('.chbs-location-add').eq(pointIndex).trigger('click');
-									
-									var newWypoint=$self.e('[name="chbs_waypoint_location_service_type_'+$self.getServiceTypeId()+'[]"]').eq(pointIndex);
-									var newWypointField=newWypoint.siblings('input[type="hidden"]');
-
-									newWypoint.val(locationAddress);
-									newWypointField.val(JSON.stringify(waypointData));
-
-									$self.googleMapCreate();
-									$self.googleMapCreateRoute();
-								});
-							}
-						}
-					}
-					else
-					{
-						var pointMoved=false;
-						var routePointsIndex=0;
-						
-						locationFields.forEach(function(locationField,index) 
-						{
-							var helper=new CHBSHelper();
-							var locationData=locationField.siblings('input[type="hidden"]').val();
-
-							if((helper.isEmpty(locationData)) && (locationFieldsLength===2) && (index===1) && !((routePoints[0].lat==routePoints[1].lat) && (routePoints[0].lng==routePoints[1].lng)))
-							{
-								pointMoved=locationField;
-								var placeData=
-								{
-									lat:routePoints[1].lat,
-									lng:routePoints[1].lng
-								};
-								
-								locationField.siblings('input[type="hidden"]').val(JSON.stringify(placeData));							
-							}
-							else if(!helper.isEmpty(locationData))
-							{
-								locationData=JSON.parse(locationData);
-								if(!(locationData.lat==routePoints[routePointsIndex].lat && locationData.lng==routePoints[routePointsIndex].lng))
-								{
-									pointMoved=locationField;
-									locationData.lat=routePoints[routePointsIndex].lat;
-									locationData.lng=routePoints[routePointsIndex].lng;
-									locationField.siblings('input[type="hidden"]').val(JSON.stringify(locationData));
-								}
-								routePointsIndex++;
-							}
-						});
-
-						if(pointMoved!=false)
-						{
-							var pointDetails=JSON.parse(pointMoved.siblings('input[type="hidden"]').val());
-							geocoder.geocode({'location':new google.maps.LatLng(pointDetails.lat,pointDetails.lng)},function(result,status) 
-							{
-								if((status==='OK') && (result[0]))
-								{
-									var locationAddress=$self.removeDoubleQuote(result[0].formatted_address);
-									pointMoved.val(locationAddress);
-									pointDetails.address=locationAddress;
-									pointMoved.siblings('input[type="hidden"]').val(JSON.stringify(pointDetails));
-								}
-							});
-
-							$self.googleMapCreate();
-							$self.googleMapCreateRoute();
-						}
-					}
-				});
-			}			 
 		};
 		
 		/**********************************************************************/
@@ -3145,18 +3391,44 @@ this.getZipCode = function(place) {
 				});
 			}
 			else
-			{
+			{								
+				/***/
+				
+				var data=[];
+				
+				var p=true;
 				var option=$self.e('select[name="chbs_route_service_type_3"]>option:selected');
 				
-				if(option.length===1) 
-				{
-					var data=JSON.parse(option.attr('data-coordinate'));
+				if(parseInt($self.e('[name="chbs_route_service_type_3_autocomplete"]').length,10)===1)
+					p=!helper.isEmpty($self.e('[name="chbs_route_service_type_3_autocomplete"]').val());
+				
+				if((parseInt(option.val(),10)>0) && (p)) 
+					data=JSON.parse(option.attr('data-coordinate'));
 
-					for(var i in data)
-					{
-						if((!helper.isEmpty(data[i].lat)) && (!helper.isEmpty(data[i].lng)))
-							coordinate.push(new google.maps.LatLng(data[i].lat,data[i].lng));					
-					}
+				/***/
+				
+				var field=$self.e('[name="chbs_pickup_location_coordinate_service_type_3"]');
+				if(parseInt(field.length,10)===1)
+				{
+					if(!helper.isEmpty(field.val()))
+						data.unshift(JSON.parse(field.val()));
+				}
+				
+				/***/
+
+				var field=$self.e('[name="chbs_dropoff_location_coordinate_service_type_3"]');
+				if(parseInt(field.length,10)===1)
+				{
+					if(!helper.isEmpty(field.val()))
+						data.push(JSON.parse(field.val()));
+				}	
+				
+				/***/
+					
+				for(var i in data)
+				{
+					if((!helper.isEmpty(data[i].lat)) && (!helper.isEmpty(data[i].lng)))
+						coordinate.push(new google.maps.LatLng(data[i].lat,data[i].lng));					
 				}
 			}	
 			
@@ -3164,21 +3436,10 @@ this.getZipCode = function(place) {
 		};
 		
 		/**********************************************************************/
-		
+
 		this.googleMapExist=function()
 		{
 			return(typeof($googleMap)==='undefined' ? false : true); 
-		};
-		
-		/**********************************************************************/
-		
-		this.googleMapDraggableLocationAllowed=function()
-		{
-			var serviceTypeId=$self.getServiceTypeId();
-			
-			var fixedFieldLength=parseInt($self.e('#panel-'+(serviceTypeId)).children('.chbs-form-field-location-fixed').length,10);
-			
-			return((fixedFieldLength===0) && (parseInt($option.google_map_option.draggable_location.enable,10)===1) && (parseInt($self.getServiceTypeId(),10)===1) && ($self.e('[name="chbs_waypoint_location_service_type_'+$self.getServiceTypeId()+'[]"]').length)); 
 		};
 	
 		/**********************************************************************/
@@ -3224,16 +3485,15 @@ this.getZipCode = function(place) {
 				coordinate.forEach(function(item,i) 
 				{
 					if((i>0) && (i<length-1))
-						waypoint.push({location:item,stopover:true});
+						waypoint.push({location:item,vehicleStopover:true});
 				});
 				
 				request= 
 				{
 					origin:coordinate[0],
-					waypoints:waypoint,
-					optimizeWaypoints:false,
+					intermediates:waypoint,
 					destination:coordinate[length-1],
-					travelMode:google.maps.DirectionsTravelMode.DRIVING
+					travelMode:'drive'
 				};			
 			}
 			else if(length===2)
@@ -3242,7 +3502,7 @@ this.getZipCode = function(place) {
 				{
 					origin:coordinate[0],
 					destination:coordinate[length-1],
-					travelMode:google.maps.DirectionsTravelMode.DRIVING
+					travelMode:'drive'
 				};		  
 			}
 			else
@@ -3251,104 +3511,50 @@ this.getZipCode = function(place) {
 				{
 					origin:coordinate[length-1],
 					destination:coordinate[length-1],
-					travelMode:google.maps.DirectionsTravelMode.DRIVING
+					travelMode:'drive'
 				};			  
 			}
 			
-			request.avoidTolls=$.inArray('tolls',$option.google_map_option.route_avoid)>-1 ? true : false;
-			request.avoidFerries=$.inArray('ferries',$option.google_map_option.route_avoid)>-1 ? true : false;
-			request.avoidHighways=$.inArray('highways',$option.google_map_option.route_avoid)>-1 ? true : false;
+			request.routeModifiers={};
+			
+			request.routeModifiers.avoidTolls=$.inArray('tolls',$option.google_map_option.route_avoid)>-1 ? true : false;
+			request.routeModifiers.avoidFerries=$.inArray('ferries',$option.google_map_option.route_avoid)>-1 ? true : false;
+			request.routeModifiers.avoidHighways=$.inArray('highways',$option.google_map_option.route_avoid)>-1 ? true : false;
 			
 			if(parseInt($option.google_map_option.route_type,10)===2)
 			{
-				request.provideRouteAlternatives=true;
+				request.computeAlternativeRoutes=true;
 			}
 			
-			$directionsService.route(request,function(response,status)
+			$GoogleMapAPI.computeRoutes(request,function(response)
 			{			  
-				$self.googleMapClearMarker();
-				
-				if(status===google.maps.DirectionsStatus.OK)
+				if($GoogleMapAPI.hasRoute(response))
 				{
-					if($self.googleMapDraggableLocationAllowed())
-					{
-						var helper=new CHBSHelper();
-						var route=response.routes[$self.getRouteIndex()];
-						var routePoints=[];
-						
-						route.legs.forEach(function(item,index) 
-						{
-							if(index===0)
-							{
-								routePoints.push(
-								{
-									'lat':item.start_location.lat(),
-									'lng':item.start_location.lng(),
-								});
-							}
-							item.via_waypoints.forEach(function(item2,index2) 
-							{
-								routePoints.push(
-								{
-									'lat':item2.lat(),
-									'lng':item2.lng()
-								});
-							});
-							routePoints.push(
-							{
-								'lat':item.end_location.lat(),
-								'lng':item.end_location.lng(),
-							});
-						});
-
-						var locationFields=[];
-						locationFields.push($self.e('[name="chbs_pickup_location_service_type_'+$self.getServiceTypeId()+'"]'));
-						$self.e('[name="chbs_waypoint_location_service_type_'+$self.getServiceTypeId()+'[]"]').each(function(index,waypointField)
-						{
-							if(index>0) locationFields.push($(waypointField));
-						});
-						
-						locationFields.push($self.e('[name="chbs_dropoff_location_service_type_'+$self.getServiceTypeId()+'"]'));
-						
-						var routePointsIndex=0;
-						locationFields.forEach(function(locationField,index) 
-						{
-							var locationData=locationField.siblings('input[type="hidden"]').val();
-							if(!helper.isEmpty(locationData))
-							{
-								locationData=JSON.parse(locationData);
-								locationData.lat=routePoints[routePointsIndex].lat;
-								locationData.lng=routePoints[routePointsIndex].lng;
-								locationField.siblings('input[type="hidden"]').val(JSON.stringify(locationData));
-								routePointsIndex++;
-							}
-						});
-					}
+					$self.googleMapCreate();
+					$self.googleMapClearMarker();
 					
 					if(parseInt($option.google_map_option.route_type,10)===2)
 					{
 						var distanceMin=-1;
-						response.routes.forEach(function(r,index) 
+						
+						for(var i in response.routes)
 						{
-							if((r.legs[0].distance.value<distanceMin) || (distanceMin===-1)) 
+							var d=$self.formatDistance(response.routes[i].distanceMeters);
+							
+							if((d<distanceMin) || (distanceMin===-1)) 
 							{	
-								distanceMin=r.legs[0].distance.value;
-								$routeIndex=index;
+								distanceMin=d;
+								$routeIndex=i;
 							}
-						});
+						}
 					}
-					
-					$directionsRenderer.setDirections(response);
-					$directionsRenderer.setRouteIndex($self.getRouteIndex());
-					
-					$directionsServiceResponse=response;
- 
+	
 					for(var i in response.routes[$self.getRouteIndex()].legs)
 					{
 						var leg=response.routes[$self.getRouteIndex()].legs[i];
 
-						$self.googleMapCreateMarker(leg.start_location);
-						$self.googleMapCreateMarker(leg.end_location); 
+						$self.googleMapCreateMarker(leg.startLocation);
+						$self.googleMapCreateMarker(leg.endLocation); 
 					}
 					
 					/***/
@@ -3364,24 +3570,28 @@ this.getZipCode = function(place) {
 							for(var j in leg.steps)
 							{
 								var step=leg.steps[j];
-								routeData.push([step.start_location,step.end_location,step.distance.value,step.lat_lngs]);
+								routeData.push([step.startLocation,step.endLocation,step.distanceMeters,step.startLocation]);
 							}
 						}
 
 						$self.e('input[name="chbs_route_data"]').val(JSON.stringify(routeData));
 					}
+					
+					/***/
 
 					try
 					{
-						$googleMap.setCenter($directionsRenderer.getDirections().routes[$self.getRouteIndex()].bounds.getCenter());
+						$googleMap.fitBounds($GoogleMapAPI.getBound(response,$self.getRouteIndex()));
 					}
 					catch(e) {}
+
+					$GoogleMapAPI.drawRoute(response,$self.getRouteIndex(),$googleMap);
 					
 					$self.calculateRoute(response,callback);
 				}
-				else if(status===google.maps.DirectionsStatus.ZERO_RESULTS)
+				else
 				{
-					if(serviceTypeId===1)
+					if($.inArray(serviceTypeId,[1,3])>-1)
 					{
 						alert($option.message.designate_route_error);
 						
@@ -3391,7 +3601,17 @@ this.getZipCode = function(place) {
 							$(this).children('input[type="hidden"]').val('');
 						}); 
 						
-						$self.googleMapReInit();
+						if($.inArray(serviceTypeId,[1])>-1)
+						{
+							$self.googleMapReInit();
+						}
+						else if($.inArray(serviceTypeId,[3])>-1)
+						{
+							$self.triggerOnSelectDatePicker('[name="chbs_pickup_date_service_type_3"]');
+
+							$self.googleMapCreate();
+							$self.googleMapCreateRoute();
+						}
 					}
 				}
 				
@@ -3412,23 +3632,16 @@ this.getZipCode = function(place) {
 		/**********************************************************************/
 		
 		this.googleMapCreateMarker=function(position)
-		{
-			if($self.googleMapDraggableLocationAllowed())
-				return;
-					
-			for(var i in $marker)
-			{
-				if(typeof($marker[i].position)=='undefined') continue;
-				if(($marker[i].position.lat()==position.lat()) && ($marker[i].position.lng()==position.lng())) return;
-			}
-			
+		{	
+			var position=new google.maps.LatLng(position.latLng.latitude,position.latLng.longitude);
+
 			var label=$marker.length+1;
 			
-			var marker=new google.maps.Marker(
+			var marker=new google.maps.marker.AdvancedMarkerElement(
 			{
 				position:position,
 				map:$googleMap,
-				label:''+label
+				title:''+label
 			});	 
 			
 			$marker.push(marker);
@@ -3439,13 +3652,6 @@ this.getZipCode = function(place) {
 		this.googleMapReInit=function()
 		{
 			if(!$self.googleMapExist()) return;
-			
-			$directionsRenderer=new google.maps.DirectionsRenderer();
-			$directionsService=new google.maps.DirectionsService();
-			
-			$directionsServiceResponse=null;
-			
-			$directionsRenderer.setDirections({routes:[]});
 			
 			$googleMap.setZoom($option.google_map_option.zoom_control.level);
 							
@@ -3466,24 +3672,21 @@ this.getZipCode = function(place) {
 			var distance=0;
 			var duration=0;
 			
-			if((typeof(response)!=='undefined') && (typeof(response.routes)!=='undefined'))
+			if($GoogleMapAPI.hasRoute(response))
 			{
-				for(var i=0;i<response.routes[$self.getRouteIndex()].legs.length;i++) 
-				{
-					distance+=response.routes[$self.getRouteIndex()].legs[i].distance.value;
-					duration+=response.routes[$self.getRouteIndex()].legs[i].duration.value;
-				}
+				distance=parseInt(response.routes[$self.getRouteIndex()].distanceMeters,10);
+				duration=parseInt(response.routes[$self.getRouteIndex()].duration,10);
 			}
 			
-			distance/=1000;
-			duration=Math.ceil(duration/60);
+			distance=$self.formatDistance(distance);
+			duration=$self.formatDuration(duration);
 			
 			if($option.ride_time_rounding>0.00)
 			{
 				duration=Math.ceil(duration/$option.ride_time_rounding)*$option.ride_time_rounding;
 			}
 			
-			$self.e('input[name="chbs_distance_map"]').val(Math.round(distance*10)/10);
+			$self.e('input[name="chbs_distance_map"]').val(distance);
 			$self.e('input[name="chbs_duration_map"]').val(duration*$option.ride_time_multiplier);
 			
 			$self.reCalculateRoute(callback);
@@ -3562,7 +3765,7 @@ this.getZipCode = function(place) {
 			if($.inArray(serviceTypeId,[1,3])>-1)
 			{
 				var transferType=$self.e('select[name="chbs_transfer_type_service_type_'+serviceTypeId+'"]');
-				var transferTypeValue=transferType.length===1 ? (parseInt(transferType.val(),10)===1 ? 1 : 2) : 1;
+				var transferTypeValue=transferType.length===1 ? ($.inArray(parseInt(transferType.val(),10),[2,3])>-1 ? 2 : 1) : 1;
 				
 				duration+=(parseInt($self.e('input[name="chbs_duration_map"]').val(),10)*transferTypeValue)+(durationWaypoint*transferTypeValue);
 				distance*=transferTypeValue;
@@ -3611,23 +3814,10 @@ this.getZipCode = function(place) {
 				if($this.hasClass('chbs-widget-style-1')) return;
 			}
 			
-			var width=$this.parent().width();
+			var Helper=new CHBSHelper();
 			
-			var className=null;
-			var classPrefix='chbs-width-';
-			
-			if(width>=1220) className='1220';
-			else if(width>=960) className='960';
-			else if(width>=768) className='768';
-			else if(width>=480) className='480';
-			else if(width>=300) className='300';
-			else className='300';
-			
-			var oldClassName=$self.getValueFromClass($this,classPrefix);
-			if(oldClassName!==false) $this.removeClass(classPrefix+oldClassName);
-			
-			$this.addClass(classPrefix+className);
-			
+			var width=Helper.setWidthClass($this);
+
 			if($self.prevWidth!==width)
 			{
 				$self.prevWidth=width;
@@ -3637,11 +3827,13 @@ this.getZipCode = function(place) {
 				
 				if(parseInt($option.widget.mode,10)!==1)
 				{
-					if($.inArray(className,['300','480'])>-1)
+					if($.inArray(width,['300','480'])>-1)
 						$self.googleMapStopCustomizeHeight();
 					else $self.googleMapStartCustomizeHeight();
 				}
 			};
+			
+			$self.e('.chbs-notice-fixed>div').css('width',parseInt($this.css('width'),10));
 						
 			setTimeout($self.setWidthClass,500);
 		};
@@ -3675,6 +3867,9 @@ this.getZipCode = function(place) {
 			$self.post($self.e('form[name="chbs-form"]').serialize(),function(response)
 			{	
 				$self.e('.chbs-summary-price-element').replaceWith(response.html);
+				
+				$self.createSelectMenu();
+			
 				$(window).scroll();
 			});   
 		};
@@ -3761,47 +3956,40 @@ this.getZipCode = function(place) {
 		   		   
 			if((helper.isEmpty(baseLocation.coordinate.lat)) || (helper.isEmpty(baseLocation.coordinate.lng)))
 			{
+				$self.doVehiclePriceCalculationStepFirst();
 				$self.callback(callback,baseLocationData);
 				return(baseLocationData);
 			}
 			
 			var request;
 			var routeCoordinate=$self.getCoordinate(true);
-			var directionsService=new google.maps.DirectionsService();
 			
 			/***/
 			
 			if(parseInt(routeCoordinate.length,10)===0)
 			{
+				$self.doVehiclePriceCalculationStepFirst();
 				$self.callback(callback,baseLocationData);
 				return(baseLocationData);
 			}
 			
 			request= 
 			{
-				origin:routeCoordinate[0],
-				optimizeWaypoints:false,
-				destination:new google.maps.LatLng(baseLocation.coordinate.lat,baseLocation.coordinate.lng),
-				travelMode:google.maps.DirectionsTravelMode.DRIVING
+				origin:new google.maps.LatLng(baseLocation.coordinate.lat,baseLocation.coordinate.lng),
+				destination:routeCoordinate[0],
+				travelMode:'drive'
 			};   
-			directionsService.route(request,function(response,status)
-			{
-				if(status===google.maps.DirectionsStatus.OK)
-				{
-					var distance=0;
-					var duration=0;
-					
-					for(var i=0;i<response.routes[0].legs.length;i++) 
-					{
-						distance+=response.routes[0].legs[i].distance.value;
-						duration+=response.routes[0].legs[i].duration.value;
-					}
-					
-					distance/=1000;
-					distance=Math.round(distance*10)/10;
-					
-					duration=Math.ceil(duration/60);
 			
+			$GoogleMapAPI.computeRoutes(request,function(response,status)
+			{
+				if($GoogleMapAPI.hasRoute(response))
+				{
+					var distance=parseInt(response.routes[0].distanceMeters,10);
+					var duration=parseInt(response.routes[0].duration,10);
+					
+					distance=$self.formatDistance(distance);
+					duration=$self.formatDuration(duration);
+								
 					if(coordinate===false)
 					{
 						$self.e('input[name="chbs_base_location_distance"]').val(distance);
@@ -3826,28 +4014,20 @@ this.getZipCode = function(place) {
 
 						request= 
 						{
-							optimizeWaypoints:false,
 							origin:$.inArray(transferTypeId,[1,3])>-1 ? routeCoordinate[routeCoordinate.length-1] : routeCoordinate[0],
 							destination:new google.maps.LatLng(baseLocation.coordinate.lat,baseLocation.coordinate.lng),
-							travelMode:google.maps.DirectionsTravelMode.DRIVING
+							travelMode:'drive'
 						};   
-						directionsService.route(request,function(response,status)
+						
+						$GoogleMapAPI.computeRoutes(request,function(response,status)
 						{
-							if(status===google.maps.DirectionsStatus.OK)
+							if($GoogleMapAPI.hasRoute(response))
 							{
-								var distance=0;
-								var duration=0;
+								var distance=parseInt(response.routes[0].distanceMeters,10);
+								var duration=parseInt(response.routes[0].duration,10);
 
-								for(var i=0;i<response.routes[0].legs.length;i++) 
-								{
-									distance+=response.routes[0].legs[i].distance.value;
-									duration+=response.routes[0].legs[i].duration.value;
-								}
-
-								distance/=1000;
-								distance=Math.round(distance*10)/10;
-										
-								duration=Math.ceil(duration/60);
+								distance=$self.formatDistance(distance);
+								duration=$self.formatDuration(duration);
 
 								if(coordinate===false)
 								{
@@ -3861,13 +4041,19 @@ this.getZipCode = function(place) {
 								}
 							}
 							
+							$self.doVehiclePriceCalculationStepFirst();
 							$self.callback(callback,baseLocationData);
 						});
 					}
-					else $self.callback(callback,baseLocationData);
+					else 
+					{		
+						$self.doVehiclePriceCalculationStepFirst();
+						$self.callback(callback,baseLocationData);
+					}
 				}
 				else
 				{
+					$self.doVehiclePriceCalculationStepFirst();
 					$self.callback(callback,baseLocationData);
 				}
 			});
@@ -3886,14 +4072,10 @@ this.getZipCode = function(place) {
 		
 		/**********************************************************************/
 		
-		this.removeDoubleQuote = function(value) {
-    if (value === undefined || value === null) {
-        console.error('Value is undefined or null in removeDoubleQuote function.');
-        return '';
-    }
-    return value.replace(/"/g, '');
-};
-
+		this.removeDoubleQuote=function(value)
+		{
+			return(value.replace(/"/g,''));
+		};
 		
 		/**********************************************************************/
 		
@@ -3926,6 +4108,53 @@ this.getZipCode = function(place) {
 				}
 			});		  
 		};
+		
+		/**********************************************************************/
+		
+		this.formatDistance=function(distance)
+		{
+			if(isNaN(distance)) distance=0;
+			
+			distance/=1000;
+			distance=Math.round(distance*10)/10;
+			
+			if(distance<0) distance=0;
+			
+			return(distance);
+		};
+		
+		/**********************************************************************/
+		
+		this.formatDuration=function(duration)
+		{
+			if(isNaN(duration)) duration=0;
+			
+			duration=Math.ceil(duration/60);	
+			
+			if(duration<0) duration=0;	
+			
+			return(duration);
+		};
+		
+		/**********************************************************************/
+		
+		this.addGAEvent=function(eventName,argument)
+		{
+			if(typeof(chbseGAEvent)!=="undefined") 
+			{
+				chbseGAEvent.addEvent(eventName,argument);
+			}
+		};
+		
+		/**********************************************************************/
+		
+		this.createCurrencySwitcher=function()
+		{
+			if(typeof(CHBSECSCurrencySwitcher)!=="undefined") 
+			{
+				CHBSECSCurrencySwitcher.setup($self);
+			}
+		};
 				
 		/**********************************************************************/
 		/**********************************************************************/
@@ -3935,8 +4164,9 @@ this.getZipCode = function(place) {
 	
 	$.fn.chauffeurBookingForm=function(option) 
 	{
-		/************************************************************debuger **************/
 		console.log('--------------------------------------------------------------------------------------------');
+		console.log('Chauffer Booking System for WordPress ver. '+option.plugin_version+(parseInt(option.license_verified,10)===1 ? ' (license verified)' : ' (license unverified)'));
+		console.log('https://1.envato.market/chauffeur-booking-system-for-wordpress-preview');
 		console.log('--------------------------------------------------------------------------------------------');
 		
 		var form=new ChauffeurBookingForm(this,option);

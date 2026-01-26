@@ -122,6 +122,8 @@ function CHBSHelper()
     
     this.getMessageFromConsole=function()
     {
+		return;
+		
         var errorDisplayed=false;
         
         var console=window.console;
@@ -159,6 +161,86 @@ function CHBSHelper()
         for(var i=0;i<methods.length;i++)
             intercept(methods[i]);
     };
+	
+	/**************************************************************************/
+	
+	this.seralizeForm=function(object,returnValue=1)
+	{
+		var data=[];
+		var queryString='';
+		
+		object.find(':input').each(function()
+		{
+			data[jQuery(this).attr('name')]=jQuery(this).val();
+			
+			if(!$self.isEmpty(queryString)) queryString+='&';
+			queryString+=jQuery(this).attr('name')+'='+jQuery(this).val();
+		});
+		
+		return(returnValue===1 ? queryString : data);
+	};
+	
+	/**************************************************************************/
+	
+	this.mapToBool=function(value)
+	{
+		if((value=='false') || (parseInt(value,10)===0)) return(false);
+		if((value=='true') || (parseInt(value,10)===1)) return(true);
+		
+		return(false);
+	};
+	
+	/**************************************************************************/
+	
+	this.setWidthClass=function(object,recursion=false)
+	{
+		var width=object.parent().width();
+			
+		var className=null;
+		var classPrefix='chbs-width-';
+			
+		if(width>=1220) className='1220';
+		else if(width>=960) className='960';
+		else if(width>=768) className='768';
+		else if(width>=480) className='480';
+		else if(width>=300) className='300';
+		else className='300';
+			
+		var oldClassName=$self.getValueFromClass(object,classPrefix);
+		if(oldClassName!==false) object.removeClass(classPrefix+oldClassName);
+			
+		object.addClass(classPrefix+className);	
+		
+		if(width>=960) object.removeClass('chbs-widthlt-960');
+		else object.addClass('chbs-widthlt-960');
+		
+		if(recursion)
+		{
+			var Helper=new CHBSHelper();
+			setTimeout(Helper.setWidthClass,500,object,recursion);
+		}
+		
+		return(width);
+	};
+	
+	/**************************************************************************/
+	
+	this.coordinateInsidePolygon=function(point, vs)
+	{
+		var x = point[0], y = point[1];
+
+		var inside = false;
+		for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+			var xi = vs[i][0], yi = vs[i][1];
+			var xj = vs[j][0], yj = vs[j][1];
+
+			var intersect = ((yi > y) != (yj > y))
+				&& (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+			if (intersect) inside = !inside;
+		}
+
+		return inside;
+	};
     
     /**************************************************************************/
 };

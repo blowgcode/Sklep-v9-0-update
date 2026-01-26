@@ -196,20 +196,30 @@
 		
 		/**********************************************************************/
 		
-		this.bindBrowseMedia=function(selector,multiple=false,type=1)
+		this.bindBrowseMedia=function(selector,multiple=false,type=1,fileType='image')
 		{
 			$this.find(selector).bind('click',function()
 			{
 				var self=$(this);
 
-				wp.media.frames.selectImageFrame=wp.media(
+				if(fileType=='all')
 				{
-					multiple:multiple,
-					library: 
+					wp.media.frames.selectImageFrame=wp.media(
 					{
-					   type:'image',
-					}
-				});
+						multiple:multiple
+					});					
+				}
+				else
+				{
+					wp.media.frames.selectImageFrame=wp.media(
+					{
+						multiple:multiple,
+						library: 
+						{
+						   type:fileType
+						}
+					});
+				}
 
 				wp.media.frames.selectImageFrame.on('open',function()
 				{

@@ -23,7 +23,7 @@ function CHBSGoogleMapAPI($APIKey)
 		
 		if(name==='computeRoutes')
 		{
-			url='https://routes.googleapis.com/directions/v3:computeRoutes';
+			url='https://routes.googleapis.com/directions/v2:computeRoutes';
 		}	
 		
 		data.origin=this.transformCoordinate(data.origin);
