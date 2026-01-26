@@ -1,0 +1,342 @@
+/******************************************************************************/
+/*	Panel																	  */
+/******************************************************************************/
+
+.to-to
+{
+	width:1080px;
+}
+
+.to .to-align-right
+{
+    text-align:right !important;
+}
+
+html .to .to-width-full
+{
+    width:100%;
+}
+
+/******************************************************************************/
+/*	Table																	  */
+/******************************************************************************/
+
+.to table.to-table .ui-sortable-helper
+{
+    display:table !important;
+}
+
+.to table.to-table .to-table-sortable-placeholder
+{
+    display:table-row !important;
+}
+
+    .to table.to-table .to-table-sortable-placeholder>td
+    {
+        padding-top:30px;
+        padding-bottom:30px;
+        background-color:#E4E4E4 !important;
+    }
+    
+    .to table.to-table select[multiple="multiple"]
+    {
+        width:100%;
+    }
+    
+/******************************************************************************/
+/*	Google Map  															  */
+/******************************************************************************/
+    
+#to-google-map,
+#to-google-map-pickup-location,
+#to-google-map-dropoff-location
+{
+    width:100%;
+    height:500px;
+}
+    
+/******************************************************************************/
+/*	Vehicle image  															  */
+/******************************************************************************/
+
+#the-list .type-chbs_vehicle .column-thumbnail
+{
+    padding:10px;
+}
+
+    #the-list .type-chbs_vehicle .column-thumbnail img
+    {
+        height:100%;
+        max-width:100%;
+    }
+    
+/******************************************************************************/
+/*	Booking status color  													  */
+/******************************************************************************/    
+ 
+.to-booking-status
+{
+    color:#FFFFFF;
+    line-height:1;
+    border-radius:5px;
+    display:inline-block;
+    padding:4px 10px 6px 10px;
+}
+
+.to-booking-status.to-booking-status-1
+{
+    background-color:#1175AE;
+}
+
+.to-booking-status.to-booking-status-2,
+.to-booking-status.to-booking-status-5
+{
+    background-color:#C98209;    
+}
+
+.to-booking-status.to-booking-status-6,
+.to-booking-status.to-booking-status-7,
+.to-booking-status.to-booking-status-3
+{
+    background-color:#FC0F0F;   
+}
+
+.to-booking-status.to-booking-status-4
+{
+    background-color:#497D04;
+}
+
+/******************************************************************************/
+/*	Color picker         													  */
+/******************************************************************************/    
+
+.to-color-picker-sample.to-color-picker-sample-style-1
+{
+    top:5px;
+    float:none;
+    width:20px;
+    height:20px;
+    position:relative;
+    display:inline-block;
+}
+
+.to .to-state-disabled.to-price-type-1 div,
+.to .to-state-disabled.to-price-type-2 div
+{
+    opacity:0.5;
+}
+
+/******************************************************************************/
+/*	Business account transaction   											  */
+/******************************************************************************/ 
+
+.to-bussiness-account-transaction
+{
+	width:800px;
+	height:212px;
+	padding:0px;
+	overflow-y:auto;
+}
+
+/******************************************************************************/
+/*	Booking form fields table   											  */
+/******************************************************************************/ 
+
+.to .to-table-form-element-field
+{
+	width:100%;
+	overflow-x:auto;
+}
+
+	.to .to-table-form-element-field>table
+	{
+		width:3000px
+	}
+
+/******************************************************************************/
+/*	Column                      											  */
+/******************************************************************************/ 
+
+.column-rule_price
+{
+    width:250px;
+}
+
+.to-field-disabled.to-field-disabled-full-width
+{
+    max-width:100%;
+}
+
+/***/  
+
+body.post-type-chbs_price_rule .wp-list-table
+{
+    table-layout:auto;
+}
+
+    body.post-type-chbs_price_rule .wp-list-table td.title
+    {
+        width:15%;
+    }
+
+    body.post-type-chbs_price_rule .wp-list-table td.rule
+    {
+        width:45%;
+    }
+
+    body.post-type-chbs_price_rule .wp-list-table td.price
+    {
+        width:40%;
+    }
+
+/***/      
+    
+body.post-type-chbs_vehicle .wp-list-table
+{
+    table-layout:auto;
+}
+
+    body.post-type-chbs_vehicle .wp-list-table td.column-thumbnail
+    {
+        width:15%;
+    }
+
+    body.post-type-chbs_vehicle .wp-list-table td.column-title
+    {
+        width:20%;
+    }
+
+    body.post-type-chbs_vehicle .wp-list-table td.column-vehicle_make_model
+    {
+        width:20%;
+    }
+
+    body.post-type-chbs_vehicle .wp-list-table td.column-passenger_bag_count
+    {
+        width:15%;
+    }
+
+    body.post-type-chbs_vehicle .wp-list-table td.column-price
+    {
+        width:30%;
+    }
+
+/***/
+
+body.post-type-chbs_price_rule .wp-list-table
+{
+    table-layout:auto;
+}
+
+    body.post-type-chbs_price_rule .wp-list-table td.column-title
+    {
+        width:15%;
+    }
+
+    body.post-type-chbs_price_rule .wp-list-table td.column-condition
+    {
+        width:45%;
+    }
+    
+    body.post-type-chbs_price_rule .wp-list-table td.column-price
+    {
+        width:40%;
+    }
+	
+/***/
+
+body.post-type-chbs_av_rule .wp-list-table
+{
+    table-layout:auto;
+}
+
+    body.post-type-chbs_av_rule .wp-list-table td.column-title
+    {
+        width:10%;
+    }
+
+    body.post-type-chbs_av_rule .wp-list-table td.column-condition
+    {
+        width:20%;
+    }
+	
+    body.post-type-chbs_av_rule .wp-list-table td.column-vehicle
+    {
+        width:20%;
+    }
+    
+    body.post-type-chbs_av_rule .wp-list-table td.column-booking_extra
+    {
+        width:20%;
+    }
+	
+	body.post-type-chbs_av_rule .wp-list-table td.column-payment
+	{
+		width:15%;
+	}
+	
+	body.post-type-chbs_av_rule .wp-list-table td.column-other
+	{
+		width:15%;
+	}
+    
+    
+/***/      
+    
+body.post-type-chbs_booking_extra .wp-list-table
+{
+    table-layout:auto;
+}
+
+    body.post-type-chbs_booking_extra .wp-list-table td.column-title
+    {
+        width:18%;
+    }
+
+    body.post-type-chbs_booking_extra .wp-list-table td.column-price
+    {
+        width:5%;
+    }
+	
+    body.post-type-chbs_booking_extra .wp-list-table td.column-quantity
+    {
+        width:25%;
+    }
+
+    body.post-type-chbs_booking_extra .wp-list-table td.column-service_type
+    {
+        width:15%;
+    }
+	
+    body.post-type-chbs_booking_extra .wp-list-table td.column-transfer_type
+    {
+        width:15%;
+    }
+	
+    body.post-type-chbs_booking_extra .wp-list-table td.column-vehicle
+    {
+        width:20%;
+    }
+	
+/***/    
+    
+.to-table-post-list
+{
+    
+}
+
+	.to-table-post-list tr:first-child td
+	{
+		padding-top:0px;
+	}
+
+    .to-table-post-list td
+    {
+        margin:0px;
+        padding:5px 5px 5px 0px;
+    }
+    
+    .to-table-post-list td+td
+    {
+        padding-left:15px;
+    }
