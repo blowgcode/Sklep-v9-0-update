@@ -38,6 +38,8 @@ if($bookingId>0)
     <div class="woocommerce-order">
 
         <?php if ( $order ) : ?>
+		
+			<?php do_action('woocommerce_before_thankyou',$order->get_id()); ?>
 
             <?php if ( $order->has_status( 'failed' ) ) : ?>
 
@@ -48,6 +50,9 @@ if($bookingId>0)
                 <p class="woocommerce-notice woocommerce-notice--success woocommerce-thankyou-order-received"><?php echo apply_filters( 'woocommerce_thankyou_order_received_text', esc_html__( 'Thank you. Your order has been received.', 'chauffeur-booking-system' ), $order ); ?></p>
 
             <?php endif; ?>
+				
+		<?php do_action('woocommerce_thankyou_'.$order->get_payment_method(),$order->get_id()); ?>
+		<?php do_action('woocommerce_thankyou',$order->get_id()); ?>
 
         <?php else : ?>
 
