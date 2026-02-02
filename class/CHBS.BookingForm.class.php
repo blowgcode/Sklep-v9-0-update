@@ -1421,6 +1421,23 @@ class CHBSBookingForm
 		$meta['payment_paypal_logo_src']=CHBSHelper::getPostValue('payment_paypal_logo_src');
 		$meta['payment_paypal_info']=CHBSHelper::getPostValue('payment_paypal_info');
 		
+		$meta['payment_tpay_client_id']=CHBSHelper::getPostValue('payment_tpay_client_id');
+		$meta['payment_tpay_client_secret']=CHBSHelper::getPostValue('payment_tpay_client_secret');
+		$meta['payment_tpay_notification_secret']=CHBSHelper::getPostValue('payment_tpay_notification_secret');
+		
+		$meta['payment_tpay_sandbox_mode_enable']=CHBSHelper::getPostValue('payment_tpay_sandbox_mode_enable');
+		if(!$Validation->isBool($meta['payment_tpay_sandbox_mode_enable']))
+			$meta['payment_tpay_sandbox_mode_enable']=0;
+		
+		$meta['payment_tpay_redirect_duration']=CHBSHelper::getPostValue('payment_tpay_redirect_duration');
+		if(!$Validation->isNumber($meta['payment_tpay_redirect_duration'],-1,99))
+			$meta['payment_tpay_redirect_duration']=5;
+		
+		$meta['payment_tpay_success_url_address']=CHBSHelper::getPostValue('payment_tpay_success_url_address');
+		$meta['payment_tpay_cancel_url_address']=CHBSHelper::getPostValue('payment_tpay_cancel_url_address');
+		$meta['payment_tpay_logo_src']=CHBSHelper::getPostValue('payment_tpay_logo_src');
+		$meta['payment_tpay_info']=CHBSHelper::getPostValue('payment_tpay_info');
+		
 		/**/
 		
 		$meta['payment_cash_success_url_address']=CHBSHelper::getPostValue('payment_cash_success_url_address');
@@ -1986,6 +2003,16 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'payment_paypal_sandbox_mode_enable',0);
 		CHBSHelper::setDefault($meta,'payment_paypal_logo_src','');		
 		CHBSHelper::setDefault($meta,'payment_paypal_info','');
+		
+		CHBSHelper::setDefault($meta,'payment_tpay_client_id','');
+		CHBSHelper::setDefault($meta,'payment_tpay_client_secret','');
+		CHBSHelper::setDefault($meta,'payment_tpay_notification_secret','');
+		CHBSHelper::setDefault($meta,'payment_tpay_sandbox_mode_enable',0);
+		CHBSHelper::setDefault($meta,'payment_tpay_redirect_duration','5');
+		CHBSHelper::setDefault($meta,'payment_tpay_success_url_address','');
+		CHBSHelper::setDefault($meta,'payment_tpay_cancel_url_address','');
+		CHBSHelper::setDefault($meta,'payment_tpay_logo_src','');
+		CHBSHelper::setDefault($meta,'payment_tpay_info','');
 
 		CHBSHelper::setDefault($meta,'payment_cash_success_url_address','');
 		CHBSHelper::setDefault($meta,'payment_cash_logo_src','');
@@ -7006,6 +7033,7 @@ class CHBSBookingForm
 	{
 		$Payment=new CHBSPayment();
 		$Validation=new CHBSValidation();
+		$PaymentTpay=new CHBSPaymentTpay();
 	
 		$html=null;
 
@@ -7112,6 +7140,21 @@ class CHBSBookingForm
 					';
 				}
 			}
+		}
+		
+		if((array_key_exists(CHBSPaymentTpay::PAYMENT_ID,$bookingForm['dictionary']['payment'])) && ((int)$bookingForm['meta']['payment_processing_enable']===1))
+		{
+			$tpayHtml=$PaymentTpay->getBankSelectionForm($bookingForm);
+			
+			$html.=
+			'
+				<div class="chbs-payment-tpay-selection chbs-hidden" data-payment-id="'.(int)CHBSPaymentTpay::PAYMENT_ID.'">
+					<h5 class="chbs-payment-header">
+						'.esc_html__('Choose Tpay payment method','chauffeur-booking-system').'
+					</h5>
+					'.$tpayHtml.'
+				</div>
+			';
 		}
 		
 		return($html);

@@ -2619,6 +2619,7 @@
 								<ul>
 									<li><a href="#meta-box-booking-form-3-3-1"><?php esc_html_e('Stripe','chauffeur-booking-system'); ?></a></li>
 									<li><a href="#meta-box-booking-form-3-3-2"><?php esc_html_e('PayPal','chauffeur-booking-system'); ?></a></li>
+									<li><a href="#meta-box-booking-form-3-3-6"><?php esc_html_e('Tpay','chauffeur-booking-system'); ?></a></li>
 									<li><a href="#meta-box-booking-form-3-3-3"><?php esc_html_e('Cash','chauffeur-booking-system'); ?></a></li>
 									<li><a href="#meta-box-booking-form-3-3-4"><?php esc_html_e('Wire transfer','chauffeur-booking-system'); ?></a></li>
 									<li><a href="#meta-box-booking-form-3-3-5"><?php esc_html_e('Credit card on pickup','chauffeur-booking-system'); ?></a></li>
@@ -2759,6 +2760,79 @@
 												<textarea rows="1" cols="1" name="<?php CHBSHelper::getFormName('payment_paypal_info'); ?>"><?php echo esc_html($this->data['meta']['payment_paypal_info']); ?></textarea>
 											</div>											
 										</li>	
+									</ul>
+								</div>
+								<div id="meta-box-booking-form-3-3-6">
+									<ul class="to-form-field-list">
+										<li>
+											<h5><?php esc_html_e('Client ID','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('OAuth client ID from the Tpay panel.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_client_id'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_client_id']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Client secret','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('OAuth client secret from the Tpay panel.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_client_secret'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_client_secret']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Notification secret','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('Secret for validating Tpay notifications (optional).','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_notification_secret'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_notification_secret']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Sandbox mode','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('Sandbox mode.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<div class="to-radio-button">
+													<input type="radio" value="1" id="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable_1'); ?>" name="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable'); ?>" <?php CHBSHelper::checkedIf($this->data['meta']['payment_tpay_sandbox_mode_enable'],1); ?>/>
+													<label for="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable_1'); ?>"><?php esc_html_e('Enable','chauffeur-booking-system'); ?></label>
+													<input type="radio" value="0" id="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable_0'); ?>" name="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable'); ?>" <?php CHBSHelper::checkedIf($this->data['meta']['payment_tpay_sandbox_mode_enable'],0); ?>/>
+													<label for="<?php CHBSHelper::getFormName('payment_tpay_sandbox_mode_enable_0'); ?>"><?php esc_html_e('Disable','chauffeur-booking-system'); ?></label>
+												</div>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Redirection delay','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('Duration of redirection delay (in seconds) to the Tpay gateway.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" maxlength="2" name="<?php CHBSHelper::getFormName('payment_tpay_redirect_duration'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_redirect_duration']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('"Success" URL address','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('"Success" URL address.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_success_url_address'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_success_url_address']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('"Cancel" URL address','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('"Cancel" URL address.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_cancel_url_address'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_cancel_url_address']); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Logo','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('Logo.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_logo_src'); ?>" id="<?php CHBSHelper::getFormName('payment_tpay_logo_src'); ?>" class="to-float-left" value="<?php echo esc_attr($this->data['meta']['payment_tpay_logo_src']); ?>"/>
+												<input type="button" name="<?php CHBSHelper::getFormName('payment_tpay_logo_src_browse'); ?>" id="<?php CHBSHelper::getFormName('payment_tpay_logo_src_browse'); ?>" class="to-button-browse to-button" value="<?php esc_attr_e('Browse','chauffeur-booking-system'); ?>"/>
+											</div>
+										</li>
+										<li>
+											<h5><?php esc_html_e('Information for customer','chauffeur-booking-system'); ?></h5>
+											<span class="to-legend"><?php esc_html_e('Additional information for customer.','chauffeur-booking-system'); ?></span>
+											<div class="to-clear-fix">
+												<textarea rows="1" cols="1" name="<?php CHBSHelper::getFormName('payment_tpay_info'); ?>"><?php echo esc_html($this->data['meta']['payment_tpay_info']); ?></textarea>
+											</div>
+										</li>
 									</ul>
 								</div>
 								<div id="meta-box-booking-form-3-3-3">

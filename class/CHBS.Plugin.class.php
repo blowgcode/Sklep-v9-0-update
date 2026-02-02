@@ -651,6 +651,8 @@ class CHBSPlugin
 		
 		$TabCustom=new CHBSTabCustom();
 		
+		$PaymentTpay=new CHBSPaymentTpay();
+		
 		$License->init();
 		$ProductInfo->init();
 		
@@ -755,6 +757,7 @@ class CHBSPlugin
 			add_action('wp_enqueue_scripts',array($this,'publicInit'));
 			
 			add_action('wp_loaded',array($PaymentStripe,'receivePayment'));
+			add_action('wp_loaded',array($PaymentTpay,'receivePayment'));
 		}
 			   
 		if(function_exists('register_block_type'))

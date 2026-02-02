@@ -20,6 +20,7 @@ class CHBSPayment
 			'3'=>array(__('PayPal','chauffeur-booking-system'),'paypal',true),
 			'4'=>array(__('Wire transfer','chauffeur-booking-system'),'wire_transfer',false),
 			'5'=>array(__('Credit card on pickup','chauffeur-booking-system'),'credit_card_pickup',false),
+			'6'=>array(__('Tpay','chauffeur-booking-system'),'tpay',true),
 		);
 		
 		$this->payment=apply_filters(PLUGIN_CHBS_CONTEXT.'_payment_filter',$this->payment);
@@ -29,7 +30,7 @@ class CHBSPayment
 	
 	function isPaymentBuiltIn($paymentId)
 	{
-		return(in_array($paymentId,[1,2,3,4,5]) ? true : false);
+		return(in_array($paymentId,[1,2,3,4,5,6]) ? true : false);
 	}
 	
 	/**************************************************************************/

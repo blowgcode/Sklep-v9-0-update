@@ -331,6 +331,7 @@
 				var paymentName=$(this).attr('data-payment-name');
 				
 				$self.e('input[name="chbs_payment_id"]').val(paymentId);
+				$self.toggleTpaySelection(paymentId);
 				
 				$self.addGAEvent('payment_select',{'payment_id':paymentId,'payment_name':paymentName});
 				
@@ -1456,6 +1457,20 @@
 		{
 			var paymentId=parseInt($self.e('input[name="chbs_payment_id"]').val(),10);
 			if(paymentId>0) $self.e('.chbs-payment>li>a[data-payment-id="'+paymentId+'"]').addClass('chbs-state-selected');
+			$self.toggleTpaySelection(paymentId);
+		};
+
+		/**********************************************************************/
+		
+		this.toggleTpaySelection=function(paymentId)
+		{
+			var tpaySelection=$self.e('.chbs-payment-tpay-selection');
+			
+			if(!tpaySelection.length) return;
+			
+			if(parseInt(paymentId,10)===parseInt(tpaySelection.data('payment-id'),10))
+				tpaySelection.removeClass('chbs-hidden');
+			else tpaySelection.addClass('chbs-hidden');
 		};
 		
 		/**********************************************************************/
@@ -2531,6 +2546,46 @@
 										}
 
 									},1000);  
+								}
+
+							break;
+							
+							case 6:
+
+								$('body').css('display','none');
+
+								var tpaySection=$self.e('.chbs-booking-complete-payment-tpay');
+
+								$self.e('.chbs-booking-complete').on('click','.chbs-booking-complete-payment-tpay a',function(e)
+								{
+									e.preventDefault();
+									window.location.href=response.payment_tpay_redirect_url;
+								});
+
+								var tpayCounter=parseInt(response.payment_tpay_redirect_duration,10);
+
+								if(tpayCounter<=0)
+								{
+									tpaySection.find('a').trigger('click');
+								}
+								else
+								{
+									$('body').css('display','block');
+
+									tpaySection.css('display','block');
+
+									var tpayInterval=setInterval(function()
+									{
+										tpayCounter--;
+										tpaySection.find('div>span').html(tpayCounter);
+
+										if(tpayCounter===0)
+										{
+											clearInterval(tpayInterval);
+											tpaySection.find('a').trigger('click');
+										}
+
+									},1000);
 								}
 
 							break;

@@ -17,6 +17,10 @@
 					<a href="#" class="chbs-button chbs-button-style-1"><?php esc_html_e('Pay via Credit Card','chauffeur-booking-system'); ?></a>
 					<div><?php echo sprintf(__('You will be redirected to the payment page within <span>%s</span> second.','chauffeur-booking-system'),$this->data['meta']['payment_stripe_redirect_duration']); ?></div>
 				</div>
+				<div class="chbs-booking-complete-payment-tpay">
+					<a href="#" class="chbs-button chbs-button-style-1"><?php esc_html_e('Pay via Tpay','chauffeur-booking-system'); ?></a>
+					<div><?php echo sprintf(__('You will be redirected to the payment page within <span>%s</span> second.','chauffeur-booking-system'),$this->data['meta']['payment_tpay_redirect_duration']); ?></div>
+				</div>
 				<?php echo apply_filters('chbs_payment_public_step_5',null,$this->data['meta']); ?>
 				<div class="chbs-booking-complete-payment-woocommerce">
 					<a href="#" class="chbs-button chbs-button-style-1"><?php esc_html_e('Pay for order','chauffeur-booking-system'); ?></a>

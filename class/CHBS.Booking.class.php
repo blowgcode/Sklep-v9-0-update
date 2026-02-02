@@ -834,8 +834,8 @@ class CHBSBooking
 
 		$b=array(false,false);
 
-		$b[0]=((int)$bookingForm['meta']['email_notification_booking_new_client_enable']===1) && (((int)$bookingForm['meta']['email_notification_booking_new_client_payment_success_enable']===0) || (((int)$bookingForm['meta']['email_notification_booking_new_client_payment_success_enable']===1) && (!in_array($booking['meta']['payment_id'],array(2,3)))));
-		$b[1]=((int)$bookingForm['meta']['email_notification_booking_new_admin_enable']===1) && (((int)$bookingForm['meta']['email_notification_booking_new_admin_payment_success_enable']===0) || (((int)$bookingForm['meta']['email_notification_booking_new_admin_payment_success_enable']===1) && (!in_array($booking['meta']['payment_id'],array(2,3)))));
+		$b[0]=((int)$bookingForm['meta']['email_notification_booking_new_client_enable']===1) && (((int)$bookingForm['meta']['email_notification_booking_new_client_payment_success_enable']===0) || (((int)$bookingForm['meta']['email_notification_booking_new_client_payment_success_enable']===1) && (!in_array($booking['meta']['payment_id'],array(2,3,6)))));
+		$b[1]=((int)$bookingForm['meta']['email_notification_booking_new_admin_enable']===1) && (((int)$bookingForm['meta']['email_notification_booking_new_admin_payment_success_enable']===0) || (((int)$bookingForm['meta']['email_notification_booking_new_admin_payment_success_enable']===1) && (!in_array($booking['meta']['payment_id'],array(2,3,6)))));
 
 		if($b[0])
 		{
