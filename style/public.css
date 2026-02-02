@@ -4099,3 +4099,29 @@ html .iti ul li
 {
     z-index:2147483647;
 }
+
+/* Chauffeur Booking System - Datepicker theme overrides */
+.chbs-datepicker.ui-datepicker,
+.chbs-datepicker#ui-datepicker-div
+{
+	background-color:#ffffff;
+	border-color:#dc3200;
+}
+
+.chbs-datepicker.ui-datepicker a,
+.chbs-datepicker#ui-datepicker-div a
+{
+	color:#dc3200;
+}
+
+.chbs-datepicker.ui-datepicker .ui-state-hover,
+.chbs-datepicker.ui-datepicker .ui-state-active,
+.chbs-datepicker.ui-datepicker .ui-state-highlight,
+.chbs-datepicker#ui-datepicker-div .ui-state-hover,
+.chbs-datepicker#ui-datepicker-div .ui-state-active,
+.chbs-datepicker#ui-datepicker-div .ui-state-highlight
+{
+	background-color:#dc3200;
+	border-color:#dc3200;
+	color:#ffffff;
+}

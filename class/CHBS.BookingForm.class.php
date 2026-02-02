@@ -1506,6 +1506,26 @@ class CHBSBookingForm
 		$meta['location_replace']=$locationReplace;
 		
 		/***/
+
+		$pickupTimeGeofence=array();
+
+		$meta['pickup_time_geofence']=(array)CHBSHelper::getPostValue('pickup_time_geofence');
+		if(array_key_exists('geofence',$meta['pickup_time_geofence']))
+		{
+			foreach($meta['pickup_time_geofence']['geofence'] as $index=>$value)
+			{
+				$time=$meta['pickup_time_geofence']['time'][$index];
+
+				if(!array_key_exists($value,$dictionaryGeofence)) continue;
+				if($Validation->isEmpty($time)) continue;
+
+				$pickupTimeGeofence[]=array('geofence_id'=>$value,'time'=>$time);
+			}
+		}
+
+		$meta['pickup_time_geofence']=$pickupTimeGeofence;
+
+		/***/
 		/***/
 				
 		$FormElement=new CHBSBookingFormElement();
@@ -2007,6 +2027,7 @@ class CHBSBookingForm
 		CHBSHelper::setDefault($meta,'driving_zone_restriction_location_field_relation_type',1);
 		
 		CHBSHelper::setDefault($meta,'location_replace',array());
+		CHBSHelper::setDefault($meta,'pickup_time_geofence',array());
 		
 		/***/
 		
@@ -2317,6 +2338,16 @@ class CHBSBookingForm
 				if(!array_key_exists($value['geofence_id'],$data['dictionary']['geofence'])) continue;
 				
 				$data['meta']['location_replace'][$index]['geofence_shape_coordinate']=$data['dictionary']['geofence'][$value['geofence_id']]['meta']['shape_coordinate'];
+			}
+		}
+
+		if((array_key_exists('pickup_time_geofence',$data['meta'])) && (is_array($data['meta']['pickup_time_geofence'])) && (count($data['meta']['pickup_time_geofence'])))
+		{
+			foreach($data['meta']['pickup_time_geofence'] as $index=>$value)
+			{
+				if(!array_key_exists($value['geofence_id'],$data['dictionary']['geofence'])) continue;
+
+				$data['meta']['pickup_time_geofence'][$index]['geofence_shape_coordinate']=$data['dictionary']['geofence'][$value['geofence_id']]['meta']['shape_coordinate'];
 			}
 		}
 	   
@@ -7188,8 +7219,9 @@ class CHBSBookingForm
 		$j=0;
 		for($i=$meta['duration_min'];$i<=$meta['duration_max'];$i+=$meta['duration_step'])
 		{
-			$durationDistance[$i]['distance']=(int)$distance[$j];
-			$durationDistance[$i]['label']=array_key_exists($j,$distance) ? sprintf(esc_html__('%d hours (%s %s)','chauffeur-booking-system'),$i,$distance[$j],$Length->label(CHBSOption::getOption('length_unit'),7)) : sprintf(esc_html__('%d hours','chauffeur-booking-system'),$i);
+			$hasDistance=array_key_exists($j,$distance);
+			$durationDistance[$i]['distance']=$hasDistance ? (int)$distance[$j] : 0;
+			$durationDistance[$i]['label']=$hasDistance ? sprintf(esc_html__('%d hours (%s %s)','chauffeur-booking-system'),$i,$distance[$j],$Length->label(CHBSOption::getOption('length_unit'),7)) : sprintf(esc_html__('%d hours','chauffeur-booking-system'),$i);
 			$j++;
 		}
 		

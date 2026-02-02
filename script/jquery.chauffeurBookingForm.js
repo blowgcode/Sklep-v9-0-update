@@ -33,6 +33,10 @@
 		var $autocomplete=[];
 		
 		var $GoogleMapAPI;
+
+		var $pickupCountryCode='';
+
+		var $dropoffCountryCode='';
 		
 		/**********************************************************************/
 		
@@ -3155,10 +3159,13 @@
 				
 				/***/
 				
+				var placeLat=place.geometry.location.lat();
+				var placeLng=place.geometry.location.lng();
+
 				var placeData=
 				{
-					lat:place.geometry.location.lat(),
-					lng:place.geometry.location.lng(),
+					lat:placeLat,
+					lng:placeLng,
 					address:$self.removeDoubleQuote(text.val()),
 					zip_code:$self.getElementFromPlace(place,'postal_code'),
 					country_code:$self.getElementFromPlace(place,'country','short_name'),
@@ -3186,7 +3193,10 @@
 				}
 
 				var field=text.siblings('input[type="hidden"]');
-				
+
+				if(!$self.setPickupDropoffCountry(fieldName,placeData.country_code,text,field)) return(false);
+				if(!$self.applyPickupTimeGeofence(fieldName,placeLat,placeLng,text,field)) return(false);
+
 				field.val(JSON.stringify(placeData));
 				
 				$self.setGoogleMapAutocompleteOption(fieldName);
@@ -3194,6 +3204,97 @@
 				//$self.googleMapCreate();
 				$self.googleMapCreateRoute();	
 			});					   
+		};
+
+		/**********************************************************************/
+
+		this.applyPickupTimeGeofence=function(fieldName,coordinateLat,coordinateLng,textField,hiddenField)
+		{
+			if(fieldName.indexOf('pickup')===-1) return(true);
+			if(fieldName.indexOf('service_type_1')===-1) return(true);
+			if(!$.isArray($option.pickup_time_geofence)) return(true);
+			if(parseInt($option.pickup_time_geofence.length,10)===0) return(true);
+
+			var pickupTime=$self.getPickupTimeByGeofence(coordinateLat,coordinateLng);
+
+			if(pickupTime===false)
+			{
+				if($option.message.pickup_time_geofence_out_of_range)
+					alert($option.message.pickup_time_geofence_out_of_range);
+
+				$self.e('[name="chbs_pickup_time_service_type_1"]').val('');
+				textField.val('');
+				hiddenField.val('');
+				return(false);
+			}
+
+			var pickupTimeField=$self.e('[name="chbs_pickup_time_service_type_1"]');
+			if(pickupTimeField.length===1)
+				pickupTimeField.val(pickupTime);
+
+			return(true);
+		};
+
+		/**********************************************************************/
+
+		this.getPickupTimeByGeofence=function(coordinateLat,coordinateLng)
+		{
+			if(!$.isArray($option.pickup_time_geofence)) return(false);
+			if(parseInt($option.pickup_time_geofence.length,10)===0) return(false);
+
+			var Helper=new CHBSHelper();
+
+			for(var i in $option.pickup_time_geofence)
+			{
+				if(typeof($option.pickup_time_geofence[i].geofence_shape_coordinate)==='undefined') continue;
+				for(var j in $option.pickup_time_geofence[i].geofence_shape_coordinate)
+				{
+					var coordinate=[];
+					var point=[coordinateLng,coordinateLat];
+
+					for(var k in $option.pickup_time_geofence[i].geofence_shape_coordinate[j])
+					{
+						coordinate.push([$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lng,$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lat]);
+					}
+
+					var result=Helper.coordinateInsidePolygon(point,coordinate);
+
+					if(result===true)
+						return($option.pickup_time_geofence[i].time);
+				}
+			}
+
+			return(false);
+		};
+
+		/**********************************************************************/
+
+		this.setPickupDropoffCountry=function(fieldName,countryCode,textField,hiddenField)
+		{
+			if(fieldName.indexOf('service_type_1')===-1) return(true);
+
+			if(fieldName.indexOf('pickup')>-1)
+				$pickupCountryCode=countryCode;
+			else if(fieldName.indexOf('dropoff')>-1)
+				$dropoffCountryCode=countryCode;
+
+			if($pickupCountryCode && $dropoffCountryCode && $pickupCountryCode===$dropoffCountryCode)
+			{
+				if($option.message.pickup_dropoff_same_country)
+					alert($option.message.pickup_dropoff_same_country);
+
+				textField.val('');
+				hiddenField.val('');
+
+				if(fieldName.indexOf('pickup')>-1)
+					$pickupCountryCode='';
+				else if(fieldName.indexOf('dropoff')>-1)
+					$dropoffCountryCode='';
+
+				return(false);
+			}
+
+			return(true);
 		};
 		
 		/**********************************************************************/

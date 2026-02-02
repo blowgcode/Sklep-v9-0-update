@@ -209,7 +209,9 @@
 					{
 						google_map_ask_load_confirm:'<?php esc_html_e('This page requires the Google Maps library to load the booking form. If you choose not to enable it, the form will not be displayed.','chauffeur-booking-system'); ?>',
 						designate_route_error:'<?php esc_html_e('It is not possible to create a route between chosen points.','chauffeur-booking-system'); ?>',
-						place_geometry_error:'<?php esc_html_e('Google Maps API cannot find details for this place.','chauffeur-booking-system'); ?>'
+						place_geometry_error:'<?php esc_html_e('Google Maps API cannot find details for this place.','chauffeur-booking-system'); ?>',
+						pickup_time_geofence_out_of_range:'<?php esc_html_e('Selected pickup address is outside the service area.','chauffeur-booking-system'); ?>',
+						pickup_dropoff_same_country:'<?php esc_html_e('Online booking is not available for trips within the same country. Please contact us to arrange your ride.','chauffeur-booking-system'); ?>'
 					},
 					text:
 					{
@@ -279,6 +281,7 @@
 						location_field_relation_type:<?php echo (int)$this->data['meta']['driving_zone_restriction_location_field_relation_type']; ?>
 					},
 					location_replace:<?php echo json_encode($this->data['meta']['location_replace']); ?>,
+					pickup_time_geofence:<?php echo json_encode($this->data['meta']['pickup_time_geofence']); ?>,
 					google_map_option:
 					{
 						map_id:'<?php echo ($Validation->isEmpty($this->data['meta']['google_map_map_id']) ? CHBSOption::getOption('google_map_map_id') : $this->data['meta']['google_map_map_id']); ?>',

@@ -3119,6 +3119,99 @@
 								</div>
 							</div>
 						</li>						
+						<li>
+							<h5><?php esc_html_e('Pickup time by geofence (service type 1)','chauffeur-booking-system'); ?></h5>
+							<span class="to-legend">
+								<?php esc_html_e('Assign pickup time ranges for pickup addresses inside selected geofence areas.','chauffeur-booking-system'); ?>
+							</span>
+							<div class="to-clear-fix">
+								<table class="to-table" id="to-table-pickup-time-geofence">
+									<tr>
+										<th style="width:40%">
+											<div>
+												<?php esc_html_e('Geofence','chauffeur-booking-system'); ?>
+												<span class="to-legend">
+													<?php esc_html_e('Geofence.','chauffeur-booking-system'); ?>
+												</span>
+											</div>
+										</th>
+										<th style="width:40%">
+											<div>
+												<?php esc_html_e('Pickup time','chauffeur-booking-system'); ?>
+												<span class="to-legend">
+													<?php esc_html_e('Pickup time range that will be assigned when the pickup address is inside the geofence.','chauffeur-booking-system'); ?>
+												</span>
+											</div>
+										</th>
+										<th style="width:40%">
+											<div>
+												<?php esc_html_e('Remove','chauffeur-booking-system'); ?>
+												<span class="to-legend">
+													<?php esc_html_e('Remove.','chauffeur-booking-system'); ?>
+												</span>
+											</div>
+										</th>
+									</tr>
+									<tr class="to-hidden">
+										<td>
+											<div class="to-clear-fix">
+												<select name="<?php CHBSHelper::getFormName('pickup_time_geofence[geofence][]'); ?>" class="to-dropkick-disable" id="pickup_time_geofence_geofence">
+<?php
+		foreach($this->data['dictionary']['geofence'] as $index=>$value)
+			echo '<option value="'.esc_attr($index).'">'.esc_html($value['post']->post_title).'</option>';
+?>
+												</select>
+											</div>
+										</td>
+										<td>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('pickup_time_geofence[time][]'); ?>" value=""/>
+											</div>
+										</td>
+										<td>
+											<div>
+												<a href="#" class="to-table-button-remove"><?php esc_html_e('Remove','chauffeur-booking-system'); ?></a>
+											</div>
+										</td>
+									</tr>
+<?php
+		if((array_key_exists('pickup_time_geofence',$this->data['meta'])) && (is_array($this->data['meta']['pickup_time_geofence'])) && (count($this->data['meta']['pickup_time_geofence'])))
+		{
+			foreach($this->data['meta']['pickup_time_geofence'] as $index=>$value)
+			{
+?>
+									<tr>
+										<td>
+											<div class="to-clear-fix">
+												<select name="<?php CHBSHelper::getFormName('pickup_time_geofence[geofence][]'); ?>" id="pickup_time_geofence_geofence_<?php echo CHBSHelper::createId(); ?>">
+<?php
+		foreach($this->data['dictionary']['geofence'] as $geofenceIndex=>$geofenceValue)
+			echo '<option value="'.esc_attr($geofenceIndex).'" '.CHBSHelper::selectedIf($geofenceIndex,$value['geofence_id'],false).'>'.esc_html($geofenceValue['post']->post_title).'</option>';
+?>
+												</select>
+											</div>
+										</td>
+										<td>
+											<div class="to-clear-fix">
+												<input type="text" name="<?php CHBSHelper::getFormName('pickup_time_geofence[time][]'); ?>" value="<?php echo esc_attr($value['time']); ?>"/>
+											</div>
+										</td>
+										<td>
+											<div>
+												<a href="#" class="to-table-button-remove"><?php esc_html_e('Remove','chauffeur-booking-system'); ?></a>
+											</div>
+										</td>
+									</tr>
+<?php
+			}
+		}
+?>
+								</table>
+								<div>
+									<a href="#" class="to-table-button-add"><?php esc_html_e('Add','chauffeur-booking-system'); ?></a>
+								</div>
+							</div>
+						</li>
 				   </ul>
 				</div>
 				<div id="meta-box-booking-form-5">
@@ -4328,6 +4421,7 @@
 						toCreateAutocomplete(line.find('input[type="text"]'),true);
 					}
 				});
+				$('#to-table-pickup-time-geofence').table();
 
 				/***/
 				
