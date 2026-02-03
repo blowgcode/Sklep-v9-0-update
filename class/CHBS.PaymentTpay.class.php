@@ -8,12 +8,14 @@ class CHBSPaymentTpay
 	/**************************************************************************/
 	
 	const PAYMENT_ID=6;
+	const ACCESS_TOKEN_TRANSIENT_PREFIX='chbs_tpay_access_token_';
 	
 	/**************************************************************************/
 	
 	private static $autoloadInitialized=false;
 	private static $hooksInitialized=false;
 	private static $libraryAvailable=null;
+	private $lastChannelError=array();
 	
 	/**************************************************************************/
 	
@@ -136,6 +138,197 @@ class CHBSPaymentTpay
 			error_log('[CHBS Tpay] '.$message);
 		}
 	}
+
+	/**************************************************************************/
+	
+	private function logHttpError($message,$status,$body,$requestId)
+	{
+		$LogManager=new CHBSLogManager();
+		$payload=array(
+			'status'=>$status,
+			'request_id'=>$requestId,
+			'body'=>$body
+		);
+		$LogManager->add('tpay',1,$message.' '.wp_json_encode($payload));
+		$this->logDebug($message,$payload);
+	}
+	
+	/**************************************************************************/
+	
+	private function getApiBaseUrl($meta)
+	{
+		$sandboxMode=((int)$meta['payment_tpay_sandbox_mode_enable']===1);
+		
+		if(class_exists('Tpay\\OpenApi\\Api\\ApiAction'))
+		{
+			return($sandboxMode ? \Tpay\OpenApi\Api\ApiAction::TPAY_API_URL_SANDBOX : \Tpay\OpenApi\Api\ApiAction::TPAY_API_URL_PRODUCTION);
+		}
+		
+		return($sandboxMode ? 'https://openapi.tpay.com' : 'https://api.tpay.com');
+	}
+	
+	/**************************************************************************/
+	
+	private function getAccessToken($meta)
+	{
+		$clientId=trim($meta['payment_tpay_client_id']);
+		$clientSecret=trim($meta['payment_tpay_client_secret']);
+		
+		if($clientId==='' || $clientSecret==='')
+			return(null);
+		
+		$cacheKey=self::ACCESS_TOKEN_TRANSIENT_PREFIX.md5($clientId.'|'.(int)$meta['payment_tpay_sandbox_mode_enable']);
+		$cached=get_transient($cacheKey);
+		
+		if(is_array($cached) && !empty($cached['access_token']))
+			return($cached['access_token']);
+		
+		$baseUrl=$this->getApiBaseUrl($meta);
+		$url=rtrim($baseUrl,'/').'/oauth/auth';
+		
+		$response=wp_remote_post($url,array(
+			'timeout'=>15,
+			'headers'=>array(
+				'Content-Type'=>'application/x-www-form-urlencoded'
+			),
+			'body'=>array(
+				'client_id'=>$clientId,
+				'client_secret'=>$clientSecret
+			)
+		));
+		
+		if(is_wp_error($response))
+		{
+			$this->logHttpError('Tpay OAuth request failed','wp_error',$response->get_error_message(),'');
+			return(null);
+		}
+		
+		$status=wp_remote_retrieve_response_code($response);
+		$body=wp_remote_retrieve_body($response);
+		$requestId=wp_remote_retrieve_header($response,'request-id');
+		if(empty($requestId))
+			$requestId=wp_remote_retrieve_header($response,'x-request-id');
+		
+		$data=json_decode($body,true);
+		$accessToken=is_array($data) && isset($data['access_token']) ? (string)$data['access_token'] : '';
+		$expiresIn=is_array($data) && isset($data['expires_in']) ? (int)$data['expires_in'] : 0;
+		
+		if($accessToken==='')
+		{
+			$this->logHttpError('Tpay OAuth invalid response',$status,$body,$requestId);
+			return(null);
+		}
+		
+		$ttl=$expiresIn>0 ? max(60,$expiresIn-100) : 7100;
+		if($ttl>7100) $ttl=7100;
+		
+		set_transient($cacheKey,array('access_token'=>$accessToken),$ttl);
+		
+		$this->logDebug('Tpay OAuth token cached',array('expires_in'=>$ttl,'request_id'=>$requestId));
+		
+		return($accessToken);
+	}
+	
+	/**************************************************************************/
+	
+	private function getPaymentChannels($meta)
+	{
+		$this->lastChannelError=array();
+		
+		$token=$this->getAccessToken($meta);
+		if($token===null)
+		{
+			$this->lastChannelError=array(
+				'status'=>'auth_failed',
+				'request_id'=>''
+			);
+			return(array());
+		}
+		
+		$baseUrl=$this->getApiBaseUrl($meta);
+		$url=rtrim($baseUrl,'/').'/transactions/channels';
+		
+		$response=wp_remote_get($url,array(
+			'timeout'=>15,
+			'headers'=>array(
+				'Authorization'=>'Bearer '.$token
+			)
+		));
+		
+		if(is_wp_error($response))
+		{
+			$this->logHttpError('Tpay channels request failed','wp_error',$response->get_error_message(),'');
+			$this->lastChannelError=array(
+				'status'=>'wp_error',
+				'request_id'=>''
+			);
+			return(array());
+		}
+		
+		$status=wp_remote_retrieve_response_code($response);
+		$body=wp_remote_retrieve_body($response);
+		$requestId=wp_remote_retrieve_header($response,'request-id');
+		if(empty($requestId))
+			$requestId=wp_remote_retrieve_header($response,'x-request-id');
+		
+		$data=json_decode($body,true);
+		
+		if($status<200 || $status>=300 || !is_array($data))
+		{
+			$this->logHttpError('Tpay channels invalid response',$status,$body,$requestId);
+			$this->lastChannelError=array(
+				'status'=>$status,
+				'request_id'=>$requestId
+			);
+			return(array());
+		}
+		
+		if(isset($data['result']) && $data['result']==='failed')
+		{
+			$this->logHttpError('Tpay channels returned failed result',$status,$body,$requestId);
+			$this->lastChannelError=array(
+				'status'=>$status,
+				'request_id'=>$requestId
+			);
+			return(array());
+		}
+		
+		$channels=array();
+		$rawChannels=array();
+		
+		if(isset($data['channels']) && is_array($data['channels']))
+			$rawChannels=$data['channels'];
+		elseif(isset($data['data']) && is_array($data['data']))
+			$rawChannels=$data['data'];
+		
+		foreach($rawChannels as $channel)
+		{
+			if(!is_array($channel))
+				continue;
+			
+			if(isset($channel['available']) && (int)$channel['available']===0)
+				continue;
+			
+			$id=isset($channel['id']) ? $channel['id'] : (isset($channel['groupId']) ? $channel['groupId'] : '');
+			$name=isset($channel['name']) ? $channel['name'] : '';
+			$image='';
+			
+			if(isset($channel['image']) && is_array($channel['image']) && isset($channel['image']['url']))
+				$image=$channel['image']['url'];
+			elseif(isset($channel['img']))
+				$image=$channel['img'];
+			
+			$channels[]=array(
+				'id'=>$id,
+				'name'=>$name,
+				'img'=>$image
+			);
+		}
+		
+		$this->logDebug('Fetched Tpay channels',array('count'=>count($channels),'request_id'=>$requestId));
+		
+		return($channels);
+	}
 	
 	/**************************************************************************/
 	
@@ -222,7 +415,7 @@ class CHBSPaymentTpay
 	
 	/**************************************************************************/
 	
-	private function getBankGroups($meta)
+	private function getBankGroupsFromApi($meta)
 	{
 		$clientId=isset($meta['payment_tpay_client_id']) ? (string)$meta['payment_tpay_client_id'] : '';
 		$this->logDebug('Fetching Tpay bank groups',array(
@@ -291,6 +484,20 @@ class CHBSPaymentTpay
 		
 		return($groups);
 	}
+
+	/**************************************************************************/
+	
+	private function getBankGroups($meta)
+	{
+		$channels=$this->getPaymentChannels($meta);
+		
+		if(count($channels))
+			return($channels);
+		
+		$this->logDebug('Falling back to Tpay bank groups');
+		
+		return($this->getBankGroupsFromApi($meta));
+	}
 	
 	/**************************************************************************/
 	
@@ -307,7 +514,12 @@ class CHBSPaymentTpay
 		if(!count($groups))
 		{
 			$this->logDebug('No Tpay bank groups available for rendering');
-			return('<div class="chbs-notice">'.esc_html__('Unable to load Tpay payment methods. Check the Tpay credentials.','chauffeur-booking-system').'</div>');
+			$debugInfo='';
+			if(current_user_can('manage_options') && !empty($this->lastChannelError))
+			{
+				$debugInfo=' <small>'.esc_html(sprintf('Debug: HTTP %s / requestId %s',$this->lastChannelError['status'],$this->lastChannelError['request_id'])).'</small>';
+			}
+			return('<div class="chbs-notice">'.esc_html__('Unable to load Tpay payment methods. Check the Tpay credentials.','chauffeur-booking-system').$debugInfo.'</div>');
 		}
 		
 		$language=strtolower(substr(get_locale(),0,2))==='pl' ? 'pl' : 'en';

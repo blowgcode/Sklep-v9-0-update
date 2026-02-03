@@ -2773,7 +2773,10 @@
 										</li>
 										<li>
 											<h5><?php esc_html_e('Client secret','chauffeur-booking-system'); ?></h5>
-											<span class="to-legend"><?php esc_html_e('OAuth client secret from the Tpay panel.','chauffeur-booking-system'); ?></span>
+											<span class="to-legend">
+												<?php esc_html_e('OAuth client secret from the Tpay panel.','chauffeur-booking-system'); ?>
+												<?php esc_html_e('Keep this value secure and never commit it to version control.','chauffeur-booking-system'); ?>
+											</span>
 											<div class="to-clear-fix">
 												<input type="text" name="<?php CHBSHelper::getFormName('payment_tpay_client_secret'); ?>" value="<?php echo esc_attr($this->data['meta']['payment_tpay_client_secret']); ?>"/>
 											</div>
