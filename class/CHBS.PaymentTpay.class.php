@@ -40,14 +40,31 @@ class CHBSPaymentTpay
 		self::$libraryAvailable=false;
 
 		$libraryRoot=PLUGIN_CHBS_LIBRARY_PATH.'tpay-openapi-php-master/';
-		$vendorAutoload=$libraryRoot.'vendor/autoload.php';
-		$srcRoot=$libraryRoot.'src/';
-
-		if(file_exists($vendorAutoload))
+		$vendorAutoloadCandidates=array(
+			$libraryRoot.'vendor/autoload.php',
+			PLUGIN_CHBS_PATH.'vendor/autoload.php'
+		);
+		if(defined('WP_CONTENT_DIR'))
 		{
-			require_once($vendorAutoload);
+			$vendorAutoloadCandidates[]=rtrim(WP_CONTENT_DIR,'/').'/vendor/autoload.php';
 		}
-		else
+		if(defined('ABSPATH'))
+		{
+			$vendorAutoloadCandidates[]=rtrim(ABSPATH,'/').'/vendor/autoload.php';
+		}
+		$vendorAutoloadCandidates=array_unique(apply_filters('chbs_tpay_autoload_paths',$vendorAutoloadCandidates));
+		$srcRoot=$libraryRoot.'src/';
+		
+		foreach($vendorAutoloadCandidates as $vendorAutoload)
+		{
+			if($vendorAutoload && file_exists($vendorAutoload))
+			{
+				require_once($vendorAutoload);
+				break;
+			}
+		}
+		
+		if(!class_exists('Tpay\\OpenApi\\Api\\TpayApi'))
 		{
 			if(!is_dir($srcRoot))
 			{
@@ -134,6 +151,22 @@ class CHBSPaymentTpay
 		
 		return($groupId);
 	}
+
+	/**************************************************************************/
+	
+	private function isNotificationRequest()
+	{
+		if(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay')
+			return(true);
+		
+		if(isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
+			return(false);
+		
+		if(!isset($_SERVER['HTTP_X_JWS_SIGNATURE']))
+			return(false);
+		
+		return(true);
+	}
 	
 	/**************************************************************************/
 	
@@ -217,6 +250,11 @@ class CHBSPaymentTpay
 		{
 			$this->logDebug('Failed to fetch Tpay bank groups',array('error'=>$ex->getMessage()));
 			return(array());
+		}
+		
+		if(isset($response['error']))
+		{
+			$this->logDebug('Tpay bank groups error response',array('error'=>$response['error']));
 		}
 		
 		$groups=array();
@@ -417,8 +455,7 @@ class CHBSPaymentTpay
 	
 	public function receivePayment()
 	{
-		if(!array_key_exists('action',$_REQUEST)) return;
-		if($_REQUEST['action']!=='payment_tpay') return;
+		if(!$this->isNotificationRequest()) return;
 
 		if(!$this->isLibraryAvailable())
 		{
