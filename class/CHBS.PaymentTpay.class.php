@@ -442,6 +442,31 @@ class CHBSPaymentTpay
 
 	/**************************************************************************/
 	
+	private function getZipCodeFromCoordinate($coordinateValue)
+	{
+		if(is_array($coordinateValue) || is_object($coordinateValue))
+		{
+			$data=json_decode(wp_json_encode($coordinateValue),true);
+		}
+		else
+		{
+			$data=json_decode((string)$coordinateValue,true);
+		}
+		
+		if(!is_array($data))
+			return('');
+		
+		if(isset($data['zip_code']) && is_string($data['zip_code']))
+			return(trim($data['zip_code']));
+		
+		if(isset($data['postcode']) && is_string($data['postcode']))
+			return(trim($data['postcode']));
+		
+		return('');
+	}
+
+	/**************************************************************************/
+	
 	private function isNotificationRequest()
 	{
 		if(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay')
@@ -662,10 +687,17 @@ class CHBSPaymentTpay
 		if(is_null($api))
 			return(false);
 		
-		$payerEmail=isset($booking['meta']['client_contact_detail_email_address']) ? trim((string)$booking['meta']['client_contact_detail_email_address']) : '';
-		$payerFirstName=isset($booking['meta']['client_contact_detail_first_name']) ? trim((string)$booking['meta']['client_contact_detail_first_name']) : '';
-		$payerLastName=isset($booking['meta']['client_contact_detail_last_name']) ? trim((string)$booking['meta']['client_contact_detail_last_name']) : '';
+		$bookingMeta=isset($booking['meta']) && is_array($booking['meta']) ? $booking['meta'] : array();
+		
+		$payerEmail=isset($bookingMeta['client_contact_detail_email_address']) ? trim((string)$bookingMeta['client_contact_detail_email_address']) : '';
+		$payerFirstName=isset($bookingMeta['client_contact_detail_first_name']) ? trim((string)$bookingMeta['client_contact_detail_first_name']) : '';
+		$payerLastName=isset($bookingMeta['client_contact_detail_last_name']) ? trim((string)$bookingMeta['client_contact_detail_last_name']) : '';
 		$payerName=trim(sprintf('%s %s',$payerFirstName,$payerLastName));
+		if(mb_strlen($payerName)<3)
+		{
+			$emailPrefix=$payerEmail!=='' ? strstr($payerEmail,'@',true) : '';
+			$payerName=$emailPrefix!==false && $emailPrefix!=='' ? $emailPrefix : 'Klient Vipmar Tour';
+		}
 		
 		if($payerEmail==='')
 		{
@@ -705,8 +737,8 @@ class CHBSPaymentTpay
 		
 		$GeoLocation=new CHBSGeoLocation();
 		
-		$postalCode=isset($booking['meta']['client_billing_detail_postal_code']) ? trim((string)$booking['meta']['client_billing_detail_postal_code']) : '';
-		$billingCountry=isset($booking['meta']['client_billing_detail_country_code']) ? trim((string)$booking['meta']['client_billing_detail_country_code']) : '';
+		$postalCode=isset($bookingMeta['client_billing_detail_postal_code']) ? trim((string)$bookingMeta['client_billing_detail_postal_code']) : '';
+		$billingCountry=isset($bookingMeta['client_billing_detail_country_code']) ? trim((string)$bookingMeta['client_billing_detail_country_code']) : '';
 		$payerIp=$GeoLocation->getIPAddress();
 		
 		$payer=array(
@@ -714,20 +746,50 @@ class CHBSPaymentTpay
 			'name'=>$payerName
 		);
 		
-		if($Validation->isNotEmpty($booking['meta']['client_contact_detail_phone_number']))
-			$payer['phone']=$booking['meta']['client_contact_detail_phone_number'];
+		if($Validation->isNotEmpty($bookingMeta['client_contact_detail_phone_number'] ?? ''))
+			$payer['phone']=$bookingMeta['client_contact_detail_phone_number'];
 		
-		if($Validation->isNotEmpty($booking['meta']['client_billing_detail_street_name']))
-			$payer['address']=$booking['meta']['client_billing_detail_street_name'];
+		if($Validation->isNotEmpty($bookingMeta['client_billing_detail_street_name'] ?? ''))
+			$payer['address']=$bookingMeta['client_billing_detail_street_name'];
 		
-		if($Validation->isNotEmpty($booking['meta']['client_billing_detail_city']))
-			$payer['city']=$booking['meta']['client_billing_detail_city'];
+		if($Validation->isNotEmpty($bookingMeta['client_billing_detail_city'] ?? ''))
+			$payer['city']=$bookingMeta['client_billing_detail_city'];
 		
 		if($billingCountry!=='')
 			$payer['country']=$billingCountry;
 		
 		if(is_string($postalCode) && mb_strlen(trim($postalCode))>=3)
+		{
 			$payer['code']=trim($postalCode);
+		}
+		else
+		{
+			foreach(array(1,2,3) as $serviceTypeId)
+			{
+				$pickupKey='pickup_location_coordinate_service_type_'.$serviceTypeId;
+				$dropoffKey='dropoff_location_coordinate_service_type_'.$serviceTypeId;
+				
+				if(isset($bookingMeta[$pickupKey]))
+				{
+					$zipCandidate=$this->getZipCodeFromCoordinate($bookingMeta[$pickupKey]);
+					if($zipCandidate!=='' && mb_strlen($zipCandidate)>=3)
+					{
+						$payer['code']=$zipCandidate;
+						break;
+					}
+				}
+				
+				if(isset($bookingMeta[$dropoffKey]))
+				{
+					$zipCandidate=$this->getZipCodeFromCoordinate($bookingMeta[$dropoffKey]);
+					if($zipCandidate!=='' && mb_strlen($zipCandidate)>=3)
+					{
+						$payer['code']=$zipCandidate;
+						break;
+					}
+				}
+			}
+		}
 		
 		if($payerIp!=='')
 			$payer['ip']=$payerIp;
@@ -774,6 +836,9 @@ class CHBSPaymentTpay
 				
 				if($errorMessage!=='' || $fieldName!=='')
 				{
+					if($fieldName==='payer.code')
+						$errorMessage=__('Brak kodu pocztowego lub jest za krótki.','chauffeur-booking-system');
+					
 					$message=sprintf(__('Tpay odrzucił dane płatnika: %s (fieldName=%s).','chauffeur-booking-system'),$errorMessage,$fieldName);
 				}
 			}
