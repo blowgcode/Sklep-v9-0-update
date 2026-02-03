@@ -1091,7 +1091,7 @@ class CHBSPaymentTpay
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_transaction_id',$this->getPaymentTransactionId($responseData));
 		
 		$response['payment_process']=1;
-		$response['payment_tpay_redirect_url']=esc_url($redirectUrl);
+		$response['payment_tpay_redirect_url']=esc_url_raw($redirectUrl);
 		$response['payment_tpay_redirect_duration']=(int)$bookingForm['meta']['payment_tpay_redirect_duration'];
 		$response['callback_object']='CHBSPaymentTpayFrontend';
 		$response['callback_function']='redirect';
