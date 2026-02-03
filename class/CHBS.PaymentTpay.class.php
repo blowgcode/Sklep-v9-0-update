@@ -16,6 +16,7 @@ class CHBSPaymentTpay
 	private static $hooksInitialized=false;
 	private static $libraryAvailable=null;
 	private $lastChannelError=array();
+	private $paymentMethodMap=array();
 	
 	/**************************************************************************/
 	
@@ -141,7 +142,17 @@ class CHBSPaymentTpay
 
 	/**************************************************************************/
 	
-	private function logHttpError($message,$status,$body,$requestId)
+	private function isDebugEnabled($meta=array())
+	{
+		if(isset($meta['payment_tpay_debug_enable']) && (int)$meta['payment_tpay_debug_enable']===1)
+			return(true);
+		
+		return(defined('WP_DEBUG') && WP_DEBUG);
+	}
+
+	/**************************************************************************/
+	
+	private function logHttpError($message,$status,$body,$requestId,$meta=array())
 	{
 		$LogManager=new CHBSLogManager();
 		$payload=array(
@@ -150,12 +161,13 @@ class CHBSPaymentTpay
 			'body'=>$body
 		);
 		$LogManager->add('tpay',1,$message.' '.wp_json_encode($payload));
-		$this->logDebug($message,$payload);
+		if($this->isDebugEnabled($meta))
+			$this->logDebug($message,$payload);
 	}
 	
 	/**************************************************************************/
 	
-	private function logApiErrorResponse($message,$status,$body,$requestId,$errors=array())
+	private function logApiErrorResponse($message,$status,$body,$requestId,$errors=array(),$meta=array())
 	{
 		$payload=array(
 			'status'=>$status,
@@ -169,7 +181,8 @@ class CHBSPaymentTpay
 		$LogManager=new CHBSLogManager();
 		$LogManager->add('tpay',1,$message.' '.wp_json_encode($payload));
 		
-		$this->logDebug($message,$payload);
+		if($this->isDebugEnabled($meta))
+			$this->logDebug($message,$payload);
 	}
 	
 	/**************************************************************************/
@@ -218,7 +231,7 @@ class CHBSPaymentTpay
 		
 		if(is_wp_error($response))
 		{
-			$this->logHttpError('Tpay OAuth request failed','wp_error',$response->get_error_message(),'');
+			$this->logHttpError('Tpay OAuth request failed','wp_error',$response->get_error_message(),'',$meta);
 			return(null);
 		}
 		
@@ -234,7 +247,7 @@ class CHBSPaymentTpay
 		
 		if($accessToken==='')
 		{
-			$this->logHttpError('Tpay OAuth invalid response',$status,$body,$requestId);
+			$this->logHttpError('Tpay OAuth invalid response',$status,$body,$requestId,$meta);
 			return(null);
 		}
 		
@@ -253,6 +266,7 @@ class CHBSPaymentTpay
 	private function getPaymentChannels($meta)
 	{
 		$this->lastChannelError=array();
+		$this->paymentMethodMap=array();
 		
 		$token=$this->getAccessToken($meta);
 		if($token===null)
@@ -276,7 +290,7 @@ class CHBSPaymentTpay
 		
 		if(is_wp_error($response))
 		{
-			$this->logHttpError('Tpay channels request failed','wp_error',$response->get_error_message(),'');
+			$this->logHttpError('Tpay channels request failed','wp_error',$response->get_error_message(),'',$meta);
 			$this->lastChannelError=array(
 				'status'=>'wp_error',
 				'request_id'=>''
@@ -294,7 +308,7 @@ class CHBSPaymentTpay
 		
 		if($status<200 || $status>=300 || !is_array($data))
 		{
-			$this->logHttpError('Tpay channels invalid response',$status,$body,$requestId);
+			$this->logHttpError('Tpay channels invalid response',$status,$body,$requestId,$meta);
 			$this->lastChannelError=array(
 				'status'=>$status,
 				'request_id'=>$requestId
@@ -304,7 +318,7 @@ class CHBSPaymentTpay
 		
 		if(isset($data['result']) && $data['result']==='failed')
 		{
-			$this->logHttpError('Tpay channels returned failed result',$status,$body,$requestId);
+			$this->logHttpError('Tpay channels returned failed result',$status,$body,$requestId,$meta);
 			$this->lastChannelError=array(
 				'status'=>$status,
 				'request_id'=>$requestId
@@ -328,7 +342,9 @@ class CHBSPaymentTpay
 			if(isset($channel['available']) && (int)$channel['available']===0)
 				continue;
 			
-			$id=isset($channel['id']) ? $channel['id'] : (isset($channel['groupId']) ? $channel['groupId'] : '');
+			$channelId=isset($channel['id']) ? $channel['id'] : '';
+			$groupId=isset($channel['groupId']) ? $channel['groupId'] : '';
+			$id=$groupId!=='' ? $groupId : $channelId;
 			$name=isset($channel['name']) ? $channel['name'] : '';
 			$image='';
 			
@@ -342,6 +358,12 @@ class CHBSPaymentTpay
 				'name'=>$name,
 				'img'=>$image
 			);
+			
+			if($groupId!=='' && $channelId!=='')
+			{
+				$this->paymentMethodMap['group_to_channel'][(string)$groupId]=(string)$channelId;
+				$this->paymentMethodMap['channel_to_group'][(string)$channelId]=(string)$groupId;
+			}
 		}
 		
 		$this->logDebug('Fetched Tpay channels',array('count'=>count($channels),'request_id'=>$requestId));
@@ -385,7 +407,7 @@ class CHBSPaymentTpay
 				'status'=>'wp_error',
 				'request_id'=>''
 			);
-			$this->logHttpError('Tpay create transaction failed','wp_error',$response->get_error_message(),'');
+			$this->logHttpError('Tpay create transaction failed','wp_error',$response->get_error_message(),'',$meta);
 			return(null);
 		}
 		
@@ -406,7 +428,7 @@ class CHBSPaymentTpay
 				'request_id'=>$requestId,
 				'errors'=>$errors
 			);
-			$this->logApiErrorResponse('Tpay create transaction invalid response',$status,$body,$requestId,$errors);
+			$this->logApiErrorResponse('Tpay create transaction invalid response',$status,$body,$requestId,$errors,$meta);
 			return(null);
 		}
 		
@@ -418,7 +440,7 @@ class CHBSPaymentTpay
 				'request_id'=>$requestId,
 				'errors'=>$errors
 			);
-			$this->logApiErrorResponse('Tpay create transaction failed result',$status,$body,$requestId,$errors);
+			$this->logApiErrorResponse('Tpay create transaction failed result',$status,$body,$requestId,$errors,$meta);
 			return(null);
 		}
 		
@@ -436,6 +458,19 @@ class CHBSPaymentTpay
 			$groupId=$_POST['groupId'];
 		
 		$groupId=(int)trim((string)$groupId);
+		
+		return($groupId);
+	}
+
+	/**************************************************************************/
+	
+	private function getSelectedGroupIdRaw()
+	{
+		$groupId=CHBSHelper::getPostValue('payment_tpay_group_id');
+		if(empty($groupId))
+			$groupId=CHBSHelper::getPostValue('payment_tpay_group_id',false);
+		if(empty($groupId) && isset($_POST['groupId']))
+			$groupId=$_POST['groupId'];
 		
 		return($groupId);
 	}
@@ -463,6 +498,28 @@ class CHBSPaymentTpay
 			return(trim($data['postcode']));
 		
 		return('');
+	}
+
+	/**************************************************************************/
+	
+	private function hasErrorCode($errors,$needle)
+	{
+		if(!is_array($errors))
+			return(false);
+		
+		foreach($errors as $error)
+		{
+			if(!is_array($error))
+				continue;
+			
+			foreach(array('code','errorCode','error_code','message') as $key)
+			{
+				if(isset($error[$key]) && is_string($error[$key]) && stripos($error[$key],$needle)!==false)
+					return(true);
+			}
+		}
+		
+		return(false);
 	}
 
 	/**************************************************************************/
@@ -592,9 +649,12 @@ class CHBSPaymentTpay
 			if(!is_array($group))
 				continue;
 			
+			$groupId=isset($group['groupId']) ? $group['groupId'] : '';
+			$id=$groupId!=='' ? $groupId : (isset($group['id']) ? $group['id'] : '');
+			
 			$groups[]=array
 			(
-				'id'=>isset($group['id']) ? $group['id'] : (isset($group['groupId']) ? $group['groupId'] : ''),
+				'id'=>$id,
 				'name'=>isset($group['name']) ? $group['name'] : '',
 				'img'=>isset($group['img']) ? $group['img'] : (isset($group['image']) ? $group['image'] : '')
 			);
@@ -669,6 +729,7 @@ class CHBSPaymentTpay
 		
 		$Validation=new CHBSValidation();
 		
+		$rawGroupId=$this->getSelectedGroupIdRaw();
 		$groupId=$this->getSelectedGroupId();
 		
 		if($groupId<=0)
@@ -681,7 +742,71 @@ class CHBSPaymentTpay
 			return($response);
 		}
 		
-		$this->logDebug('Selected Tpay groupId',array('group_id'=>$groupId));
+		if($this->isDebugEnabled($bookingForm['meta']))
+		{
+			$this->logDebug('Selected Tpay groupId',array(
+				'raw_value'=>$rawGroupId,
+				'parsed_value'=>$groupId,
+				'type'=>gettype($rawGroupId)
+			));
+		}
+		
+		$availableGroups=$this->getBankGroups($bookingForm['meta']);
+		$availableIds=array();
+		$preview=array();
+		
+		foreach($availableGroups as $index=>$group)
+		{
+			if(!is_array($group) || !isset($group['id']))
+				continue;
+			
+			$availableIds[]=(int)$group['id'];
+			if($index<5)
+			{
+				$preview[]=array(
+					'id'=>$group['id'],
+					'name'=>isset($group['name']) ? $group['name'] : ''
+				);
+			}
+		}
+		
+		if($this->isDebugEnabled($bookingForm['meta']))
+		{
+			$this->logDebug('Available Tpay methods preview',array(
+				'count'=>count($availableIds),
+				'preview'=>$preview
+			));
+		}
+		
+		if(!count($availableIds))
+		{
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Wybrana metoda płatności jest nieprawidłowa – odśwież stronę i wybierz ponownie.','chauffeur-booking-system');
+			return($response);
+		}
+		
+		if(!in_array($groupId,$availableIds,true))
+		{
+			$groupIdKey=(string)$groupId;
+			if(isset($this->paymentMethodMap['channel_to_group'][$groupIdKey]))
+			{
+				$mappedGroupId=(int)$this->paymentMethodMap['channel_to_group'][$groupIdKey];
+				if(in_array($mappedGroupId,$availableIds,true))
+				{
+					$groupId=$mappedGroupId;
+					if($this->isDebugEnabled($bookingForm['meta']))
+						$this->logDebug('Mapped channelId to groupId',array('channel_id'=>$groupIdKey,'group_id'=>$mappedGroupId));
+				}
+			}
+		}
+		
+		if(!in_array($groupId,$availableIds,true))
+		{
+			$this->logDebug('Invalid Tpay groupId selected',array('group_id'=>$groupId,'available_ids'=>$availableIds));
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Wybrana metoda płatności jest nieprawidłowa – odśwież stronę i wybierz ponownie.','chauffeur-booking-system');
+			return($response);
+		}
 		
 		$api=$this->getApiClient($bookingForm['meta']);
 		if(is_null($api))
@@ -693,11 +818,6 @@ class CHBSPaymentTpay
 		$payerFirstName=isset($bookingMeta['client_contact_detail_first_name']) ? trim((string)$bookingMeta['client_contact_detail_first_name']) : '';
 		$payerLastName=isset($bookingMeta['client_contact_detail_last_name']) ? trim((string)$bookingMeta['client_contact_detail_last_name']) : '';
 		$payerName=trim(sprintf('%s %s',$payerFirstName,$payerLastName));
-		if(mb_strlen($payerName)<3)
-		{
-			$emailPrefix=$payerEmail!=='' ? strstr($payerEmail,'@',true) : '';
-			$payerName=$emailPrefix!==false && $emailPrefix!=='' ? $emailPrefix : 'Klient Vipmar Tour';
-		}
 		
 		if($payerEmail==='')
 		{
@@ -710,7 +830,7 @@ class CHBSPaymentTpay
 			return($response);
 		}
 		
-		if($payerName==='')
+		if($payerName==='' || mb_strlen($payerName)<3)
 		{
 			$response['payment_process']=1;
 			$response['error']['global'][0]['message']=__('Aby opłacić przez Tpay wymagane jest imię i nazwisko.','chauffeur-booking-system');
@@ -819,8 +939,54 @@ class CHBSPaymentTpay
 			)
 		);
 		
+		if($this->isDebugEnabled($bookingForm['meta']))
+		{
+			$this->logDebug('Tpay transaction payload pay',array(
+				'pay'=>$fields['pay']
+			));
+		}
+		
 		$errorData=array();
 		$responseData=$this->createTransaction($bookingForm['meta'],$fields,$errorData);
+		
+		if($responseData===null)
+		{
+			if($this->hasErrorCode(isset($errorData['errors']) ? $errorData['errors'] : array(),'bank_group_does_not_exist'))
+			{
+				$channelId='';
+				if(isset($this->paymentMethodMap['group_to_channel'][(string)$groupId]))
+					$channelId=$this->paymentMethodMap['group_to_channel'][(string)$groupId];
+				elseif(is_numeric($rawGroupId) && (int)$rawGroupId>0)
+					$channelId=(int)$rawGroupId;
+				
+				if($channelId!=='')
+				{
+					$fallbackFields=$fields;
+					$fallbackFields['pay']=array('channelId'=>(int)$channelId);
+					
+					if($this->isDebugEnabled($bookingForm['meta']))
+					{
+						$this->logDebug('Retrying Tpay transaction with channelId fallback',array(
+							'group_id'=>$groupId,
+							'channel_id'=>$channelId
+						));
+					}
+					
+					$fallbackError=array();
+					$fallbackResponse=$this->createTransaction($bookingForm['meta'],$fallbackFields,$fallbackError);
+					
+					if($fallbackResponse!==null)
+					{
+						$responseData=$fallbackResponse;
+						$errorData=array();
+					}
+					else
+					{
+						$errorData=$fallbackError;
+					}
+				}
+			}
+		}
 		
 		if($responseData===null)
 		{
