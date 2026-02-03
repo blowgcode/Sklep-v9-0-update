@@ -13,6 +13,7 @@ class CHBSPaymentTpay
 	
 	private static $autoloadInitialized=false;
 	private static $hooksInitialized=false;
+	private static $libraryAvailable=null;
 	
 	/**************************************************************************/
 	
@@ -33,31 +34,89 @@ class CHBSPaymentTpay
 	
 	private function registerAutoloader()
 	{
-		if(self::$autoloadInitialized) return;
+		if(self::$autoloadInitialized) return(self::$libraryAvailable === true);
 		
 		self::$autoloadInitialized=true;
-		
-		spl_autoload_register(function($class)
+		self::$libraryAvailable=false;
+
+		$libraryRoot=PLUGIN_CHBS_LIBRARY_PATH.'tpay-openapi-php-master/';
+		$vendorAutoload=$libraryRoot.'vendor/autoload.php';
+		$srcRoot=$libraryRoot.'src/';
+
+		if(file_exists($vendorAutoload))
 		{
-			$prefix='Tpay\\OpenApi\\';
-			$baseDir=PLUGIN_CHBS_LIBRARY_PATH.'tpay-openapi-php-master/';
+			require_once($vendorAutoload);
+		}
+		else
+		{
+			if(!is_dir($srcRoot))
+			{
+				return(false);
+			}
 			
-			$len=strlen($prefix);
-			if(strncmp($prefix,$class,$len)!==0)
-				return;
-			
-			$relativeClass=substr($class,$len);
-			$file=$baseDir.str_replace('\\','/',$relativeClass).'.php';
-			
-			if(file_exists($file))
-				require_once($file);
-		});
+			spl_autoload_register(function($class) use ($srcRoot)
+			{
+				$prefixes=array(
+					'Tpay\\OpenApi\\'=>$srcRoot,
+					'Tpay\\Example\\'=>PLUGIN_CHBS_LIBRARY_PATH.'tpay-openapi-php-master/examples/'
+				);
+				
+				foreach($prefixes as $prefix=>$baseDir)
+				{
+					$len=strlen($prefix);
+					if(strncmp($prefix,$class,$len)!==0)
+						continue;
+					
+					$relativeClass=substr($class,$len);
+					$file=$baseDir.str_replace('\\','/',$relativeClass).'.php';
+					
+					if(file_exists($file))
+					{
+						require_once($file);
+					}
+					return;
+				}
+			});
+		}
+
+		if(class_exists('Tpay\\OpenApi\\Api\\TpayApi'))
+		{
+			self::$libraryAvailable=true;
+		}
+		
+		return(self::$libraryAvailable);
+	}
+
+	/**************************************************************************/
+	
+	private function isLibraryAvailable()
+	{
+		if(self::$libraryAvailable!==null)
+			return(self::$libraryAvailable);
+		
+		return($this->registerAutoloader());
+	}
+	
+	/**************************************************************************/
+	
+	private function logLibraryMissing()
+	{
+		$LogManager=new CHBSLogManager();
+		$LogManager->add('tpay',1,__('Unable to load Tpay OpenAPI library. Payment temporarily unavailable.','chauffeur-booking-system'));
+		
+		return(false);
 	}
 	
 	/**************************************************************************/
 	
 	private function getApiClient($meta)
 	{
+		if(!$this->isLibraryAvailable())
+		{
+			$this->logLibraryMissing();
+			return(null);
+		}
+		
 		$clientId=trim($meta['payment_tpay_client_id']);
 		$clientSecret=trim($meta['payment_tpay_client_secret']);
 		
@@ -160,6 +219,12 @@ class CHBSPaymentTpay
 	
 	public function getBankSelectionForm($bookingForm)
 	{
+		if(!$this->isLibraryAvailable())
+		{
+			$this->logLibraryMissing();
+			return('<div class="chbs-notice">'.esc_html__('Płatność Tpay tymczasowo niedostępna.','chauffeur-booking-system').'</div>');
+		}
+		
 		$groups=$this->getBankGroups($bookingForm['meta']);
 		
 		if(!count($groups))
@@ -169,7 +234,7 @@ class CHBSPaymentTpay
 		
 		$language=strtolower(substr(get_locale(),0,2))==='pl' ? 'pl' : 'en';
 		
-		\Tpay\OpenApi\Utilities\Util::$libraryPath=PLUGIN_CHBS_URL.'library/tpay-openapi-php-master/';
+		\Tpay\OpenApi\Utilities\Util::$libraryPath=PLUGIN_CHBS_URL.'library/tpay-openapi-php-master/src/';
 		\Tpay\OpenApi\Utilities\Util::$customTemplateDirectory=PLUGIN_CHBS_PATH.'template/tpay/';
 		
 		$paymentForms=new \Tpay\OpenApi\Forms\PaymentForms($language);
@@ -212,6 +277,8 @@ class CHBSPaymentTpay
 		$payerName=trim(sprintf('%s %s',$booking['meta']['client_contact_detail_first_name'],$booking['meta']['client_contact_detail_last_name']));
 		$GeoLocation=new CHBSGeoLocation();
 		
+		$postalCode=isset($booking['meta']['client_billing_detail_postal_code']) ? $booking['meta']['client_billing_detail_postal_code'] : '';
+		
 		$fields=array
 		(
 			'amount'=>CHBSPrice::numberFormat($bookingBilling['summary']['pay']),
@@ -228,7 +295,7 @@ class CHBSPaymentTpay
 				'name'=>$payerName,
 				'phone'=>$booking['meta']['client_contact_detail_phone_number'],
 				'address'=>$booking['meta']['client_billing_detail_street_name'],
-				'code'=>$booking['meta']['client_billing_detail_postal_code'],
+				'code'=>$postalCode,
 				'city'=>$booking['meta']['client_billing_detail_city'],
 				'country'=>$booking['meta']['client_billing_detail_country_code'],
 				'ip'=>$GeoLocation->getIPAddress(),
@@ -293,6 +360,14 @@ class CHBSPaymentTpay
 	{
 		if(!array_key_exists('action',$_REQUEST)) return;
 		if($_REQUEST['action']!=='payment_tpay') return;
+
+		if(!$this->isLibraryAvailable())
+		{
+			$this->logLibraryMissing();
+			http_response_code(503);
+			echo 'FALSE';
+			exit;
+		}
 		
 		$LogManager=new CHBSLogManager();
 		$LogManager->add('tpay',2,__('[1] Receiving a payment.','chauffeur-booking-system'));
@@ -311,7 +386,7 @@ class CHBSPaymentTpay
 		{
 			$LogManager->add('tpay',2,__('[2] Booking reference not found in notification.','chauffeur-booking-system'));
 			http_response_code(200);
-			echo 'OK';
+			echo 'TRUE';
 			exit;
 		}
 		
@@ -325,7 +400,7 @@ class CHBSPaymentTpay
 		{
 			$LogManager->add('tpay',2,sprintf(__('[3] Booking %s is not found.','chauffeur-booking-system'),$bookingId));
 			http_response_code(200);
-			echo 'OK';
+			echo 'TRUE';
 			exit;
 		}
 		
@@ -346,6 +421,8 @@ class CHBSPaymentTpay
 			exit;
 		}
 		
+		$jwsVerified=false;
+		
 		try
 		{
 			$cache=new \Tpay\OpenApi\Utilities\Cache(null,new CHBSTpayCache());
@@ -354,6 +431,7 @@ class CHBSPaymentTpay
 			
 			$notificationHandler=new \Tpay\OpenApi\Webhook\JWSVerifiedPaymentNotification($certificateProvider,$notificationSecret,$productionMode);
 			$notification=$notificationHandler->getNotification();
+			$jwsVerified=true;
 			
 			if($notification instanceof \Tpay\OpenApi\Model\Objects\NotificationBody\BasicPayment)
 				$data=$notification->getNotificationAssociative();
@@ -363,6 +441,7 @@ class CHBSPaymentTpay
 		{
 			$LogManager->add('tpay',2,$ex->__toString());
 			http_response_code(400);
+			echo 'FALSE';
 			exit;
 		}
 		
@@ -379,6 +458,30 @@ class CHBSPaymentTpay
 		
 		CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_data',$meta['payment_tpay_data']);
 		
+		$trId=isset($data['tr_id']) ? (string)$data['tr_id'] : '';
+		$trCrc=isset($data['tr_crc']) ? (string)$data['tr_crc'] : '';
+		$trStatus=isset($data['tr_status']) ? (string)$data['tr_status'] : '';
+		$notificationKey=trim($trId.'|'.$trCrc.'|'.$trStatus,'|');
+		
+		if(!array_key_exists('payment_tpay_notification_ids',$meta))
+			$meta['payment_tpay_notification_ids']=array();
+		
+		if($notificationKey!=='' && in_array($notificationKey,$meta['payment_tpay_notification_ids'],true))
+		{
+			$LogManager->add('tpay',2,sprintf(__('[5] Duplicate Tpay notification ignored. tr_id=%s tr_crc=%s tr_status=%s jws_verified=%s','chauffeur-booking-system'),$trId,$trCrc,$trStatus,$jwsVerified ? 'true' : 'false'));
+			http_response_code(200);
+			echo 'TRUE';
+			exit;
+		}
+		
+		if($notificationKey!=='')
+		{
+			$meta['payment_tpay_notification_ids'][]=$notificationKey;
+			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_notification_ids',$meta['payment_tpay_notification_ids']);
+		}
+		
+		$LogManager->add('tpay',2,sprintf(__('[5] Notification received. tr_id=%s tr_crc=%s tr_status=%s jws_verified=%s','chauffeur-booking-system'),$trId,$trCrc,$trStatus,$jwsVerified ? 'true' : 'false'));
+		
 		$statusValue=isset($data['tr_status']) ? strtolower((string)$data['tr_status']) : '';
 		
 		if(in_array($statusValue,array('true','paid','correct','success'),true))
@@ -387,19 +490,142 @@ class CHBSPaymentTpay
 			{
 				if($BookingStatus->isBookingStatus(CHBSOption::getOption('booking_status_payment_success')))
 				{
-					$LogManager->add('tpay',2,__('[4] Updating booking status.','chauffeur-booking-system'));
-					CHBSBookingHelper::paymentSuccess($bookingId);
+					$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
+					$currentStatus=isset($booking['meta']['booking_status_id']) ? (int)$booking['meta']['booking_status_id'] : 0;
+					
+					if($currentStatus===$successStatus)
+					{
+						$LogManager->add('tpay',2,__('[6] Booking already marked as paid.','chauffeur-booking-system'));
+					}
+					else
+					{
+						$LogManager->add('tpay',2,__('[6] Scheduling booking status update.','chauffeur-booking-system'));
+						if(!wp_next_scheduled('chbs_tpay_payment_success',array($bookingId)))
+						{
+							wp_schedule_single_event(time(),'chbs_tpay_payment_success',array($bookingId));
+						}
+						if(apply_filters('chbs_tpay_process_payment_synchronously',false,$bookingId))
+						{
+							CHBSBookingHelper::paymentSuccess($bookingId);
+						}
+					}
 				}
 				else
 				{
-					$LogManager->add('tpay',2,__('[5] Cannot find a valid booking status.','chauffeur-booking-system'));
+					$LogManager->add('tpay',2,__('[7] Cannot find a valid booking status.','chauffeur-booking-system'));
 				}
 			}
 		}
 		
 		http_response_code(200);
-		echo 'OK';
+		echo 'TRUE';
 		exit;
+	}
+
+	/**************************************************************************/
+	
+	public function processPaymentSuccess($bookingId)
+	{
+		CHBSBookingHelper::paymentSuccess((int)$bookingId);
+	}
+
+	/**************************************************************************/
+	
+	public function maybeRunDiagnostics()
+	{
+		if(!is_user_logged_in() || !current_user_can('manage_options'))
+			return;
+		
+		if(!isset($_GET['chbs_tpay_test']))
+			return;
+		
+		$bookingFormId=isset($_GET['booking_form_id']) ? (int)$_GET['booking_form_id'] : 0;
+		
+		if($bookingFormId<=0)
+		{
+			wp_send_json_error(array('message'=>'Missing booking_form_id.'));
+		}
+		
+		$BookingForm=new CHBSBookingForm();
+		$formDictionary=$BookingForm->getDictionary(array('booking_form_id'=>$bookingFormId));
+		
+		if(!is_array($formDictionary) || !array_key_exists($bookingFormId,$formDictionary))
+		{
+			wp_send_json_error(array('message'=>'Booking form not found.'));
+		}
+		
+		$meta=$formDictionary[$bookingFormId]['meta'];
+		$api=$this->getApiClient($meta);
+		
+		if(is_null($api))
+		{
+			wp_send_json_error(array('message'=>'Unable to initialize Tpay API client.'));
+		}
+		
+		$results=array(
+			'bank_groups'=>null,
+			'transaction'=>null
+		);
+		
+		try
+		{
+			$results['bank_groups']=$api->transactions()->getBankGroups(true);
+		}
+		catch(Exception $ex)
+		{
+			$results['bank_groups_error']=$ex->getMessage();
+		}
+		
+		try
+		{
+			$groups=array();
+			if(isset($results['bank_groups']['data']) && is_array($results['bank_groups']['data']))
+				$groups=$results['bank_groups']['data'];
+			
+			$groupId=isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+			if($groupId<=0 && count($groups))
+				$groupId=(int)$groups[0]['id'];
+			
+			$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
+			
+			$transactionData=array
+			(
+				'amount'=>'1.00',
+				'description'=>'CHBS Tpay test transaction',
+				'hiddenDescription'=>'diagnostic',
+				'lang'=>strtolower(substr(get_locale(),0,2)),
+				'pay'=>array(
+					'groupId'=>$groupId
+				),
+				'payer'=>array(
+					'email'=>get_bloginfo('admin_email'),
+					'name'=>'CHBS Test',
+					'phone'=>'',
+					'ip'=>isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
+					'userAgent'=>isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''
+				),
+				'callbacks'=>array
+				(
+					'payerUrls'=>array
+					(
+						'success'=>home_url('/'),
+						'error'=>home_url('/')
+					),
+					'notification'=>array
+					(
+						'url'=>$notificationUrl
+					)
+				)
+			);
+			
+			$results['transaction']=$api->transactions()->createTransactionWithInstantRedirection($transactionData);
+		}
+		catch(Exception $ex)
+		{
+			$results['transaction_error']=$ex->getMessage();
+		}
+		
+		wp_send_json_success($results);
 	}
 	
 	/**************************************************************************/

@@ -3904,7 +3904,7 @@ class CHBSBookingForm
 								}
 								if(in_array('client_billing_detail_postal_code',$bookingForm['meta']['field_mandatory']))	
 								{
-									if($Validation->isEmpty($data['client_billing_detail_postal_code']))
+									if($Validation->isEmpty($data['client_billing_detail_postal_code'] ?? ''))
 										$this->setErrorLocal($response,CHBSHelper::getFormName('client_billing_detail_postal_code',false),__('Enter valid postal code.','chauffeur-booking-system'));				  
 								}
 								if(in_array('client_billing_detail_country_code',$bookingForm['meta']['field_mandatory']))
@@ -5172,7 +5172,7 @@ class CHBSBookingForm
 							array
 							(
 								$data['client_billing_detail_street_name'].' '.$data['client_billing_detail_street_number'],
-								$data['client_billing_detail_postal_code'].' '.$data['client_billing_detail_city'],
+								($data['client_billing_detail_postal_code'] ?? '').' '.$data['client_billing_detail_city'],
 								$data['client_billing_detail_state'],
 								$Country->getCountryName($data['client_billing_detail_country_code'])
 							)
@@ -6360,7 +6360,7 @@ class CHBSBookingForm
 							</div>
 							<div class="chbs-form-field chbs-form-field-width-33">
 								<label>'.esc_html__('Postal code','chauffeur-booking-system').(in_array('client_billing_detail_postal_code',$bookingForm['meta']['field_mandatory']) ? ' *' : '').'</label>
-								<input type="text" name="'.CHBSHelper::getFormName('client_billing_detail_postal_code',false).'" value="'.esc_attr($data['client_billing_detail_postal_code']).'"/>
+								<input type="text" name="'.CHBSHelper::getFormName('client_billing_detail_postal_code',false).'" value="'.esc_attr($data['client_billing_detail_postal_code'] ?? '').'"/>
 							</div>
 							<div class="chbs-form-field chbs-form-field-width-33">
 								<label>'.esc_html__('Country','chauffeur-booking-system').(in_array('client_billing_detail_country_code',$bookingForm['meta']['field_mandatory']) ? ' *' : '').'</label>

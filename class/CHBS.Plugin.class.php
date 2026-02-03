@@ -653,6 +653,9 @@ class CHBSPlugin
 		
 		$PaymentTpay=new CHBSPaymentTpay();
 		
+		add_action('chbs_tpay_payment_success',array($PaymentTpay,'processPaymentSuccess'));
+		add_action('wp_loaded',array($PaymentTpay,'maybeRunDiagnostics'));
+		
 		$License->init();
 		$ProductInfo->init();
 		
