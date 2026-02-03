@@ -17,22 +17,4 @@
     </div>
 </div>
 <input name="<?php CHBSHelper::getFormName('payment_tpay_group_id'); ?>" id="chbs-tpay-group-id" type="hidden"/>
-<script type="text/javascript">
-    (function () {
-        var input = document.getElementById('chbs-tpay-group-id');
-        if (!input) {
-            return;
-        }
-        var groups = document.querySelectorAll('#chbs-tpay-payment .tpay-group-holder');
-        groups.forEach(function (group) {
-            group.addEventListener('click', function () {
-                var active = document.querySelector('#chbs-tpay-payment .tpay-active');
-                if (active) {
-                    active.classList.remove('tpay-active');
-                }
-                group.classList.add('tpay-active');
-                input.value = group.getAttribute('data-tpay-group-id');
-            });
-        });
-    })();
-</script>
+<input name="payment_tpay_group_id" id="chbs-tpay-group-id-fallback" type="hidden"/>

@@ -37,6 +37,8 @@
 		var $pickupCountryCode='';
 
 		var $dropoffCountryCode='';
+
+		var $tpaySelectionBound=false;
 		
 		/**********************************************************************/
 		
@@ -116,6 +118,7 @@
 			}
 			
 			$self.createButtonRadio('.chbs-booking-extra');
+			$self.bindTpaySelection();
 			
 			/***/
 			
@@ -1458,6 +1461,7 @@
 			var paymentId=parseInt($self.e('input[name="chbs_payment_id"]').val(),10);
 			if(paymentId>0) $self.e('.chbs-payment>li>a[data-payment-id="'+paymentId+'"]').addClass('chbs-state-selected');
 			$self.toggleTpaySelection(paymentId);
+			$self.restoreTpaySelection();
 		};
 
 		/**********************************************************************/
@@ -1471,6 +1475,58 @@
 			if(parseInt(paymentId,10)===parseInt(tpaySelection.data('payment-id'),10))
 				tpaySelection.removeClass('chbs-hidden');
 			else tpaySelection.addClass('chbs-hidden');
+		};
+		
+		/**********************************************************************/
+		
+		this.setTpayGroupId=function(groupId)
+		{
+			if(isNaN(parseInt(groupId,10))) return;
+			
+			$self.e('input[name="chbs_payment_tpay_group_id"]').val(groupId);
+			$self.e('input[name="payment_tpay_group_id"]').val(groupId);
+		};
+		
+		/**********************************************************************/
+		
+		this.restoreTpaySelection=function()
+		{
+			var groupId=$self.e('input[name="chbs_payment_tpay_group_id"]').val();
+			if(isNaN(parseInt(groupId,10))) groupId=$self.e('input[name="payment_tpay_group_id"]').val();
+			if(isNaN(parseInt(groupId,10))) return;
+			
+			var selection=$self.e('.chbs-payment-tpay-selection');
+			if(!selection.length) return;
+			
+			selection.find('.tpay-group-holder').removeClass('tpay-active');
+			selection.find('.tpay-group-holder[data-tpay-group-id="'+groupId+'"]').addClass('tpay-active');
+		};
+		
+		/**********************************************************************/
+		
+		this.bindTpaySelection=function()
+		{
+			if($tpaySelectionBound) return;
+			
+			$tpaySelectionBound=true;
+			
+			var form=$self.e('form[name="chbs-form"]');
+			
+			form.on('click','.chbs-payment-tpay-selection .tpay-group-holder',function()
+			{
+				var groupId=$(this).attr('data-tpay-group-id');
+				if(isNaN(parseInt(groupId,10))) return;
+				
+				$(this).closest('.chbs-payment-tpay-selection').find('.tpay-group-holder').removeClass('tpay-active');
+				$(this).addClass('tpay-active');
+				$self.setTpayGroupId(groupId);
+			});
+			
+			form.on('change','.chbs-payment-tpay-selection input[name="groupId"], .chbs-payment-tpay-selection select[name="bank_list"]',function()
+			{
+				var groupId=$(this).val();
+				$self.setTpayGroupId(groupId);
+			});
 		};
 		
 		/**********************************************************************/

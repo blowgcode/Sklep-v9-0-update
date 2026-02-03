@@ -106,6 +106,34 @@ class CHBSPaymentTpay
 		
 		return(false);
 	}
+
+	/**************************************************************************/
+	
+	private function logDebug($message,$context=array())
+	{
+		if(defined('WP_DEBUG') && WP_DEBUG)
+		{
+			if(!empty($context))
+				$message.=' '.wp_json_encode($context);
+			
+			error_log('[CHBS Tpay] '.$message);
+		}
+	}
+	
+	/**************************************************************************/
+	
+	private function getSelectedGroupId()
+	{
+		$groupId=CHBSHelper::getPostValue('payment_tpay_group_id');
+		if(empty($groupId))
+			$groupId=CHBSHelper::getPostValue('payment_tpay_group_id',false);
+		if(empty($groupId) && isset($_POST['groupId']))
+			$groupId=$_POST['groupId'];
+		
+		$groupId=(int)trim((string)$groupId);
+		
+		return($groupId);
+	}
 	
 	/**************************************************************************/
 	
@@ -163,6 +191,12 @@ class CHBSPaymentTpay
 	
 	private function getBankGroups($meta)
 	{
+		$clientId=isset($meta['payment_tpay_client_id']) ? (string)$meta['payment_tpay_client_id'] : '';
+		$this->logDebug('Fetching Tpay bank groups',array(
+			'client_id_prefix'=>substr($clientId,0,4),
+			'sandbox_mode'=>(int)$meta['payment_tpay_sandbox_mode_enable']
+		));
+		
 		$cacheKey='bank_groups_'.md5($meta['payment_tpay_client_id'].'|'.(int)$meta['payment_tpay_sandbox_mode_enable']);
 		
 		$cache=new CHBSTpayCache();
@@ -181,6 +215,7 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
+			$this->logDebug('Failed to fetch Tpay bank groups',array('error'=>$ex->getMessage()));
 			return(array());
 		}
 		
@@ -210,7 +245,11 @@ class CHBSPaymentTpay
 		}
 		
 		if(count($groups))
+		{
 			$cache->set($cacheKey,$groups,3600);
+		}
+		
+		$this->logDebug('Fetched Tpay bank groups',array('count'=>count($groups)));
 		
 		return($groups);
 	}
@@ -229,6 +268,7 @@ class CHBSPaymentTpay
 		
 		if(!count($groups))
 		{
+			$this->logDebug('No Tpay bank groups available for rendering');
 			return('<div class="chbs-notice">'.esc_html__('Unable to load Tpay payment methods. Check the Tpay credentials.','chauffeur-booking-system').'</div>');
 		}
 		
@@ -238,8 +278,11 @@ class CHBSPaymentTpay
 		\Tpay\OpenApi\Utilities\Util::$customTemplateDirectory=PLUGIN_CHBS_PATH.'template/tpay/';
 		
 		$paymentForms=new \Tpay\OpenApi\Forms\PaymentForms($language);
+		$formHtml=$paymentForms->getBankSelectionForm($groups,false,false,'',true);
 		
-		return($paymentForms->getBankSelectionForm($groups,false,false,'',true));
+		$this->logDebug('Rendered Tpay bank selection form',array('length'=>strlen($formHtml)));
+		
+		return($formHtml);
 	}
 	
 	/**************************************************************************/
@@ -251,14 +294,19 @@ class CHBSPaymentTpay
 		
 		$Validation=new CHBSValidation();
 		
-		$groupId=(int)CHBSHelper::getPostValue('payment_tpay_group_id');
+		$groupId=$this->getSelectedGroupId();
 		
 		if($groupId<=0)
 		{
+			$this->logDebug('Missing selected Tpay groupId',array(
+				'post_keys'=>array_keys($_POST)
+			));
 			$response['payment_process']=1;
 			$response['error']['global'][0]['message']=__('Select a Tpay payment method.','chauffeur-booking-system');
 			return($response);
 		}
+		
+		$this->logDebug('Selected Tpay groupId',array('group_id'=>$groupId));
 		
 		$api=$this->getApiClient($bookingForm['meta']);
 		if(is_null($api))
@@ -323,13 +371,24 @@ class CHBSPaymentTpay
 		{
 			$LogManager=new CHBSLogManager();
 			$LogManager->add('tpay',1,$ex->__toString());
+			$this->logDebug('Failed to create Tpay transaction',array('error'=>$ex->getMessage()));
 			return(false);
 		}
 		
 		$redirectUrl=$this->getPaymentRedirectUrl($responseData);
 		
 		if($Validation->isEmpty($redirectUrl))
+		{
+			$this->logDebug('Missing Tpay redirect URL in response',array(
+				'response_keys'=>is_array($responseData) ? array_keys($responseData) : array()
+			));
 			return(false);
+		}
+		
+		$this->logDebug('Created Tpay transaction',array(
+			'transaction_id'=>$this->getPaymentTransactionId($responseData),
+			'redirect_url'=>$redirectUrl
+		));
 		
 		$meta=CHBSPostMeta::getPostMeta($booking['post']);
 		
