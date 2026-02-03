@@ -323,6 +323,11 @@ class CHBSPlugin
 					'use'=>2,
 					'file'=>'jquery.chauffeurBookingForm.js'
 				),
+				'chbs-tpay-frontend'=>array
+				(
+					'use'=>2,
+					'file'=>'CHBS.PaymentTpayFrontend.js'
+				),
 				'chbs-google-map'=>array
 				(
 					'inc'=>false,

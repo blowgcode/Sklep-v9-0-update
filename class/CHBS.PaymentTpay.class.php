@@ -155,6 +155,25 @@ class CHBSPaymentTpay
 	
 	/**************************************************************************/
 	
+	private function logApiErrorResponse($message,$status,$body,$requestId,$errors=array())
+	{
+		$payload=array(
+			'status'=>$status,
+			'request_id'=>$requestId,
+			'body'=>$body
+		);
+		
+		if(!empty($errors))
+			$payload['errors']=$errors;
+		
+		$LogManager=new CHBSLogManager();
+		$LogManager->add('tpay',1,$message.' '.wp_json_encode($payload));
+		
+		$this->logDebug($message,$payload);
+	}
+	
+	/**************************************************************************/
+	
 	private function getApiBaseUrl($meta)
 	{
 		$sandboxMode=((int)$meta['payment_tpay_sandbox_mode_enable']===1);
@@ -329,6 +348,82 @@ class CHBSPaymentTpay
 		
 		return($channels);
 	}
+
+	/**************************************************************************/
+	
+	private function createTransaction($meta,$fields,&$errorData=array())
+	{
+		$errorData=array();
+		
+		$token=$this->getAccessToken($meta);
+		if($token===null)
+		{
+			$errorData=array(
+				'message'=>'auth_failed',
+				'status'=>'auth_failed',
+				'request_id'=>''
+			);
+			return(null);
+		}
+		
+		$baseUrl=$this->getApiBaseUrl($meta);
+		$url=rtrim($baseUrl,'/').'/transactions';
+		
+		$response=wp_remote_post($url,array(
+			'timeout'=>15,
+			'headers'=>array(
+				'Content-Type'=>'application/json',
+				'Authorization'=>'Bearer '.$token
+			),
+			'body'=>wp_json_encode($fields)
+		));
+		
+		if(is_wp_error($response))
+		{
+			$errorData=array(
+				'message'=>$response->get_error_message(),
+				'status'=>'wp_error',
+				'request_id'=>''
+			);
+			$this->logHttpError('Tpay create transaction failed','wp_error',$response->get_error_message(),'');
+			return(null);
+		}
+		
+		$status=wp_remote_retrieve_response_code($response);
+		$body=wp_remote_retrieve_body($response);
+		$requestId=wp_remote_retrieve_header($response,'request-id');
+		if(empty($requestId))
+			$requestId=wp_remote_retrieve_header($response,'x-request-id');
+		
+		$data=json_decode($body,true);
+		$errors=is_array($data) && isset($data['errors']) ? $data['errors'] : array();
+		
+		if($status<200 || $status>=300 || !is_array($data))
+		{
+			$errorData=array(
+				'message'=>'invalid_response',
+				'status'=>$status,
+				'request_id'=>$requestId,
+				'errors'=>$errors
+			);
+			$this->logApiErrorResponse('Tpay create transaction invalid response',$status,$body,$requestId,$errors);
+			return(null);
+		}
+		
+		if(isset($data['result']) && $data['result']==='failed')
+		{
+			$errorData=array(
+				'message'=>'failed_result',
+				'status'=>$status,
+				'request_id'=>$requestId,
+				'errors'=>$errors
+			);
+			$this->logApiErrorResponse('Tpay create transaction failed result',$status,$body,$requestId,$errors);
+			return(null);
+		}
+		
+		return($data);
+	}
 	
 	/**************************************************************************/
 	
@@ -387,7 +482,12 @@ class CHBSPaymentTpay
 	
 	private function getPaymentRedirectUrl($response)
 	{
-		$keys=array('redirectUrl','redirect_url','paymentUrl','payment_url','transactionPaymentUrl','transaction_payment_url','url');
+		if(is_object($response))
+		{
+			$response=json_decode(wp_json_encode($response),true);
+		}
+		
+		$keys=array('transactionPaymentUrl','transaction_payment_url','paymentUrl','payment_url','redirectUrl','redirect_url','url');
 		
 		foreach($keys as $key)
 		{
@@ -562,6 +662,37 @@ class CHBSPaymentTpay
 		if(is_null($api))
 			return(false);
 		
+		$payerEmail=isset($booking['meta']['client_contact_detail_email_address']) ? trim((string)$booking['meta']['client_contact_detail_email_address']) : '';
+		$payerFirstName=isset($booking['meta']['client_contact_detail_first_name']) ? trim((string)$booking['meta']['client_contact_detail_first_name']) : '';
+		$payerLastName=isset($booking['meta']['client_contact_detail_last_name']) ? trim((string)$booking['meta']['client_contact_detail_last_name']) : '';
+		$payerName=trim(sprintf('%s %s',$payerFirstName,$payerLastName));
+		
+		if($payerEmail==='')
+		{
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Aby opłacić przez Tpay wymagany jest adres e-mail.','chauffeur-booking-system');
+			$response['error']['local'][]=array(
+				'field'=>CHBSHelper::getFormName('client_contact_detail_email_address',false),
+				'message'=>__('Enter valid e-mail address','chauffeur-booking-system')
+			);
+			return($response);
+		}
+		
+		if($payerName==='')
+		{
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Aby opłacić przez Tpay wymagane jest imię i nazwisko.','chauffeur-booking-system');
+			$response['error']['local'][]=array(
+				'field'=>CHBSHelper::getFormName('client_contact_detail_first_name',false),
+				'message'=>__('Enter your first name','chauffeur-booking-system')
+			);
+			$response['error']['local'][]=array(
+				'field'=>CHBSHelper::getFormName('client_contact_detail_last_name',false),
+				'message'=>__('Enter your last name','chauffeur-booking-system')
+			);
+			return($response);
+		}
+		
 		$successUrl=$bookingForm['meta']['payment_tpay_success_url_address'];
 		$cancelUrl=$bookingForm['meta']['payment_tpay_cancel_url_address'];
 		
@@ -572,7 +703,6 @@ class CHBSPaymentTpay
 		
 		$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
 		
-		$payerName=trim(sprintf('%s %s',$booking['meta']['client_contact_detail_first_name'],$booking['meta']['client_contact_detail_last_name']));
 		$GeoLocation=new CHBSGeoLocation();
 		
 		$postalCode=isset($booking['meta']['client_billing_detail_postal_code']) ? $booking['meta']['client_billing_detail_postal_code'] : '';
@@ -589,7 +719,7 @@ class CHBSPaymentTpay
 			),
 			'payer'=>array
 			(
-				'email'=>$booking['meta']['client_contact_detail_email_address'],
+				'email'=>$payerEmail,
 				'name'=>$payerName,
 				'phone'=>$booking['meta']['client_contact_detail_phone_number'],
 				'address'=>$booking['meta']['client_billing_detail_street_name'],
@@ -613,16 +743,23 @@ class CHBSPaymentTpay
 			)
 		);
 		
-		try
+		$errorData=array();
+		$responseData=$this->createTransaction($bookingForm['meta'],$fields,$errorData);
+		
+		if($responseData===null)
 		{
-			$responseData=$api->transactions()->createTransactionWithInstantRedirection($fields);
-		}
-		catch(Exception $ex)
-		{
-			$LogManager=new CHBSLogManager();
-			$LogManager->add('tpay',1,$ex->__toString());
-			$this->logDebug('Failed to create Tpay transaction',array('error'=>$ex->getMessage()));
-			return(false);
+			$httpStatus=isset($errorData['status']) ? $errorData['status'] : 'unknown';
+			$requestId=isset($errorData['request_id']) ? $errorData['request_id'] : '';
+			$message=sprintf(__('Tpay: nie udało się utworzyć transakcji (HTTP %s, requestId=%s). Sprawdź dane płatnika.','chauffeur-booking-system'),$httpStatus,$requestId);
+			
+			if(current_user_can('manage_options') && isset($errorData['errors']) && is_array($errorData['errors']) && count($errorData['errors']))
+			{
+				$message.=' '.sprintf(__('Debug: %s','chauffeur-booking-system'),wp_json_encode($errorData['errors']));
+			}
+			
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=$message;
+			return($response);
 		}
 		
 		$redirectUrl=$this->getPaymentRedirectUrl($responseData);
@@ -632,7 +769,9 @@ class CHBSPaymentTpay
 			$this->logDebug('Missing Tpay redirect URL in response',array(
 				'response_keys'=>is_array($responseData) ? array_keys($responseData) : array()
 			));
-			return(false);
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Tpay: nie udało się odczytać adresu płatności. Spróbuj ponownie.','chauffeur-booking-system');
+			return($response);
 		}
 		
 		$this->logDebug('Created Tpay transaction',array(
@@ -659,6 +798,8 @@ class CHBSPaymentTpay
 		$response['payment_process']=1;
 		$response['payment_tpay_redirect_url']=esc_url($redirectUrl);
 		$response['payment_tpay_redirect_duration']=(int)$bookingForm['meta']['payment_tpay_redirect_duration'];
+		$response['callback_object']='CHBSPaymentTpayFrontend';
+		$response['callback_function']='redirect';
 		
 		return($response);
 	}
