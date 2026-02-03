@@ -198,6 +198,13 @@ class CHBSPaymentTpay
 		
 		return($sandboxMode ? 'https://openapi.tpay.com' : 'https://api.tpay.com');
 	}
+
+	/**************************************************************************/
+	
+	private function getEnvironmentLabel($meta)
+	{
+		return(((int)$meta['payment_tpay_sandbox_mode_enable']===1) ? 'sandbox' : 'prod');
+	}
 	
 	/**************************************************************************/
 	
@@ -778,6 +785,11 @@ class CHBSPaymentTpay
 			));
 		}
 		
+		if($this->isDebugEnabled($bookingForm['meta']))
+		{
+			$this->logDebug('ENV',array('tpay_env'=>$this->getEnvironmentLabel($bookingForm['meta'])));
+		}
+		
 		if(!count($availableIds))
 		{
 			$response['payment_process']=1;
@@ -988,6 +1000,25 @@ class CHBSPaymentTpay
 			}
 		}
 		
+		$transactionResult=isset($responseData['result']) ? (string)$responseData['result'] : '';
+		$transactionStatus=isset($responseData['status']) ? (string)$responseData['status'] : '';
+		$transactionId=isset($responseData['transactionId']) ? (string)$responseData['transactionId'] : (isset($responseData['transaction_id']) ? (string)$responseData['transaction_id'] : '');
+		$transactionTitle=isset($responseData['title']) ? (string)$responseData['title'] : '';
+		$requestId=isset($responseData['requestId']) ? (string)$responseData['requestId'] : (isset($responseData['request_id']) ? (string)$responseData['request_id'] : '');
+		$transactionPaymentUrl=isset($responseData['transactionPaymentUrl']) ? (string)$responseData['transactionPaymentUrl'] : '';
+		
+		if($this->isDebugEnabled($bookingForm['meta']))
+		{
+			$this->logDebug('Tpay transaction response',array(
+				'result'=>$transactionResult,
+				'status'=>$transactionStatus,
+				'transaction_id'=>$transactionId,
+				'title'=>$transactionTitle,
+				'request_id'=>$requestId,
+				'transactionPaymentUrl'=>$transactionPaymentUrl
+			));
+		}
+		
 		if($responseData===null)
 		{
 			$httpStatus=isset($errorData['status']) ? $errorData['status'] : 'unknown';
@@ -1016,6 +1047,13 @@ class CHBSPaymentTpay
 			
 			$response['payment_process']=1;
 			$response['error']['global'][0]['message']=$message;
+			return($response);
+		}
+		
+		if($transactionResult!=='success')
+		{
+			$response['payment_process']=1;
+			$response['error']['global'][0]['message']=__('Tpay: nie udało się utworzyć transakcji. Spróbuj ponownie.','chauffeur-booking-system');
 			return($response);
 		}
 		
