@@ -705,7 +705,32 @@ class CHBSPaymentTpay
 		
 		$GeoLocation=new CHBSGeoLocation();
 		
-		$postalCode=isset($booking['meta']['client_billing_detail_postal_code']) ? $booking['meta']['client_billing_detail_postal_code'] : '';
+		$postalCode=isset($booking['meta']['client_billing_detail_postal_code']) ? trim((string)$booking['meta']['client_billing_detail_postal_code']) : '';
+		$billingCountry=isset($booking['meta']['client_billing_detail_country_code']) ? trim((string)$booking['meta']['client_billing_detail_country_code']) : '';
+		$payerIp=$GeoLocation->getIPAddress();
+		
+		$payer=array(
+			'email'=>$payerEmail,
+			'name'=>$payerName
+		);
+		
+		if($Validation->isNotEmpty($booking['meta']['client_contact_detail_phone_number']))
+			$payer['phone']=$booking['meta']['client_contact_detail_phone_number'];
+		
+		if($Validation->isNotEmpty($booking['meta']['client_billing_detail_street_name']))
+			$payer['address']=$booking['meta']['client_billing_detail_street_name'];
+		
+		if($Validation->isNotEmpty($booking['meta']['client_billing_detail_city']))
+			$payer['city']=$booking['meta']['client_billing_detail_city'];
+		
+		if($billingCountry!=='')
+			$payer['country']=$billingCountry;
+		
+		if(is_string($postalCode) && mb_strlen(trim($postalCode))>=3)
+			$payer['code']=trim($postalCode);
+		
+		if($payerIp!=='')
+			$payer['ip']=$payerIp;
 		
 		$fields=array
 		(
@@ -717,18 +742,7 @@ class CHBSPaymentTpay
 			(
 				'groupId'=>$groupId
 			),
-			'payer'=>array
-			(
-				'email'=>$payerEmail,
-				'name'=>$payerName,
-				'phone'=>$booking['meta']['client_contact_detail_phone_number'],
-				'address'=>$booking['meta']['client_billing_detail_street_name'],
-				'code'=>$postalCode,
-				'city'=>$booking['meta']['client_billing_detail_city'],
-				'country'=>$booking['meta']['client_billing_detail_country_code'],
-				'ip'=>$GeoLocation->getIPAddress(),
-				'userAgent'=>isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''
-			),
+			'payer'=>$payer,
 			'callbacks'=>array
 			(
 				'payerUrls'=>array
@@ -751,6 +765,18 @@ class CHBSPaymentTpay
 			$httpStatus=isset($errorData['status']) ? $errorData['status'] : 'unknown';
 			$requestId=isset($errorData['request_id']) ? $errorData['request_id'] : '';
 			$message=sprintf(__('Tpay: nie udało się utworzyć transakcji (HTTP %s, requestId=%s). Sprawdź dane płatnika.','chauffeur-booking-system'),$httpStatus,$requestId);
+			
+			if(isset($errorData['errors']) && is_array($errorData['errors']) && count($errorData['errors']))
+			{
+				$firstError=$errorData['errors'][0];
+				$errorMessage=isset($firstError['message']) ? $firstError['message'] : '';
+				$fieldName=isset($firstError['fieldName']) ? $firstError['fieldName'] : '';
+				
+				if($errorMessage!=='' || $fieldName!=='')
+				{
+					$message=sprintf(__('Tpay odrzucił dane płatnika: %s (fieldName=%s).','chauffeur-booking-system'),$errorMessage,$fieldName);
+				}
+			}
 			
 			if(current_user_can('manage_options') && isset($errorData['errors']) && is_array($errorData['errors']) && count($errorData['errors']))
 			{
