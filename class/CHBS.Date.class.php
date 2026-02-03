@@ -161,15 +161,36 @@ class CHBSDate
 	{
 		$Validation=new CHBSValidation();
 		if($Validation->isEmpty($time)) return('');
-		
-		if(($index=strpos($time,' - '))!==false)
-			$time=substr($time,0,$index);
-		
+
+		$time=trim($time);
+
+		if(preg_match('/^(.+?)\s*-\s*(.+)$/',$time,$match))
+		{
+			$start=$this->formatSingleTimeToStandard($match[1]);
+			$end=$this->formatSingleTimeToStandard($match[2]);
+
+			if(($Validation->isEmpty($start)) || ($Validation->isEmpty($end))) return('');
+
+			return($start.'-'.$end);
+		}
+
+		return($this->formatSingleTimeToStandard($time));
+	}
+
+	/**************************************************************************/
+
+	function formatSingleTimeToStandard($time)
+	{
+		$Validation=new CHBSValidation();
+		if($Validation->isEmpty($time)) return('');
+
+		$time=trim($time);
+
 		if($Validation->isTime($time)) return($time);
-        
-        $time=date_create_from_format(CHBSOption::getOption('time_format'),$time);
-        if($time===false) return('');
-        
+
+		$time=date_create_from_format(CHBSOption::getOption('time_format'),$time);
+		if($time===false) return('');
+
 		return(date_format($time,'H:i'));
 	}
 	
@@ -179,11 +200,45 @@ class CHBSDate
 	{
 		$Validation=new CHBSValidation();
 		if($Validation->isEmpty($time)) return('');
-		
+
+		$time=trim($time);
+
+		if(preg_match('/^(.+?)\s*-\s*(.+)$/',$time,$match))
+		{
+			$start=$this->formatSingleTimeToDisplay($match[1],$sourceFormat);
+			$end=$this->formatSingleTimeToDisplay($match[2],$sourceFormat);
+
+			if(($Validation->isEmpty($start)) || ($Validation->isEmpty($end))) return('');
+
+			return($start.'-'.$end);
+		}
+
+		return($this->formatSingleTimeToDisplay($time,$sourceFormat));
+	}
+
+	/**************************************************************************/
+
+	function formatSingleTimeToDisplay($time,$sourceFormat='H:i')
+	{
+		$Validation=new CHBSValidation();
+		if($Validation->isEmpty($time)) return('');
+
+		$time=trim($time);
+
 		$time=date_create_from_format($sourceFormat,$time);
 		if($time===false) return('');
-		
+
 		return(date_format($time,CHBSOption::getOption('time_format')));
+	}
+
+	/**************************************************************************/
+
+	function getTimeRangeStart($time)
+	{
+		if(preg_match('/^(.+?)\s*-\s*(.+)$/',trim($time),$match))
+			return(trim($match[1]));
+
+		return($time);
 	}
 	
 	/**************************************************************************/

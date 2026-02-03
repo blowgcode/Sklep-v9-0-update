@@ -3131,7 +3131,10 @@ class CHBSBookingForm
 			
 			$data['pickup_date_service_type_'.$data['service_type_id']]=$Date->formatDateToStandard($data['pickup_date_service_type_'.$data['service_type_id']]);
 			$data['pickup_time_service_type_'.$data['service_type_id']]=$Date->formatTimeToStandard($data['pickup_time_service_type_'.$data['service_type_id']]);		  
-			
+
+			$pickupTimeForValidation=$data['pickup_time_service_type_'.$data['service_type_id']];
+			$pickupTimeForComparison=$Date->getTimeRangeStart($pickupTimeForValidation);
+
 			$dateTimeError=false;
 			$validateReturnDateTime=false;
 					
@@ -3171,7 +3174,7 @@ class CHBSBookingForm
 				$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_date_service_type_'.$data['service_type_id'],false),__('Enter a valid date.','chauffeur-booking-system'));
 			}
 			// check if format of pickup time is valid
-			if(!$Validation->isTime($data['pickup_time_service_type_'.$data['service_type_id']]))
+			if((!$Validation->isTime($pickupTimeForValidation)) && (!$Validation->isTimeRange($pickupTimeForValidation)))
 			{   
 				$dateTimeError=true;
 				$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_time_service_type_'.$data['service_type_id'],false),__('Enter a valid time.','chauffeur-booking-system'));
@@ -3197,7 +3200,7 @@ class CHBSBookingForm
 			if(!$dateTimeError)
 			{
 				// check if pickup date/time is later than current date/time
-				if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$data['pickup_time_service_type_'.$data['service_type_id']],date_i18n('Y-m-d H:i')),array(2)))
+				if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$pickupTimeForComparison,date_i18n('Y-m-d H:i')),array(2)))
 				{
 					$dateTimeError=true;
 					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_date_service_type_'.$data['service_type_id'],false),__('Pickup date and time have to be later than the current time.','chauffeur-booking-system'));					
@@ -3211,7 +3214,7 @@ class CHBSBookingForm
 				if($validateReturnDateTime)
 				{
 					// check if return date/time is later than pickup date/time
-					if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$data['pickup_time_service_type_'.$data['service_type_id']],$data['return_date_service_type_'.$data['service_type_id']].' '.$data['return_time_service_type_'.$data['service_type_id']]),array(0,1)))
+					if(in_array($Date->compareDate($data['pickup_date_service_type_'.$data['service_type_id']].' '.$pickupTimeForComparison,$data['return_date_service_type_'.$data['service_type_id']].' '.$data['return_time_service_type_'.$data['service_type_id']]),array(0,1)))
 					{
 						$dateTimeError=true;
 						$this->setErrorLocal($response,CHBSHelper::getFormName('return_date_service_type_'.$data['service_type_id'],false),__('Return date and time have to be later than pickup date and time.','chauffeur-booking-system'));					
@@ -3348,7 +3351,7 @@ class CHBSBookingForm
 				{
 					if(($Validation->isNotEmpty($bookingForm['meta']['business_hour'][$number]['start'])) && ($Validation->isNotEmpty($bookingForm['meta']['business_hour'][$number]['stop'])))
 					{
-						if(!$Date->timeInRange($data['pickup_time_service_type_'.$data['service_type_id']],$bookingForm['meta']['business_hour'][$number]['start'],$bookingForm['meta']['business_hour'][$number]['stop']))
+						if(!$Date->timeInRange($pickupTimeForComparison,$bookingForm['meta']['business_hour'][$number]['start'],$bookingForm['meta']['business_hour'][$number]['stop']))
 						{
 							$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_time_service_type_'.$data['service_type_id'],false),__('Enter a valid time.','chauffeur-booking-system'));
 							$dateTimeError=true;

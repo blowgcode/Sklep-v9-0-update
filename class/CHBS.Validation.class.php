@@ -125,6 +125,17 @@ class CHBSValidation
         
 		return(false);
 	}
+
+	/**************************************************************************/
+
+	public function isTimeRange($value,$empty=false)
+	{
+		if(($empty) && ($this->isEmpty($value))) return(true);
+
+		if(!preg_match('/^\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\s*$/',(string)$value,$match)) return(false);
+
+		return($this->isTime($match[1]) && $this->isTime($match[2]));
+	}
 	
 	/**************************************************************************/
 	
