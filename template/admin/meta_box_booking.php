@@ -928,10 +928,13 @@
 								<?php esc_html_e('List of registered transactions for this payment.','chauffeur-booking-system'); ?><br/>
 							</span>
 <?php
+					$renderedTransactionDetails=false;
+
 					if(array_key_exists('payment_stripe_data',$this->data['meta']))
 					{
 						if((is_array($this->data['meta']['payment_stripe_data'])) && (count($this->data['meta']['payment_stripe_data'])))
 						{
+							$renderedTransactionDetails=true;
 ?>						
 							<div>	
 								<table class="to-table to-table-fixed-layout">
@@ -996,6 +999,7 @@
 					{
 						if((is_array($this->data['meta']['payment_paypal_data'])) && (count($this->data['meta']['payment_paypal_data'])))
 						{
+							$renderedTransactionDetails=true;
 ?>
 							<div>	
 								<table class="to-table">
@@ -1056,7 +1060,100 @@
 <?php				
 						}
 					}
-					else 
+					
+					if(!$renderedTransactionDetails && array_key_exists('payment_tpay_data',$this->data['meta']))
+					{
+						if((is_array($this->data['meta']['payment_tpay_data'])) && (count($this->data['meta']['payment_tpay_data'])))
+						{
+							$renderedTransactionDetails=true;
+?>
+							<div>	
+								<table class="to-table to-table-fixed-layout">
+									<thead>
+										<tr>
+											<th style="width:15%">
+												<div>
+													<?php esc_html_e('Transaction ID','chauffeur-booking-system'); ?>
+													<span class="to-legend"><?php esc_html_e('Transaction ID.','chauffeur-booking-system'); ?></span>
+												</div>
+											</th>
+											<th style="width:15%">
+												<div>
+													<?php esc_html_e('Type','chauffeur-booking-system'); ?>
+													<span class="to-legend"><?php esc_html_e('Type.','chauffeur-booking-system'); ?></span>
+												</div>
+											</th>
+											<th style="width:15%">
+												<div>
+													<?php esc_html_e('Date','chauffeur-booking-system'); ?>
+													<span class="to-legend"><?php esc_html_e('Date.','chauffeur-booking-system'); ?></span>
+												</div>
+											</th>	
+											<th style="width:55%">
+												<div>
+													<?php esc_html_e('Details','chauffeur-booking-system'); ?>
+													<span class="to-legend"><?php esc_html_e('Details.','chauffeur-booking-system'); ?></span>
+												</div>
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+<?php
+							foreach($this->data['meta']['payment_tpay_data'] as $index=>$value)
+							{
+								$payload=array();
+								if(isset($value['data']) && is_array($value['data']))
+									$payload=$value['data'];
+								elseif(isset($value['response']) && is_array($value['response']))
+									$payload=$value['response'];
+								
+								$transactionId='-';
+								$dateValue='-';
+								$transactionIdKeys=array('tr_id','transactionId','transaction_id','id');
+								foreach($transactionIdKeys as $key)
+								{
+									if(isset($payload[$key]) && $payload[$key]!=='')
+									{
+										$transactionId=$payload[$key];
+										break;
+									}
+								}
+								$dateKeys=array('tr_date','created','created_at','createdAt','date');
+								foreach($dateKeys as $key)
+								{
+									if(isset($payload[$key]) && $payload[$key]!=='')
+									{
+										$dateValue=$payload[$key];
+										break;
+									}
+								}
+?>
+										<tr>
+											<td><div><?php echo esc_html($transactionId); ?></div></td>
+											<td><div><?php echo esc_html(isset($value['type']) ? $value['type'] : '-'); ?></div></td>
+											<td><div><?php echo esc_html($dateValue); ?></div></td>
+											<td>
+												<div class="to-toggle-details">
+													<a href="#"><?php esc_html_e('Toggle details','chauffeur-booking-system'); ?></a>
+													<div class="to-hidden">
+														<pre>
+															<?php echo esc_html(var_export($value,true)); ?>
+														</pre>
+													</div>
+												</div>
+											</td>
+										</tr>
+<?php
+							}
+?>
+									</tbody>
+								</table>
+							</div>
+<?php
+						}
+					}
+					
+					if(!$renderedTransactionDetails)
 					{
 						echo apply_filters(PLUGIN_CHBS_CONTEXT.'_booking_payment_transaction',null,$this->data);
 					}

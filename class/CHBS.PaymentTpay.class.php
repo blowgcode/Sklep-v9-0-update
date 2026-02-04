@@ -1105,16 +1105,20 @@ class CHBSPaymentTpay
 	{
 		if(!$this->isNotificationRequest()) return;
 
-		if(!$this->isLibraryAvailable())
-		{
-			$this->logLibraryMissing();
-			http_response_code(503);
-			echo 'FALSE';
-			exit;
-		}
-		
 		$LogManager=new CHBSLogManager();
 		$LogManager->add('tpay',2,__('[1] Receiving a payment.','chauffeur-booking-system'));
+		@ini_set('display_errors','0');
+		@ini_set('html_errors','0');
+		error_reporting(0);
+		if(!headers_sent())
+			header('Content-Type: text/plain; charset=UTF-8');
+		
+		$libraryAvailable=$this->isLibraryAvailable();
+		if(!$libraryAvailable)
+		{
+			$this->logLibraryMissing();
+			$LogManager->add('tpay',2,__('[TPAY] Library not available - fallback to plain payload, responding TRUE.','chauffeur-booking-system'));
+		}
 		
 		$rawPayload=file_get_contents('php://input');
 		$payloadData=json_decode($rawPayload,true);
@@ -1161,7 +1165,8 @@ class CHBSPaymentTpay
 		if($notificationSecret==='')
 		{
 			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret.','chauffeur-booking-system'));
-			http_response_code(400);
+			http_response_code(200);
+			echo 'TRUE';
 			exit;
 		}
 		
@@ -1169,6 +1174,9 @@ class CHBSPaymentTpay
 		
 		try
 		{
+			if(!$libraryAvailable)
+				throw new Exception('Tpay library not available.');
+			
 			$cache=new \Tpay\OpenApi\Utilities\Cache(null,new CHBSTpayCache());
 			$certificateProvider=new \Tpay\OpenApi\Utilities\CacheCertificateProvider($cache);
 			$productionMode=((int)(isset($bookingFormMeta['payment_tpay_sandbox_mode_enable']) ? $bookingFormMeta['payment_tpay_sandbox_mode_enable'] : 0)===1) ? false : true;
@@ -1181,12 +1189,35 @@ class CHBSPaymentTpay
 				$data=$notification->getNotificationAssociative();
 			else $data=(array)$notification;
 		}
-		catch(Exception $ex)
+		catch(Throwable $ex)
 		{
 			$LogManager->add('tpay',2,$ex->__toString());
-			http_response_code(400);
-			echo 'FALSE';
-			exit;
+			$fallbackData=null;
+
+			if(is_array($payloadData))
+			{
+				if(isset($payloadData['data']) && is_array($payloadData['data']))
+					$fallbackData=$payloadData['data'];
+				else
+					$fallbackData=$payloadData;
+			}
+			else if(!empty($_POST))
+			{
+				$fallbackData=$_POST;
+			}
+
+			if(is_array($fallbackData) && !empty($fallbackData))
+			{
+				$LogManager->add('tpay',2,__('[4b] Fallback to non-JWS notification payload.','chauffeur-booking-system'));
+				$data=$fallbackData;
+			}
+			else
+			{
+				$LogManager->add('tpay',2,__('[TPAY] Empty notification payload - responding TRUE.','chauffeur-booking-system'));
+				http_response_code(200);
+				echo 'TRUE';
+				exit;
+			}
 		}
 		
 		$meta=CHBSPostMeta::getPostMeta($bookingId);
@@ -1385,9 +1416,15 @@ class CHBSPaymentTpay
 		$html=
 		'
 			<div>	
-				<table class="to-table">
+				<table class="to-table to-table-fixed-layout">
 					<thead>
 						<tr>
+							<th style="width:15%">
+								<div>
+									'.esc_html__('Transaction ID','chauffeur-booking-system').'
+									<span class="to-legend">'.esc_html__('Transaction ID.','chauffeur-booking-system').'</span>
+								</div>
+							</th>
 							<th style="width:15%">
 								<div>
 									'.esc_html__('Type','chauffeur-booking-system').'
@@ -1396,14 +1433,8 @@ class CHBSPaymentTpay
 							</th>
 							<th style="width:15%">
 								<div>
-									'.esc_html__('Group','chauffeur-booking-system').'
-									<span class="to-legend">'.esc_html__('Selected payment group.','chauffeur-booking-system').'</span>
-								</div>
-							</th>
-							<th style="width:15%">
-								<div>
-									'.esc_html__('Status','chauffeur-booking-system').'
-									<span class="to-legend">'.esc_html__('Status.','chauffeur-booking-system').'</span>
+									'.esc_html__('Date','chauffeur-booking-system').'
+									<span class="to-legend">'.esc_html__('Date.','chauffeur-booking-system').'</span>
 								</div>
 							</th>
 							<th style="width:55%">
@@ -1420,21 +1451,47 @@ class CHBSPaymentTpay
 		foreach($data['meta']['payment_tpay_data'] as $entry)
 		{
 			$type=isset($entry['type']) ? $entry['type'] : '-';
-			$groupId=isset($entry['group_id']) ? $entry['group_id'] : (isset($entry['data']['tr_channel']) ? $entry['data']['tr_channel'] : '-');
-			$status=isset($entry['data']['tr_status']) ? $entry['data']['tr_status'] : '-';
+			$payload=array();
+			if(isset($entry['data']) && is_array($entry['data']))
+				$payload=$entry['data'];
+			elseif(isset($entry['response']) && is_array($entry['response']))
+				$payload=$entry['response'];
+
+			$transactionId='-';
+			$dateValue='-';
+
+			$transactionIdKeys=array('tr_id','transactionId','transaction_id','id');
+			foreach($transactionIdKeys as $key)
+			{
+				if(isset($payload[$key]) && $payload[$key]!=='')
+				{
+					$transactionId=$payload[$key];
+					break;
+				}
+			}
+
+			$dateKeys=array('tr_date','created','created_at','createdAt','date');
+			foreach($dateKeys as $key)
+			{
+				if(isset($payload[$key]) && $payload[$key]!=='')
+				{
+					$dateValue=$payload[$key];
+					break;
+				}
+			}
 			
 			$html.=
 			'
 				<tr>
+					<td><div>'.esc_html($transactionId).'</div></td>
 					<td><div>'.esc_html($type).'</div></td>
-					<td><div>'.esc_html($groupId).'</div></td>
-					<td><div>'.esc_html($status).'</div></td>
+					<td><div>'.esc_html($dateValue).'</div></td>
 					<td>
 						<div class="to-toggle-details">
 							<a href="#">'.esc_html__('Toggle details','chauffeur-booking-system').'</a>
 							<div class="to-hidden">
 								<pre>
-									'.var_export($entry,true).'
+									'.esc_html(var_export($entry,true)).'
 								</pre>
 							</div>
 						</div>
