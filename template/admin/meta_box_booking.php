@@ -1109,6 +1109,20 @@
 								
 								$transactionId='-';
 								$dateValue='-';
+								$statusLabel=isset($value['type']) ? $value['type'] : '-';
+								$statusValue=isset($payload['tr_status']) ? strtoupper(trim((string)$payload['tr_status'])) : '';
+								if($statusValue!=='')
+									$statusLabel=$statusValue;
+
+								if(in_array($statusLabel,array('TRUE','SUCCESS','CORRECT'),true))
+									$statusLabel=__('Paid','chauffeur-booking-system');
+								else if($statusLabel==='PAID')
+									$statusLabel=__('Paid (stage 1)','chauffeur-booking-system');
+								else if($statusLabel==='PENDING')
+									$statusLabel=__('Unpaid','chauffeur-booking-system');
+								else if($statusLabel==='CHARGEBACK')
+									$statusLabel=__('Chargeback','chauffeur-booking-system');
+
 								$transactionIdKeys=array('tr_id','transactionId','transaction_id','id');
 								foreach($transactionIdKeys as $key)
 								{
@@ -1130,7 +1144,7 @@
 ?>
 										<tr>
 											<td><div><?php echo esc_html($transactionId); ?></div></td>
-											<td><div><?php echo esc_html(isset($value['type']) ? $value['type'] : '-'); ?></div></td>
+											<td><div><?php echo esc_html($statusLabel); ?></div></td>
 											<td><div><?php echo esc_html($dateValue); ?></div></td>
 											<td>
 												<div class="to-toggle-details">

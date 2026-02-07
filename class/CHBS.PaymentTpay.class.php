@@ -637,21 +637,16 @@ class CHBSPaymentTpay
 		$headerData=json_decode($headerJson,true);
 		$x5u=(is_array($headerData) && isset($headerData['x5u'])) ? (string)$headerData['x5u'] : '';
 		
-		if($x5u==='')
-		{
-			$errorMessage='Missing x5u header.';
-			return(false);
-		}
-		
 		$prefix=$productionMode ? 'https://secure.tpay.com' : 'https://secure.sandbox.tpay.com';
-		if(strpos($x5u,$prefix)!==0)
+		if($x5u!=='' && strpos($x5u,$prefix)!==0)
 		{
 			$errorMessage='Wrong x5u url.';
 			return(false);
 		}
 		
+		$certUrl=$x5u!=='' ? $x5u : $prefix.'/x509/notifications-jws.pem';
 		$rootCaUrl=$prefix.'/x509/tpay-jws-root.pem';
-		$certResponse=wp_remote_get($x5u);
+		$certResponse=wp_remote_get($certUrl);
 		if(is_wp_error($certResponse))
 		{
 			$errorMessage='Unable to download signing certificate.';
@@ -684,20 +679,26 @@ class CHBSPaymentTpay
 			return(false);
 		}
 		
-		$rootTemp=wp_tempnam('tpay-root-ca');
-		if($rootTemp)
-			file_put_contents($rootTemp,$rootPem);
-		
-		$certValid=true;
-		if($rootTemp)
+		$certValid=false;
+		if(function_exists('openssl_x509_verify'))
 		{
-			$certValid=openssl_x509_checkpurpose($cert,-1,array($rootTemp));
-			if($certValid!==true && $certValid!==1)
-				$certValid=false;
+			$certValid=openssl_x509_verify($certPem,$rootPem)===1;
 		}
-		
-		if($rootTemp && file_exists($rootTemp))
-			unlink($rootTemp);
+		else
+		{
+			$rootTemp=wp_tempnam('tpay-root-ca');
+			if($rootTemp)
+				file_put_contents($rootTemp,$rootPem);
+			
+			if($rootTemp)
+			{
+				$certValid=openssl_x509_checkpurpose($cert,-1,array($rootTemp));
+				$certValid=($certValid===true || $certValid===1);
+			}
+			
+			if($rootTemp && file_exists($rootTemp))
+				unlink($rootTemp);
+		}
 		
 		if(!$certValid)
 		{
@@ -1294,7 +1295,12 @@ class CHBSPaymentTpay
 		(
 			'type'=>'transaction_create',
 			'group_id'=>$groupId,
-			'response'=>$responseData
+			'response'=>$responseData,
+			'data'=>array(
+				'tr_id'=>$this->getPaymentTransactionId($responseData),
+				'tr_status'=>'PENDING',
+				'tr_date'=>current_time('mysql')
+			)
 		);
 		
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_data',$meta['payment_tpay_data']);
@@ -1710,6 +1716,19 @@ class CHBSPaymentTpay
 
 			$transactionId='-';
 			$dateValue='-';
+			$statusLabel=$type;
+			$statusValue=isset($payload['tr_status']) ? strtoupper(trim((string)$payload['tr_status'])) : '';
+			if($statusValue!=='')
+				$statusLabel=$statusValue;
+
+			if(in_array($statusLabel,array('TRUE','SUCCESS','CORRECT'),true))
+				$statusLabel=__('Paid','chauffeur-booking-system');
+			else if($statusLabel==='PAID')
+				$statusLabel=__('Paid (stage 1)','chauffeur-booking-system');
+			else if($statusLabel==='PENDING')
+				$statusLabel=__('Unpaid','chauffeur-booking-system');
+			else if($statusLabel==='CHARGEBACK')
+				$statusLabel=__('Chargeback','chauffeur-booking-system');
 
 			$transactionIdKeys=array('tr_id','transactionId','transaction_id','id');
 			foreach($transactionIdKeys as $key)
@@ -1735,7 +1754,7 @@ class CHBSPaymentTpay
 			'
 				<tr>
 					<td><div>'.esc_html($transactionId).'</div></td>
-					<td><div>'.esc_html($type).'</div></td>
+					<td><div>'.esc_html($statusLabel).'</div></td>
 					<td><div>'.esc_html($dateValue).'</div></td>
 					<td>
 						<div class="to-toggle-details">
