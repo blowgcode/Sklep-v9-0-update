@@ -533,7 +533,8 @@ class CHBSPaymentTpay
 	
 	private function isNotificationRequest()
 	{
-		if(isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
+		$requestMethod=isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string)$_SERVER['REQUEST_METHOD']) : '';
+		if($requestMethod!=='POST')
 			return(false);
 		
 		$hasAction=(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay');
@@ -1375,8 +1376,7 @@ class CHBSPaymentTpay
 		
 		if($notificationSecret==='')
 		{
-			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret.','chauffeur-booking-system'));
-			$this->respondAndExit(false);
+			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret - using empty secret.','chauffeur-booking-system'));
 		}
 		
 		$jwsVerified=false;
