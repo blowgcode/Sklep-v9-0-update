@@ -651,8 +651,8 @@ class CHBSBookingHelper
         
         $Validation=new CHBSValidation();
         
-        if((int)$serviceTypeId!==1) return($count);
-        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($count);
+        if((int)$serviceTypeId!==1) return($duration);
+        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($duration);
         
         if(is_array($data['waypoint_location_coordinate_service_type_1']))
         {
@@ -675,8 +675,8 @@ class CHBSBookingHelper
         
         $Validation=new CHBSValidation();
         
-        if((int)$serviceTypeId!==1) return($count);
-        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($count);
+        if((int)$serviceTypeId!==1) return($duration);
+        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($duration);
         
         if(is_array($data['waypoint_location_coordinate_service_type_1']))
         {

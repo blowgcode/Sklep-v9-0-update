@@ -297,7 +297,7 @@ class CHBSBookingFormElement
 	
 	function createField($panelId,$serviceTypeId,$transferTypeId,$bookingForm)
 	{
-		$html=array(null,null);
+		$html=array('','');
 		
 		$Validation=new CHBSValidation();
 		$GeofenceChecker=new CHBSGeofenceChecker();
@@ -473,12 +473,14 @@ class CHBSBookingFormElement
 					if($value['id']==$panelId)
 					{
 						$checkboxHtml=null;
+						$toggleVisibilityEnable=array_key_exists('toggle_visibility_enable',$value) ? (int)$value['toggle_visibility_enable'] : 0;
+						$panelVisibility=array_key_exists('panel_visibility_'.$panelId,$data) ? (int)$data['panel_visibility_'.$panelId] : 0;
 						
-						if((int)$value['toggle_visibility_enable']===1)
+						if($toggleVisibilityEnable===1)
 						{
 							$class=array('chbs-form-checkbox');
 
-							if((int)$data['panel_visibility_'.$panelId]===1)
+							if($panelVisibility===1)
 							{
 								array_push($class,'chbs-state-selected');
 							}
@@ -488,7 +490,7 @@ class CHBSBookingFormElement
 								<span'.CHBSHelper::createCSSClassAttribute($class).'>
 									<span class="chbs-meta-icon-tick"></span>
 								</span>
-								<input type="hidden" name="'.CHBSHelper::getFormName('panel_visibility_'.$panelId,false).'" value="'.esc_attr($data['panel_visibility_'.$panelId]).'"/> 	
+								<input type="hidden" name="'.CHBSHelper::getFormName('panel_visibility_'.$panelId,false).'" value="'.esc_attr($panelVisibility).'"/> 	
 							';
 						}
 						
@@ -504,9 +506,11 @@ class CHBSBookingFormElement
 		}
 		
 		$class=array('chbs-panel');
-		if((int)$panelData['toggle_visibility_enable']===1)
+		$panelToggleVisibilityEnable=array_key_exists('toggle_visibility_enable',$panelData) ? (int)$panelData['toggle_visibility_enable'] : 0;
+		$panelVisibility=array_key_exists('panel_visibility_'.$panelId,$data) ? (int)$data['panel_visibility_'.$panelId] : 0;
+		if($panelToggleVisibilityEnable===1)
 		{
-			if((int)$data['panel_visibility_'.$panelId]!==1)
+			if($panelVisibility!==1)
 				$class[]='chbs-hidden';
 		}
 		

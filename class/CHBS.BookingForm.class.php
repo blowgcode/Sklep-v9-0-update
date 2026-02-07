@@ -3749,37 +3749,54 @@ class CHBSBookingForm
 			if(!$error)
 			{
 				// *rule
+				$serviceTypeId=(int)$data['service_type_id'];
+				$transferTypeKey='transfer_type_service_type_'.$serviceTypeId;
+				$pickupCoordinateKey='pickup_location_coordinate_service_type_'.$serviceTypeId;
+				$dropoffCoordinateKey='dropoff_location_coordinate_service_type_'.$serviceTypeId;
+				$fixedPickupKey='fixed_location_pickup_service_type_'.$serviceTypeId;
+				$fixedDropoffKey='fixed_location_dropoff_service_type_'.$serviceTypeId;
+				$routeKey='route_service_type_'.$serviceTypeId;
+
+				$transferTypeId=array_key_exists($transferTypeKey,$data) ? $data[$transferTypeKey] : 0;
+				$pickupCoordinate=array_key_exists($pickupCoordinateKey,$data) ? $data[$pickupCoordinateKey] : null;
+				$dropoffCoordinate=array_key_exists($dropoffCoordinateKey,$data) ? $data[$dropoffCoordinateKey] : null;
+				$fixedLocationPickup=array_key_exists($fixedPickupKey,$data) ? (int)$data[$fixedPickupKey] : 0;
+				$fixedLocationDropoff=array_key_exists($fixedDropoffKey,$data) ? (int)$data[$fixedDropoffKey] : 0;
+				$routeId=array_key_exists($routeKey,$data) ? (int)$data[$routeKey] : 0;
+
 				$argument=array
 				(
 					'booking_form_id'=>(int)$data['booking_form_id'],
-					'service_type_id'=>(int)$data['service_type_id'],
-					'transfer_type_id'=>$data['transfer_type_service_type_'.$data['service_type_id']],
-					'pickup_location_coordinate'=>$data['pickup_location_coordinate_service_type_'.$data['service_type_id']],
-					'dropoff_location_coordinate'=>$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']],
-					'fixed_location_pickup'=>(int)$data['fixed_location_pickup_service_type_'.$data['service_type_id']],
-					'fixed_location_dropoff'=>(int)$data['fixed_location_dropoff_service_type_'.$data['service_type_id']],
-					'route_id'=>(int)$data['route_service_type_3'],
+					'service_type_id'=>$serviceTypeId,
+					'transfer_type_id'=>$transferTypeId,
+					'pickup_location_coordinate'=>$pickupCoordinate,
+					'dropoff_location_coordinate'=>$dropoffCoordinate,
+					'fixed_location_pickup'=>$fixedLocationPickup,
+					'fixed_location_dropoff'=>$fixedLocationDropoff,
+					'route_id'=>$routeId,
 					'vehicle_id'=>(int)$data['vehicle_id'],
-					'pickup_date'=>$data['pickup_date_service_type_'.$data['service_type_id']],
-					'pickup_time'=>$data['pickup_time_service_type_'.$data['service_type_id']],
-					'return_date'=>$data['return_date_service_type_'.$data['service_type_id']],
-					'return_time'=>$data['return_time_service_type_'.$data['service_type_id']],					
+					'pickup_date'=>$data['pickup_date_service_type_'.$serviceTypeId],
+					'pickup_time'=>$data['pickup_time_service_type_'.$serviceTypeId],
+					'return_date'=>$data['return_date_service_type_'.$serviceTypeId],
+					'return_time'=>$data['return_time_service_type_'.$serviceTypeId],
 					'base_location_distance'=>CHBSBookingHelper::getBaseLocationDistance($data['vehicle_id']),
 					'base_location_return_distance'=>CHBSBookingHelper::getBaseLocationDistance($data['vehicle_id'],true),					
 					'distance'=>$data['distance_map'],
 					'distance_sum'=>$data['distance_sum'],
-					'duration'=>in_array($data['service_type_id'],array(1,3)) ? 0 : $data['duration_service_type_2']*60,
+					'duration'=>in_array($serviceTypeId,array(1,3)) ? 0 : $data['duration_service_type_2']*60,
 					'duration_map'=>$data['duration_map'],
-					'duration_sum'=>in_array($data['service_type_id'],array(1,3)) ? $data['duration_sum'] : $data['duration_service_type_2']*60,
+					'duration_sum'=>in_array($serviceTypeId,array(1,3)) ? $data['duration_sum'] : $data['duration_service_type_2']*60,
 					'passenger_sum'=>$passengerSum,
-                    'waypoint_count'=>CHBSBookingHelper::getWaypointCount($data,$bookingForm,$data['service_type_id'],$data['transfer_type_service_type_'.$data['service_type_id']])
+					'waypoint_count'=>CHBSBookingHelper::getWaypointCount($data,$bookingForm,$serviceTypeId,$transferTypeId)
 				);
 
 				$PriceRule=new CHBSPriceRule();
 				
 				$priceRule=$PriceRule->getPriceFromRule($argument,$bookingForm);
-   
-				if((int)$priceRule['calculation_on_request_enable']===1)
+
+				$calculationOnRequestEnable=array_key_exists('calculation_on_request_enable',$priceRule) ? (int)$priceRule['calculation_on_request_enable'] : 0;
+
+				if($calculationOnRequestEnable===1)
 				{
 					$error=true;
 					$this->setErrorGlobal($response,__('Select a vehicle.','chauffeur-booking-system'));						
@@ -4292,6 +4309,8 @@ class CHBSBookingForm
 		{
 			return(null);
 		}
+
+		$html='';
 		
 		$Coupon=new CHBSCoupon();
 		$Booking=new CHBSBooking();
@@ -4512,7 +4531,7 @@ class CHBSBookingForm
 	
 	function createSummary($data,$bookingForm)
 	{
-		$response=array();
+		$response=array(0=>'');
 		
 		$User=new CHBSUser();
 		$Date=new CHBSDate();

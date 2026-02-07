@@ -1350,7 +1350,20 @@ class CHBSBooking
 		if(array_key_exists($data['vehicle_id'],$data['booking_form']['dictionary']['vehicle']))
 		{
 			$serviceTypeId=(int)$data['service_type_id'];
-			$transferTypeId=(int)$data['transfer_type_service_type_'.$data['service_type_id']];
+			$transferTypeKey='transfer_type_service_type_'.$serviceTypeId;
+			$transferTypeId=array_key_exists($transferTypeKey,$data) ? (int)$data[$transferTypeKey] : 0;
+
+			$pickupCoordinateKey='pickup_location_coordinate_service_type_'.$serviceTypeId;
+			$dropoffCoordinateKey='dropoff_location_coordinate_service_type_'.$serviceTypeId;
+			$fixedPickupKey='fixed_location_pickup_service_type_'.$serviceTypeId;
+			$fixedDropoffKey='fixed_location_dropoff_service_type_'.$serviceTypeId;
+			$routeKey='route_service_type_'.$serviceTypeId;
+
+			$pickupCoordinate=array_key_exists($pickupCoordinateKey,$data) ? $data[$pickupCoordinateKey] : null;
+			$dropoffCoordinate=array_key_exists($dropoffCoordinateKey,$data) ? $data[$dropoffCoordinateKey] : null;
+			$fixedLocationPickup=array_key_exists($fixedPickupKey,$data) ? (int)$data[$fixedPickupKey] : 0;
+			$fixedLocationDropoff=array_key_exists($fixedDropoffKey,$data) ? (int)$data[$fixedDropoffKey] : 0;
+			$routeId=array_key_exists($routeKey,$data) ? (int)$data[$routeKey] : 0;
 			
             $waypointCount=CHBSBookingHelper::getWaypointCount($data,$data['booking_form'],$serviceTypeId,$transferTypeId);
 			$waypointDuration=CHBSBookingHelper::getWaypointDuration($data,$data['booking_form'],$serviceTypeId,$transferTypeId);
@@ -1361,12 +1374,12 @@ class CHBSBooking
 				'booking_form_id'=>$data['booking_form_id'],
 				'service_type_id'=>$serviceTypeId,
 				'transfer_type_id'=>$transferTypeId,
-				'pickup_location_coordinate'=>$data['pickup_location_coordinate_service_type_'.$data['service_type_id']],
-				'dropoff_location_coordinate'=>$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']],
-				'fixed_location_pickup'=>$data['fixed_location_pickup_service_type_'.$serviceTypeId],
-				'fixed_location_dropoff'=>$data['fixed_location_dropoff_service_type_'.$serviceTypeId],
-				'route_id'=>$data['route_service_type_'.$serviceTypeId],
-				'transfer_type_id'=>$data['transfer_type_service_type_'.$serviceTypeId],
+				'pickup_location_coordinate'=>$pickupCoordinate,
+				'dropoff_location_coordinate'=>$dropoffCoordinate,
+				'fixed_location_pickup'=>$fixedLocationPickup,
+				'fixed_location_dropoff'=>$fixedLocationDropoff,
+				'route_id'=>$routeId,
+				'transfer_type_id'=>$transferTypeId,
 				'vehicle_id'=>$data['vehicle_id'],
 				'pickup_date'=>$data['pickup_date_service_type_'.$serviceTypeId],
 				'pickup_time'=>$data['pickup_time_service_type_'.$serviceTypeId],
@@ -1441,7 +1454,8 @@ class CHBSBooking
 			{
 				$priceExtraTime=$vehiclePrice['price']['base']['price_extra_time_value'];
 
-				$time=$data['extra_time_service_type_'.$data['service_type_id']];
+				$extraTimeKey='extra_time_service_type_'.$serviceTypeId;
+				$time=array_key_exists($extraTimeKey,$data) ? $data[$extraTimeKey] : 0;
 
 				if((int)$data['booking_form']['meta']['extra_time_unit']===1)
 					$time/=60;
