@@ -758,14 +758,15 @@ class CHBSPlugin
 		
 		register_nav_menus(array('chbs-demo'=>'CHBS Demo menu'));
 		
+		add_action('wp_loaded',array($PaymentTpay,'receivePayment'));
+
 		if(!is_admin())
 		{
 			$PaymentStripe=new CHBSPaymentStripe();
-			
+
 			add_action('wp_enqueue_scripts',array($this,'publicInit'));
-			
+
 			add_action('wp_loaded',array($PaymentStripe,'receivePayment'));
-			add_action('wp_loaded',array($PaymentTpay,'receivePayment'));
 		}
 			   
 		if(function_exists('register_block_type'))

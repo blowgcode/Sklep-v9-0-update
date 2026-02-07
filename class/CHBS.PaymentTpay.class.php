@@ -552,7 +552,10 @@ class CHBSPaymentTpay
 		}
 		
 		if(!headers_sent())
+		{
+			http_response_code(200);
 			header('Content-Type: text/plain; charset=UTF-8');
+		}
 		
 		echo ($success ? 'TRUE' : 'FALSE');
 		exit;
@@ -750,7 +753,15 @@ class CHBSPaymentTpay
 		$expected=md5((string)$data['id'].(string)$data['tr_id'].(string)$data['tr_amount'].(string)$data['tr_crc'].(string)$secret);
 		if(!hash_equals($expected,(string)$data['md5sum']))
 		{
-			$errorMessage='MD5 checksum mismatch.';
+			$errorMessage=sprintf(
+				'MD5 checksum mismatch. Expected prefix: %s, received prefix: %s, id=%s, tr_id=%s, tr_amount=%s, tr_crc=%s',
+				substr($expected,0,8),
+				substr((string)$data['md5sum'],0,8),
+				(string)$data['id'],
+				(string)$data['tr_id'],
+				(string)$data['tr_amount'],
+				(string)$data['tr_crc']
+			);
 			return(false);
 		}
 		
@@ -1474,7 +1485,10 @@ class CHBSPaymentTpay
 			'type'=>'notification',
 			'data'=>$data
 		);
-		
+
+		if(count($meta['payment_tpay_data'])>200)
+			$meta['payment_tpay_data']=array_slice($meta['payment_tpay_data'],-200);
+
 		CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_data',$meta['payment_tpay_data']);
 		
 		$trId=isset($data['tr_id']) ? (string)$data['tr_id'] : '';
@@ -1512,6 +1526,18 @@ class CHBSPaymentTpay
 		if($statusValue==='CHARGEBACK')
 		{
 			$LogManager->add('tpay',2,__('[6] Received CHARGEBACK status.','chauffeur-booking-system'));
+
+			$chargebackStatus=(int)apply_filters('chbs_tpay_chargeback_booking_status',0,$bookingId);
+			if($chargebackStatus>0 && $BookingStatus->isBookingStatus($chargebackStatus))
+			{
+				$currentStatus=isset($booking['meta']['booking_status_id']) ? (int)$booking['meta']['booking_status_id'] : 0;
+				if($currentStatus!==$chargebackStatus)
+				{
+					CHBSPostMeta::updatePostMeta($bookingId,'booking_status_id',$chargebackStatus);
+					$LogManager->add('tpay',2,sprintf(__('[6] Booking status changed to %d due to CHARGEBACK.','chauffeur-booking-system'),$chargebackStatus));
+				}
+			}
+
 			$this->respondAndExit(true);
 		}
 		
