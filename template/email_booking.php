@@ -308,8 +308,9 @@
 				$address=CHBSHelper::getAddress($value);
 				if($Validation->isNotEmpty($address))
 				{
-					if($value['duration']>0)
-						$address.=sprintf(esc_html__(' (%s minutes)','chauffeur-booking-system'),$value['duration']);
+					$duration=isset($value['duration']) ? (int)$value['duration'] : 0;
+					if($duration>0)
+						$address.=sprintf(esc_html__(' (%s minutes)','chauffeur-booking-system'),$duration);
 ?>
 														<li <?php echo $this->data['style']['list'][2]; ?>><a href="https://www.google.com/maps/?q=<?php echo esc_attr($value['lat']).','.esc_attr($value['lng']); ?>" target="_blank" <?php echo $this->data['style']['link'][1]; ?>><?php echo esc_html($address); ?></a></li>
 <?php

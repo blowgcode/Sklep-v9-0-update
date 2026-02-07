@@ -1334,7 +1334,7 @@ class CHBSBookingHelper
 				$Booking->sendEmail($bookingId,$bookingForm['meta']['booking_new_sender_email_account_id'],'booking_new_client',array($bookingNew['meta']['client_contact_detail_email_address']),$subject);
 			}
 
-			if(((int)$bookingForm['meta']['email_notification_booking_new_admin_enable']===1) && ((int)$bookingForm['meta']['email_notification_booking_new_admin_payment_success_enable']===1))
+			if((int)$bookingForm['meta']['email_notification_booking_new_admin_enable']===1)
 			{
 				$chbs_logEvent=2;
 				$emailAdminSend=true;

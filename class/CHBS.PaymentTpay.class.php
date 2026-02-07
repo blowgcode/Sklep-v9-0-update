@@ -533,14 +533,227 @@ class CHBSPaymentTpay
 	
 	private function isNotificationRequest()
 	{
-		if(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay')
+		$requestMethod=isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string)$_SERVER['REQUEST_METHOD']) : '';
+		if($requestMethod!=='POST')
+			return(false);
+		
+		$hasAction=(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay');
+		$hasSignature=isset($_SERVER['HTTP_X_JWS_SIGNATURE']) && $_SERVER['HTTP_X_JWS_SIGNATURE']!=='';
+		
+		return($hasAction || $hasSignature);
+	}
+
+	/**************************************************************************/
+
+	private function respondAndExit($success)
+	{
+		while(ob_get_level())
+		{
+			ob_end_clean();
+		}
+		
+		if(!headers_sent())
+			header('Content-Type: text/plain; charset=UTF-8');
+		
+		echo ($success ? 'TRUE' : 'FALSE');
+		exit;
+	}
+
+	/**************************************************************************/
+
+	private function getRequestContentType()
+	{
+		$contentType=isset($_SERVER['CONTENT_TYPE']) ? strtolower((string)$_SERVER['CONTENT_TYPE']) : '';
+		if($contentType!=='' && strpos($contentType,';')!==false)
+			$contentType=trim(strstr($contentType,';',true));
+		
+		return($contentType);
+	}
+
+	/**************************************************************************/
+
+	private function parseNotificationPayload($rawBody,$contentType)
+	{
+		if($contentType==='application/json')
+		{
+			$decoded=json_decode($rawBody,true);
+			return(is_array($decoded) ? $decoded : null);
+		}
+		
+		$parsed=array();
+		parse_str($rawBody,$parsed);
+		return($parsed);
+	}
+
+	/**************************************************************************/
+
+	private function getNotificationDataSource($payloadData)
+	{
+		if(is_array($payloadData) && isset($payloadData['data']) && is_array($payloadData['data']))
+			return($payloadData['data']);
+		
+		return(is_array($payloadData) ? $payloadData : array());
+	}
+
+	/**************************************************************************/
+
+	private function base64UrlDecode($data)
+	{
+		$remainder=strlen($data) % 4;
+		if($remainder)
+		{
+			$data.=str_repeat('=',4 - $remainder);
+		}
+		
+		return(base64_decode(strtr($data,'-_','+/')));
+	}
+
+	/**************************************************************************/
+
+	private function base64UrlEncode($data)
+	{
+		return(rtrim(strtr(base64_encode($data),'+/','-_'),'='));
+	}
+
+	/**************************************************************************/
+
+	private function verifyJwsSignatureManually($rawBody,$productionMode,&$errorMessage)
+	{
+		$jws=isset($_SERVER['HTTP_X_JWS_SIGNATURE']) ? (string)$_SERVER['HTTP_X_JWS_SIGNATURE'] : '';
+		if($jws==='')
+		{
+			$errorMessage='Missing X-JWS-Signature header.';
+			return(false);
+		}
+		
+		$jwsParts=explode('.',$jws);
+		if(count($jwsParts)!==3)
+		{
+			$errorMessage='Invalid JWS format.';
+			return(false);
+		}
+		
+		list($encodedHeader,$encodedPayload,$encodedSignature)=$jwsParts;
+		$headerJson=$this->base64UrlDecode($encodedHeader);
+		$headerData=json_decode($headerJson,true);
+		$x5u=(is_array($headerData) && isset($headerData['x5u'])) ? (string)$headerData['x5u'] : '';
+		
+		$prefix=$productionMode ? 'https://secure.tpay.com' : 'https://secure.sandbox.tpay.com';
+		if($x5u!=='' && strpos($x5u,$prefix)!==0)
+		{
+			$errorMessage='Wrong x5u url.';
+			return(false);
+		}
+		
+		$certUrl=$x5u!=='' ? $x5u : $prefix.'/x509/notifications-jws.pem';
+		$rootCaUrl=$prefix.'/x509/tpay-jws-root.pem';
+		$certResponse=wp_remote_get($certUrl);
+		if(is_wp_error($certResponse))
+		{
+			$errorMessage='Unable to download signing certificate.';
+			return(false);
+		}
+		$certPem=wp_remote_retrieve_body($certResponse);
+		if($certPem==='')
+		{
+			$errorMessage='Empty signing certificate.';
+			return(false);
+		}
+		
+		$rootResponse=wp_remote_get($rootCaUrl);
+		if(is_wp_error($rootResponse))
+		{
+			$errorMessage='Unable to download root certificate.';
+			return(false);
+		}
+		$rootPem=wp_remote_retrieve_body($rootResponse);
+		if($rootPem==='')
+		{
+			$errorMessage='Empty root certificate.';
+			return(false);
+		}
+		
+		$cert=openssl_x509_read($certPem);
+		if($cert===false)
+		{
+			$errorMessage='Invalid signing certificate.';
+			return(false);
+		}
+		
+		$certValid=false;
+		if(function_exists('openssl_x509_verify'))
+		{
+			$certValid=openssl_x509_verify($certPem,$rootPem)===1;
+		}
+		else
+		{
+			$rootTemp=wp_tempnam('tpay-root-ca');
+			if($rootTemp)
+				file_put_contents($rootTemp,$rootPem);
+			
+			if($rootTemp)
+			{
+				$certValid=openssl_x509_checkpurpose($cert,-1,array($rootTemp));
+				$certValid=($certValid===true || $certValid===1);
+			}
+			
+			if($rootTemp && file_exists($rootTemp))
+				unlink($rootTemp);
+		}
+		
+		if(!$certValid)
+		{
+			$errorMessage='Signing certificate is not trusted.';
+			return(false);
+		}
+		
+		$publicKey=openssl_pkey_get_public($cert);
+		if($publicKey===false)
+		{
+			$errorMessage='Unable to read public key.';
+			return(false);
+		}
+		
+		$payloadEncoded=$this->base64UrlEncode($rawBody);
+		$signingInput=$encodedHeader.'.'.$payloadEncoded;
+		$signature=$this->base64UrlDecode($encodedSignature);
+		$verified=openssl_verify($signingInput,$signature,$publicKey,OPENSSL_ALGO_SHA256);
+		
+		if(is_resource($publicKey))
+			openssl_free_key($publicKey);
+		
+		if($verified!==1)
+		{
+			$errorMessage='Invalid JWS signature.';
+			return(false);
+		}
+		
+		return(true);
+	}
+
+	/**************************************************************************/
+
+	private function verifyMd5sum($data,$secret,&$errorMessage)
+	{
+		if(!is_array($data) || !isset($data['md5sum']) || $data['md5sum']==='')
 			return(true);
 		
-		if(isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
-			return(false);
+		$requiredKeys=array('id','tr_id','tr_amount','tr_crc');
+		foreach($requiredKeys as $key)
+		{
+			if(!isset($data[$key]))
+			{
+				$errorMessage='Missing md5sum input field: '.$key;
+				return(false);
+			}
+		}
 		
-		if(!isset($_SERVER['HTTP_X_JWS_SIGNATURE']))
+		$expected=md5((string)$data['id'].(string)$data['tr_id'].(string)$data['tr_amount'].(string)$data['tr_crc'].(string)$secret);
+		if(!hash_equals($expected,(string)$data['md5sum']))
+		{
+			$errorMessage='MD5 checksum mismatch.';
 			return(false);
+		}
 		
 		return(true);
 	}
@@ -1083,7 +1296,12 @@ class CHBSPaymentTpay
 		(
 			'type'=>'transaction_create',
 			'group_id'=>$groupId,
-			'response'=>$responseData
+			'response'=>$responseData,
+			'data'=>array(
+				'tr_id'=>$this->getPaymentTransactionId($responseData),
+				'tr_status'=>'PENDING',
+				'tr_date'=>current_time('mysql')
+			)
 		);
 		
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_data',$meta['payment_tpay_data']);
@@ -1105,33 +1323,33 @@ class CHBSPaymentTpay
 	{
 		if(!$this->isNotificationRequest()) return;
 
-		if(!$this->isLibraryAvailable())
-		{
-			$this->logLibraryMissing();
-			http_response_code(503);
-			echo 'FALSE';
-			exit;
-		}
-		
 		$LogManager=new CHBSLogManager();
 		$LogManager->add('tpay',2,__('[1] Receiving a payment.','chauffeur-booking-system'));
+		@ini_set('display_errors','0');
+		@ini_set('html_errors','0');
+		error_reporting(0);
 		
-		$rawPayload=file_get_contents('php://input');
-		$payloadData=json_decode($rawPayload,true);
+		$rawBody=file_get_contents('php://input');
+		$contentType=$this->getRequestContentType();
+		$payloadData=$this->parseNotificationPayload($rawBody,$contentType);
+		$payloadSource=$this->getNotificationDataSource($payloadData);
+
+		$libraryAvailable=$this->isLibraryAvailable();
+		if(!$libraryAvailable)
+		{
+			$this->logLibraryMissing();
+			$LogManager->add('tpay',2,__('[TPAY] Library not available - fallback to manual verification.','chauffeur-booking-system'));
+		}
 		
 		$bookingId=0;
 		
-		if(is_array($payloadData) && isset($payloadData['data']['tr_crc']))
-			$bookingId=(int)$payloadData['data']['tr_crc'];
-		elseif(isset($_POST['tr_crc']))
-			$bookingId=(int)$_POST['tr_crc'];
+		if(is_array($payloadSource) && isset($payloadSource['tr_crc']))
+			$bookingId=(int)$payloadSource['tr_crc'];
 		
 		if($bookingId<=0)
 		{
 			$LogManager->add('tpay',2,__('[2] Booking reference not found in notification.','chauffeur-booking-system'));
-			http_response_code(200);
-			echo 'TRUE';
-			exit;
+			$this->respondAndExit(true);
 		}
 		
 		$Booking=new CHBSBooking();
@@ -1143,9 +1361,7 @@ class CHBSPaymentTpay
 		if(!is_array($booking) || !count($booking))
 		{
 			$LogManager->add('tpay',2,sprintf(__('[3] Booking %s is not found.','chauffeur-booking-system'),$bookingId));
-			http_response_code(200);
-			echo 'TRUE';
-			exit;
+			$this->respondAndExit(true);
 		}
 		
 		$bookingForm=$BookingForm->getDictionary(array('booking_form_id'=>$booking['meta']['booking_form_id']));
@@ -1160,33 +1376,92 @@ class CHBSPaymentTpay
 		
 		if($notificationSecret==='')
 		{
-			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret.','chauffeur-booking-system'));
-			http_response_code(400);
-			exit;
+			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret - using empty secret.','chauffeur-booking-system'));
 		}
 		
 		$jwsVerified=false;
+		$data=array();
+		$productionMode=((int)(isset($bookingFormMeta['payment_tpay_sandbox_mode_enable']) ? $bookingFormMeta['payment_tpay_sandbox_mode_enable'] : 0)===1) ? false : true;
 		
-		try
+		if(!isset($_SERVER['HTTP_X_JWS_SIGNATURE']) || $_SERVER['HTTP_X_JWS_SIGNATURE']==='')
 		{
-			$cache=new \Tpay\OpenApi\Utilities\Cache(null,new CHBSTpayCache());
-			$certificateProvider=new \Tpay\OpenApi\Utilities\CacheCertificateProvider($cache);
-			$productionMode=((int)(isset($bookingFormMeta['payment_tpay_sandbox_mode_enable']) ? $bookingFormMeta['payment_tpay_sandbox_mode_enable'] : 0)===1) ? false : true;
-			
-			$notificationHandler=new \Tpay\OpenApi\Webhook\JWSVerifiedPaymentNotification($certificateProvider,$notificationSecret,$productionMode);
-			$notification=$notificationHandler->getNotification();
-			$jwsVerified=true;
-			
-			if($notification instanceof \Tpay\OpenApi\Model\Objects\NotificationBody\BasicPayment)
-				$data=$notification->getNotificationAssociative();
-			else $data=(array)$notification;
+			$LogManager->add('tpay',2,__('[TPAY] Missing JWS signature header.','chauffeur-booking-system'));
+			$this->respondAndExit(false);
 		}
-		catch(Exception $ex)
+		
+		if($libraryAvailable)
 		{
-			$LogManager->add('tpay',2,$ex->__toString());
-			http_response_code(400);
-			echo 'FALSE';
-			exit;
+			try
+			{
+				$requestParser=new class($rawBody,$contentType,$payloadData) extends \Tpay\OpenApi\Utilities\RequestParser
+				{
+					private $rawBody;
+					private $contentType;
+					private $payloadData;
+					
+					public function __construct($rawBody,$contentType,$payloadData)
+					{
+						$this->rawBody=$rawBody;
+						$this->contentType=$contentType;
+						$this->payloadData=$payloadData;
+					}
+					
+					public function getContentType()
+					{
+						return $this->contentType;
+					}
+					
+					public function getParsedContent()
+					{
+						return is_array($this->payloadData) ? $this->payloadData : array();
+					}
+					
+					public function getPayload()
+					{
+						return $this->rawBody;
+					}
+				};
+				
+				$cache=new \Tpay\OpenApi\Utilities\Cache(null,new CHBSTpayCache());
+				$certificateProvider=new \Tpay\OpenApi\Utilities\CacheCertificateProvider($cache);
+				$notificationHandler=new \Tpay\OpenApi\Webhook\JWSVerifiedPaymentNotification($certificateProvider,$notificationSecret,$productionMode,$requestParser);
+				$notification=$notificationHandler->getNotification();
+				$jwsVerified=true;
+				
+				if($notification instanceof \Tpay\OpenApi\Model\Objects\NotificationBody\BasicPayment)
+					$data=$notification->getNotificationAssociative();
+				else $data=(array)$notification;
+			}
+			catch(Throwable $ex)
+			{
+				$LogManager->add('tpay',2,$ex->__toString());
+			}
+		}
+		
+		if(!$jwsVerified)
+		{
+			$errorMessage='';
+			if(!$this->verifyJwsSignatureManually($rawBody,$productionMode,$errorMessage))
+			{
+				$LogManager->add('tpay',2,sprintf(__('[TPAY] JWS verification failed: %s','chauffeur-booking-system'),$errorMessage));
+				$this->respondAndExit(false);
+			}
+			
+			$LogManager->add('tpay',2,__('[TPAY] JWS verified using manual verification.','chauffeur-booking-system'));
+			$data=$payloadSource;
+		}
+		
+		if(!is_array($data) || !count($data))
+		{
+			$LogManager->add('tpay',2,__('[TPAY] Empty notification payload after verification.','chauffeur-booking-system'));
+			$this->respondAndExit(false);
+		}
+		
+		$md5Error='';
+		if(!$this->verifyMd5sum($data,$notificationSecret,$md5Error))
+		{
+			$LogManager->add('tpay',2,sprintf(__('[TPAY] %s','chauffeur-booking-system'),$md5Error));
+			$this->respondAndExit(false);
 		}
 		
 		$meta=CHBSPostMeta::getPostMeta($bookingId);
@@ -1213,22 +1488,34 @@ class CHBSPaymentTpay
 		if($notificationKey!=='' && in_array($notificationKey,$meta['payment_tpay_notification_ids'],true))
 		{
 			$LogManager->add('tpay',2,sprintf(__('[5] Duplicate Tpay notification ignored. tr_id=%s tr_crc=%s tr_status=%s jws_verified=%s','chauffeur-booking-system'),$trId,$trCrc,$trStatus,$jwsVerified ? 'true' : 'false'));
-			http_response_code(200);
-			echo 'TRUE';
-			exit;
+			$this->respondAndExit(true);
 		}
 		
 		if($notificationKey!=='')
 		{
 			$meta['payment_tpay_notification_ids'][]=$notificationKey;
+			if(count($meta['payment_tpay_notification_ids'])>200)
+				$meta['payment_tpay_notification_ids']=array_slice($meta['payment_tpay_notification_ids'],-200);
 			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_notification_ids',$meta['payment_tpay_notification_ids']);
 		}
 		
 		$LogManager->add('tpay',2,sprintf(__('[5] Notification received. tr_id=%s tr_crc=%s tr_status=%s jws_verified=%s','chauffeur-booking-system'),$trId,$trCrc,$trStatus,$jwsVerified ? 'true' : 'false'));
 		
-		$statusValue=isset($data['tr_status']) ? strtolower((string)$data['tr_status']) : '';
+		$statusValue=isset($data['tr_status']) ? strtoupper(trim((string)$data['tr_status'])) : '';
 		
-		if(in_array($statusValue,array('true','paid','correct','success'),true))
+		if($statusValue==='PAID')
+		{
+			$LogManager->add('tpay',2,__('[6] Received PAID status (stage 1).','chauffeur-booking-system'));
+			$this->respondAndExit(true);
+		}
+		
+		if($statusValue==='CHARGEBACK')
+		{
+			$LogManager->add('tpay',2,__('[6] Received CHARGEBACK status.','chauffeur-booking-system'));
+			$this->respondAndExit(true);
+		}
+		
+		if(in_array($statusValue,array('TRUE','CORRECT','SUCCESS'),true))
 		{
 			if(CHBSOption::getOption('booking_status_payment_success')!=-1)
 			{
@@ -1259,11 +1546,12 @@ class CHBSPaymentTpay
 					$LogManager->add('tpay',2,__('[7] Cannot find a valid booking status.','chauffeur-booking-system'));
 				}
 			}
+			
+			$this->respondAndExit(true);
 		}
 		
-		http_response_code(200);
-		echo 'TRUE';
-		exit;
+		$LogManager->add('tpay',2,__('[6] Notification received with unsupported status.','chauffeur-booking-system'));
+		$this->respondAndExit(true);
 	}
 
 	/**************************************************************************/
@@ -1385,9 +1673,15 @@ class CHBSPaymentTpay
 		$html=
 		'
 			<div>	
-				<table class="to-table">
+				<table class="to-table to-table-fixed-layout">
 					<thead>
 						<tr>
+							<th style="width:15%">
+								<div>
+									'.esc_html__('Transaction ID','chauffeur-booking-system').'
+									<span class="to-legend">'.esc_html__('Transaction ID.','chauffeur-booking-system').'</span>
+								</div>
+							</th>
 							<th style="width:15%">
 								<div>
 									'.esc_html__('Type','chauffeur-booking-system').'
@@ -1396,14 +1690,8 @@ class CHBSPaymentTpay
 							</th>
 							<th style="width:15%">
 								<div>
-									'.esc_html__('Group','chauffeur-booking-system').'
-									<span class="to-legend">'.esc_html__('Selected payment group.','chauffeur-booking-system').'</span>
-								</div>
-							</th>
-							<th style="width:15%">
-								<div>
-									'.esc_html__('Status','chauffeur-booking-system').'
-									<span class="to-legend">'.esc_html__('Status.','chauffeur-booking-system').'</span>
+									'.esc_html__('Date','chauffeur-booking-system').'
+									<span class="to-legend">'.esc_html__('Date.','chauffeur-booking-system').'</span>
 								</div>
 							</th>
 							<th style="width:55%">
@@ -1420,21 +1708,60 @@ class CHBSPaymentTpay
 		foreach($data['meta']['payment_tpay_data'] as $entry)
 		{
 			$type=isset($entry['type']) ? $entry['type'] : '-';
-			$groupId=isset($entry['group_id']) ? $entry['group_id'] : (isset($entry['data']['tr_channel']) ? $entry['data']['tr_channel'] : '-');
-			$status=isset($entry['data']['tr_status']) ? $entry['data']['tr_status'] : '-';
+			$payload=array();
+			if(isset($entry['data']) && is_array($entry['data']))
+				$payload=$entry['data'];
+			elseif(isset($entry['response']) && is_array($entry['response']))
+				$payload=$entry['response'];
+
+			$transactionId='-';
+			$dateValue='-';
+			$statusLabel=$type;
+			$statusValue=isset($payload['tr_status']) ? strtoupper(trim((string)$payload['tr_status'])) : '';
+			if($statusValue!=='')
+				$statusLabel=$statusValue;
+
+			if(in_array($statusLabel,array('TRUE','SUCCESS','CORRECT'),true))
+				$statusLabel=__('Paid','chauffeur-booking-system');
+			else if($statusLabel==='PAID')
+				$statusLabel=__('Paid (stage 1)','chauffeur-booking-system');
+			else if($statusLabel==='PENDING')
+				$statusLabel=__('Unpaid','chauffeur-booking-system');
+			else if($statusLabel==='CHARGEBACK')
+				$statusLabel=__('Chargeback','chauffeur-booking-system');
+
+			$transactionIdKeys=array('tr_id','transactionId','transaction_id','id');
+			foreach($transactionIdKeys as $key)
+			{
+				if(isset($payload[$key]) && $payload[$key]!=='')
+				{
+					$transactionId=$payload[$key];
+					break;
+				}
+			}
+
+			$dateKeys=array('tr_date','created','created_at','createdAt','date');
+			foreach($dateKeys as $key)
+			{
+				if(isset($payload[$key]) && $payload[$key]!=='')
+				{
+					$dateValue=$payload[$key];
+					break;
+				}
+			}
 			
 			$html.=
 			'
 				<tr>
-					<td><div>'.esc_html($type).'</div></td>
-					<td><div>'.esc_html($groupId).'</div></td>
-					<td><div>'.esc_html($status).'</div></td>
+					<td><div>'.esc_html($transactionId).'</div></td>
+					<td><div>'.esc_html($statusLabel).'</div></td>
+					<td><div>'.esc_html($dateValue).'</div></td>
 					<td>
 						<div class="to-toggle-details">
 							<a href="#">'.esc_html__('Toggle details','chauffeur-booking-system').'</a>
 							<div class="to-hidden">
 								<pre>
-									'.var_export($entry,true).'
+									'.esc_html(var_export($entry,true)).'
 								</pre>
 							</div>
 						</div>
