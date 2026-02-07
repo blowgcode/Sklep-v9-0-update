@@ -1503,19 +1503,18 @@ class CHBSPaymentTpay
 		
 		$statusValue=isset($data['tr_status']) ? strtoupper(trim((string)$data['tr_status'])) : '';
 		
-		if($statusValue==='PAID')
-		{
-			$LogManager->add('tpay',2,__('[6] Received PAID status (stage 1).','chauffeur-booking-system'));
-			$this->respondAndExit(true);
-		}
-		
 		if($statusValue==='CHARGEBACK')
 		{
 			$LogManager->add('tpay',2,__('[6] Received CHARGEBACK status.','chauffeur-booking-system'));
 			$this->respondAndExit(true);
 		}
 		
-		if(in_array($statusValue,array('TRUE','CORRECT','SUCCESS'),true))
+		if($statusValue==='PAID')
+		{
+			$LogManager->add('tpay',2,__('[6] Received PAID status.','chauffeur-booking-system'));
+		}
+
+		if(in_array($statusValue,array('PAID','TRUE','CORRECT','SUCCESS'),true))
 		{
 			if(CHBSOption::getOption('booking_status_payment_success')!=-1)
 			{
