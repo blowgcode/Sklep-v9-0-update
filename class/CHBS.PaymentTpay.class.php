@@ -533,12 +533,12 @@ class CHBSPaymentTpay
 	
 	private function isNotificationRequest()
 	{
-		if(isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
+		if(!isset($_SERVER['REQUEST_METHOD']) || strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
 			return(false);
-		
-		$hasAction=(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay');
+
+		$hasAction=(array_key_exists('action',$_GET) && $_GET['action']==='payment_tpay');
 		$hasSignature=isset($_SERVER['HTTP_X_JWS_SIGNATURE']) && $_SERVER['HTTP_X_JWS_SIGNATURE']!=='';
-		
+
 		return($hasAction || $hasSignature);
 	}
 
@@ -1332,6 +1332,9 @@ class CHBSPaymentTpay
 	public function receivePayment()
 	{
 		if(!$this->isNotificationRequest()) return;
+
+		if(!isset($_SERVER['REQUEST_METHOD']) || strtoupper($_SERVER['REQUEST_METHOD'])!=='POST')
+			return;
 
 		$LogManager=new CHBSLogManager();
 		$LogManager->add('tpay',2,__('[1] Receiving a payment.','chauffeur-booking-system'));
