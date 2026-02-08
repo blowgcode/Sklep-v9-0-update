@@ -656,7 +656,7 @@ class CHBSPlugin
 		
 		$TabCustom=new CHBSTabCustom();
 		
-		$PaymentTpay=new CHBSPaymentTpay();
+		$PaymentTpay=new CHBSPaymentTpay(array());
 		
 		add_action('chbs_tpay_payment_success',array($PaymentTpay,'processPaymentSuccess'));
 		add_action('wp_loaded',array($PaymentTpay,'maybeRunDiagnostics'));

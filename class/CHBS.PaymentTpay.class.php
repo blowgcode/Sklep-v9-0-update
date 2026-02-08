@@ -20,9 +20,10 @@ class CHBSPaymentTpay
 	
 	/**************************************************************************/
 	
-	function __construct()
+	function __construct($bookingForm=array())
 	{
 		$this->registerAutoloader();
+		$this->initializeTpayLogging($bookingForm['meta'] ?? array());
 		
 		if(!self::$hooksInitialized)
 		{
@@ -125,6 +126,58 @@ class CHBSPaymentTpay
 		$LogManager->add('tpay',1,__('Unable to load Tpay OpenAPI library. Payment temporarily unavailable.','chauffeur-booking-system'));
 		
 		return(false);
+	}
+
+	/**************************************************************************/
+	
+	private function initializeTpayLogging($meta)
+	{
+		if(isset($meta['payment_tpay_disable_logging']) && (int)$meta['payment_tpay_disable_logging']===1)
+		{
+			if(class_exists('Tpay\\OpenApi\\Utilities\\Logger'))
+				\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			return;
+		}
+		
+		if(!class_exists('Tpay\\OpenApi\\Utilities\\Logger'))
+			return;
+		
+		$LogManager=new CHBSLogManager();
+		$uploadDir=wp_get_upload_dir();
+		$baseDir=is_array($uploadDir) && isset($uploadDir['basedir']) ? $uploadDir['basedir'] : '';
+		
+		if($baseDir==='')
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,__('Unable to determine upload directory for Tpay logs. Logging disabled.','chauffeur-booking-system'));
+			return;
+		}
+		
+		$customDir=trailingslashit($baseDir).'tpay-logs';
+		
+		if(!is_dir($customDir) && !wp_mkdir_p($customDir))
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Unable to create Tpay log directory (%s). Logging disabled.','chauffeur-booking-system'),$customDir));
+			return;
+		}
+		
+		if(!is_writable($customDir))
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Tpay log directory is not writable (%s). Logging disabled.','chauffeur-booking-system'),$customDir));
+			return;
+		}
+		
+		try
+		{
+			\Tpay\OpenApi\Utilities\Logger::setLogPath(trailingslashit($customDir));
+		}
+		catch(Exception $ex)
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Unable to configure Tpay logging: %s','chauffeur-booking-system'),$ex->getMessage()));
+		}
 	}
 
 	/**************************************************************************/
@@ -883,6 +936,8 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
+			$LogManager=new CHBSLogManager();
+			$LogManager->add('tpay',1,sprintf(__('Tpay bank groups request failed: %s','chauffeur-booking-system'),$ex->getMessage()));
 			$this->logDebug('Failed to fetch Tpay bank groups',array('error'=>$ex->getMessage()));
 			return(array());
 		}
@@ -1615,7 +1670,9 @@ class CHBSPaymentTpay
 		}
 		
 		$meta=$formDictionary[$bookingFormId]['meta'];
+		$this->initializeTpayLogging($meta);
 		$api=$this->getApiClient($meta);
+		$LogManager=new CHBSLogManager();
 		
 		if(is_null($api))
 		{
@@ -1633,7 +1690,8 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
-			$results['bank_groups_error']=$ex->getMessage();
+			$LogManager->add('tpay',1,sprintf(__('Tpay diagnostics bank groups failed: %s','chauffeur-booking-system'),$ex->getMessage()));
+			wp_send_json_error(array('message'=>__('Nie można zapisać logu Tpay.','chauffeur-booking-system')));
 		}
 		
 		try
@@ -1682,7 +1740,8 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
-			$results['transaction_error']=$ex->getMessage();
+			$LogManager->add('tpay',1,sprintf(__('Tpay diagnostics transaction failed: %s','chauffeur-booking-system'),$ex->getMessage()));
+			wp_send_json_error(array('message'=>__('Nie można zapisać logu Tpay.','chauffeur-booking-system')));
 		}
 		
 		wp_send_json_success($results);
