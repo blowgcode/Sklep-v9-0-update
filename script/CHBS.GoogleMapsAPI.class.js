@@ -113,7 +113,7 @@ function CHBSGoogleMapAPI($APIKey)
 
 		var path=google.maps.geometry.encoding.decodePath(line);
 
-		new google.maps.Polyline(
+		return new google.maps.Polyline(
 		{
 			path:path,
 			strokeColor:'#60A9F2',

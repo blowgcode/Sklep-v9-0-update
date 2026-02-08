@@ -180,6 +180,18 @@ html .chbs-main .chbs-list-reset
     color:red;
 }
 
+.chbs-main .chbs-form-field-error label
+{
+    color:#d63638;
+}
+
+.chbs-main .chbs-form-field-error input[type="text"],
+.chbs-main .chbs-form-field-error .ui-selectmenu-button
+{
+    border-color:#d63638;
+    box-shadow:0 0 0 1px #d63638;
+}
+
 /******************************************************************************/
 /* Font                                                                       */
 /******************************************************************************/

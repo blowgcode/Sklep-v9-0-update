@@ -15,9 +15,11 @@
 		var $option=$.extend($optionDefault,option);
 		
 		var $marker=[];
-	
+
 		var $googleMap;
-		
+
+		var $routePolyline=[];
+
 		var $routeIndex=0;
 		
 		var $startLocation;
@@ -77,6 +79,7 @@
 			/***/
 			
 			$self.init();
+			$self.resetPickupTimeOnLoad();
 			
 			if(parseInt($option.icon_field_enable,10)===1)
 			{
@@ -1138,6 +1141,10 @@
 
 			var prefix=dateField.attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
 			var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
+			var allowDefaultTime=true;
+
+			if(prefix==='pickup' && !$self.hasValidPickupLocation($self.getServiceTypeId()))
+				allowDefaultTime=false;
 
 			if(parseInt($option.pickup_time_field_write_enable,10)===1 || prefix==='return')
 			{	
@@ -1204,7 +1211,7 @@
 
 					/***/
 
-					if(typeof($option.business_hour[dayWeek].default_format)!='undefined')
+					if(allowDefaultTime && typeof($option.business_hour[dayWeek].default_format)!='undefined')
 					{
 						option.scrollDefault=$option.business_hour[dayWeek].default_format;
 					}
@@ -1268,7 +1275,7 @@
 
 					/***/
 
-					if(typeof($option.business_hour[dayWeek].default_format)!='undefined')
+					if(allowDefaultTime && typeof($option.business_hour[dayWeek].default_format)!='undefined')
 					{
 						$('.ui-timepicker-list>li:contains("'+$option.business_hour[dayWeek].default_format+'"):last').addClass('ui-timepicker-selected');
 					}
@@ -1276,9 +1283,13 @@
 			}
 			else
 			{	
-				if(new String(typeof($option.business_hour[dayWeek]))!=='undefined')
+				if(allowDefaultTime && new String(typeof($option.business_hour[dayWeek]))!=='undefined')
 				{
 					timeField.val($option.business_hour[dayWeek].default_format);
+				}
+				else
+				{
+					timeField.val('');
 				}
 			}			
 		};
@@ -3236,15 +3247,23 @@
 			{
 				if(!$.trim($(this).val()).length)
 				{
-					text.siblings('input[type="hidden"]').val('');
-	
-					$self.setGoogleMapAutocompleteOption(text.attr('name'));
+					var fieldName=new String(text.attr('name'));
+					var hiddenField=text.siblings('input[type="hidden"]');
+
+					hiddenField.val('');
+
+					$self.resetLocationSelection(fieldName,text,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true});
 					
 					$self.googleMapCreate();
 					$self.googleMapCreateRoute();					
 				}
 			});
-			
+
+			text.on('input',function()
+			{
+				$self.clearFieldError(text);
+			});
+
 			var fieldName=new String(text.attr('name'));
 			var option=$self.getGoogleMapAutocompleteOption(fieldName,1);
 
@@ -3259,19 +3278,25 @@
 
 				if(!place.geometry)
 				{
-					alert($option.message.place_geometry_error);
-					
-					text.val('');
-					
+					$self.showFieldError(text,$option.message.place_geometry_error);
+					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
+
 					$self.setGoogleMapAutocompleteOption(fieldName);
-					
+
 					return(false);
 				}
-				
+
 				/***/
-				
+
 				var placeLat=place.geometry.location.lat();
 				var placeLng=place.geometry.location.lng();
+
+				if(!$self.isCompleteAddress(place))
+				{
+					$self.showFieldError(text,$option.message.address_incomplete);
+					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
+					return(false);
+				}
 
 				var placeData=
 				{
@@ -3308,14 +3333,244 @@
 				if(!$self.applyDrivingZoneGeofence(fieldName,placeData,text,field)) return(false);
 				if(!$self.setPickupDropoffCountry(fieldName,placeData.country_code,text,field)) return(false);
 				if(!$self.applyPickupTimeGeofence(fieldName,placeLat,placeLng,text,field)) return(false);
+				$self.setDefaultPickupTime(fieldName);
 
 				field.val(JSON.stringify(placeData));
 				
+				$self.clearFieldError(text);
+
 				$self.setGoogleMapAutocompleteOption(fieldName);
 		 
 				//$self.googleMapCreate();
 				$self.googleMapCreateRoute();	
 			});					   
+		};
+
+		/**********************************************************************/
+
+		this.showFieldError=function(textField,message)
+		{
+			var field=textField.closest('.chbs-form-field');
+			var label=field.children('label').first();
+
+			field.addClass('chbs-form-field-error');
+
+			if(label.length===1)
+			{
+				if(label.data('qtip')) label.qtip('destroy',true);
+
+				label.qtip(
+				{
+					show:
+					{
+						ready:true,
+						target:label
+					},
+					style:
+					{
+						classes:'chbs-qtip chbs-qtip-error'
+					},
+					content:
+					{
+						text:message
+					},
+					position:
+					{
+						my:($option.rtl_mode ? 'bottom right' : 'bottom left'),
+						at:($option.rtl_mode ? 'top right' : 'top left'),
+						container:field.parents('[name="chbs-form"]')
+					}
+				}).qtip('show');
+			}
+			else
+			{
+				$self.getGlobalNotice().removeClass('chbs-hidden').html(message);
+			}
+		};
+
+		/**********************************************************************/
+
+		this.clearFieldError=function(textField)
+		{
+			var field=textField.closest('.chbs-form-field');
+			var label=field.children('label').first();
+
+			field.removeClass('chbs-form-field-error');
+
+			if(label.length===1 && label.data('qtip'))
+			{
+				label.qtip('destroy',true);
+			}
+		};
+
+		/**********************************************************************/
+
+		this.resetLocationSelection=function(fieldName,textField,hiddenField,options)
+		{
+			var settings=$.extend(
+			{
+				resetCountry:true,
+				clearRoute:true,
+				clearPickupTime:true,
+				focus:false
+			},options);
+
+			textField.val('');
+			hiddenField.val('');
+
+			if(settings.resetCountry)
+				$self.resetLocationCountryCode(fieldName);
+
+			if(settings.clearPickupTime && fieldName.indexOf('pickup')>-1)
+				$self.clearPickupTimeField();
+
+			if(settings.clearRoute)
+				$self.resetRouteData();
+
+			$self.setGoogleMapAutocompleteOption(fieldName);
+
+			if(settings.focus)
+				textField.focus();
+		};
+
+		/**********************************************************************/
+
+		this.resetLocationCountryCode=function(fieldName)
+		{
+			if(fieldName.indexOf('pickup')>-1)
+				$pickupCountryCode='';
+			else if(fieldName.indexOf('dropoff')>-1)
+				$dropoffCountryCode='';
+		};
+
+		/**********************************************************************/
+
+		this.clearPickupTimeField=function()
+		{
+			var serviceTypeId=$self.getServiceTypeId();
+			var pickupTimeField=$self.e('[name="chbs_pickup_time_service_type_'+serviceTypeId+'"]');
+
+			if(pickupTimeField.length===1)
+				pickupTimeField.val('');
+		};
+
+		/**********************************************************************/
+
+		this.resetPickupTimeOnLoad=function()
+		{
+			for(var i=1;i<=3;i++)
+			{
+				var pickupTimeField=$self.e('[name="chbs_pickup_time_service_type_'+i+'"]');
+				if(pickupTimeField.length!==1) continue;
+
+				if(!$self.hasValidPickupLocation(i))
+					pickupTimeField.val('');
+			}
+		};
+
+		/**********************************************************************/
+
+		this.isCompleteAddress=function(place)
+		{
+			if(!place || !place.address_components) return(false);
+
+			var hasStreetNumber=false;
+			var hasRoute=false;
+			var hasLocality=false;
+
+			for(var i in place.address_components)
+			{
+				var component=place.address_components[i];
+
+				if($.inArray('street_number',component.types)>-1) hasStreetNumber=true;
+				if($.inArray('route',component.types)>-1) hasRoute=true;
+				if($.inArray('locality',component.types)>-1 || $.inArray('postal_town',component.types)>-1) hasLocality=true;
+			}
+
+			return(hasStreetNumber && hasRoute && hasLocality);
+		};
+
+		/**********************************************************************/
+
+		this.setDefaultPickupTime=function(fieldName)
+		{
+			if(fieldName.indexOf('pickup')===-1) return;
+
+			var serviceTypeId=$self.getServiceTypeId();
+			var helper=new CHBSHelper();
+
+			if(!$self.hasValidPickupLocation(serviceTypeId)) return;
+
+			var pickupTimeField=$self.e('[name="chbs_pickup_time_service_type_'+serviceTypeId+'"]');
+			var pickupDateField=$self.e('[name="chbs_pickup_date_service_type_'+serviceTypeId+'"]');
+
+			if(pickupTimeField.length!==1) return;
+			if(!helper.isEmpty(pickupTimeField.val())) return;
+			if(pickupDateField.length!==1 || helper.isEmpty(pickupDateField.val())) return;
+
+			var dateValue=pickupDateField.val();
+			var date;
+
+			try
+			{
+				date=$.datepicker.parseDate($option.date_format_js,dateValue);
+			}
+			catch(e)
+			{
+				date=null;
+			}
+
+			if(!date) return;
+
+			var dayWeek=parseInt(date.getDay(),10);
+			if(dayWeek===0) dayWeek=7;
+
+			if(typeof($option.business_hour[dayWeek])!=='undefined' && typeof($option.business_hour[dayWeek].default_format)!=='undefined')
+				pickupTimeField.val($option.business_hour[dayWeek].default_format);
+		};
+
+		/**********************************************************************/
+
+		this.hasValidPickupLocation=function(serviceTypeId)
+		{
+			var helper=new CHBSHelper();
+			var coordinateField=$self.e('[name="chbs_pickup_location_coordinate_service_type_'+serviceTypeId+'"]');
+
+			if(coordinateField.length===1 && !helper.isEmpty(coordinateField.val()))
+			{
+				try
+				{
+					var coordinate=JSON.parse(coordinateField.val());
+					if(!helper.isEmpty(coordinate.lat) && !helper.isEmpty(coordinate.lng))
+						return(true);
+				}
+				catch(e) {}
+			}
+
+			var fixedSelect=$self.e('select[name="chbs_fixed_location_pickup_service_type_'+serviceTypeId+'"]');
+			if(fixedSelect.length===1)
+			{
+				var selected=fixedSelect.children('option:selected');
+				if(selected.length===1 && parseInt(selected.val(),10)>0)
+					return(true);
+			}
+
+			return(false);
+		};
+
+		/**********************************************************************/
+
+		this.resetRouteData=function()
+		{
+			$self.e('input[name="chbs_route_data"]').val('');
+			$self.e('input[name="chbs_distance_map"]').val(0);
+			$self.e('input[name="chbs_duration_map"]').val(0);
+			$self.e('input[name="chbs_distance_sum"]').val(0);
+			$self.e('input[name="chbs_duration_sum"]').val(0);
+
+			$self.googleMapClearRoute();
+			$self.googleMapClearMarker();
+			$self.googleMapReInit();
 		};
 
 		/**********************************************************************/
@@ -3344,11 +3599,9 @@
 			if(!(inCircle && inCountry))
 			{
 				if($option.message.pickup_dropoff_out_of_range)
-					alert($option.message.pickup_dropoff_out_of_range);
+					$self.showFieldError(textField,$option.message.pickup_dropoff_out_of_range);
 
-				textField.val('');
-				hiddenField.val('');
-
+				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 				return(false);
 			}
 
@@ -3369,11 +3622,10 @@
 			if(pickupTime===false)
 			{
 				if($option.message.pickup_time_geofence_out_of_range)
-					alert($option.message.pickup_time_geofence_out_of_range);
+					$self.showFieldError(textField,$option.message.pickup_time_geofence_out_of_range);
 
-				$self.e('[name="chbs_pickup_time_service_type_1"]').val('');
-				textField.val('');
-				hiddenField.val('');
+				$self.clearPickupTimeField();
+				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 				return(false);
 			}
 
@@ -3428,15 +3680,9 @@
 			if($pickupCountryCode && $dropoffCountryCode && $pickupCountryCode===$dropoffCountryCode)
 			{
 				if($option.message.pickup_dropoff_same_country)
-					alert($option.message.pickup_dropoff_same_country);
+					$self.showFieldError(textField,$option.message.pickup_dropoff_same_country);
 
-				textField.val('');
-				hiddenField.val('');
-
-				if(fieldName.indexOf('pickup')>-1)
-					$pickupCountryCode='';
-				else if(fieldName.indexOf('dropoff')>-1)
-					$dropoffCountryCode='';
+				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 
 				return(false);
 			}
@@ -3711,6 +3957,8 @@
 		
 			if(length===0)
 			{
+				$self.googleMapClearRoute();
+				$self.googleMapClearMarker();
 				$self.googleMapReInit();
 				
 				if(typeof(callback)!=='undefined') callback();
@@ -3779,6 +4027,7 @@
 				if($GoogleMapAPI.hasRoute(response))
 				{
 					$self.googleMapCreate();
+					$self.googleMapClearRoute();
 					$self.googleMapClearMarker();
 					
 					if(parseInt($option.google_map_option.route_type,10)===2)
@@ -3833,7 +4082,9 @@
 					}
 					catch(e) {}
 
-					$GoogleMapAPI.drawRoute(response,$self.getRouteIndex(),$googleMap);
+					var routePolyline=$GoogleMapAPI.drawRoute(response,$self.getRouteIndex(),$googleMap);
+					if(routePolyline)
+						$routePolyline.push(routePolyline);
 					
 					$self.calculateRoute(response,callback);
 				}
@@ -3875,6 +4126,18 @@
 				$marker[i].setMap(null);
 			
 			$marker=[];
+		};
+
+		/**********************************************************************/
+
+		this.googleMapClearRoute=function()
+		{
+			for(var i in $routePolyline)
+			{
+				$routePolyline[i].setMap(null);
+			}
+
+			$routePolyline=[];
 		};
 		
 		/**********************************************************************/
