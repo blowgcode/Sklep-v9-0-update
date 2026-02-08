@@ -1,0 +1,27 @@
+<?php
+
+namespace Tpay\OpenApi\Model\Fields\Payer;
+
+use Tpay\OpenApi\Model\Fields\Field;
+use Tpay\OpenApi\Model\Fields\FieldValidationResult;
+
+/**
+ * @method getValue(): string
+ */
+class IP extends Field
+{
+    protected $name = __CLASS__;
+    protected $type = self::STRING;
+    protected $maxLength = 255;
+
+    protected function initValidators()
+    {
+        $this->addValidator(function ($value) {
+            if (!empty($value) && false === filter_var($value, FILTER_VALIDATE_IP)) {
+                return new FieldValidationResult(false, 'Invalid IP address.');
+            }
+
+            return new FieldValidationResult(true);
+        });
+    }
+}

@@ -1,0 +1,20 @@
+<?php use Tpay\OpenApi\Locale\Lang; ?>
+<link rel="stylesheet" type="text/css" href="<?php echo $data['static_files_url'] ?>View/Styles/style.css"/>
+<div class="tpay-insidebg" id="chbs-tpay-payment">
+    <div id="groups_v" class="tpay-panel-inside-content">
+        <div id="bank-selection-form" class="tpay-groups-wrapper">
+            <?php foreach ($data['groups_list'] as $group) { ?>
+                <div class="tpay-group-holder tpay-with-logo" data-tpay-group-id="<?php echo $group['id'] ?>">
+                    <div class="tpay-group-name"><?php echo $group['name'] ?></div>
+                    <div class="tpay-group-logo-holder">
+                        <?php if (!empty($group['img'])) { ?>
+                            <img src="<?php echo $group['img'] ?>" class="tpay-group-logo" alt="<?php echo $group['name'] ?>">
+                        <?php } ?>
+                    </div>
+                </div>
+            <?php } ?>
+        </div>
+    </div>
+</div>
+<input name="<?php CHBSHelper::getFormName('payment_tpay_group_id'); ?>" id="chbs-tpay-group-id" type="hidden"/>
+<input name="payment_tpay_group_id" id="chbs-tpay-group-id-fallback" type="hidden"/>

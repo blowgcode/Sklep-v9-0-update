@@ -30,26 +30,26 @@
             $self.createMap();
             var draw=$self.createDraw();
             
-            if(navigator.geolocation) 
-            {
-                navigator.geolocation.getCurrentPosition(function(position)
-                {
-					if(!draw)
+			if(!draw)				
+			{
+				if(navigator.geolocation) 
+				{
+					navigator.geolocation.getCurrentPosition(function(position)
 					{
 						$startLocation=new google.maps.LatLng(position.coords.latitude,position.coords.longitude);
 						$map.setCenter($startLocation);
-					}
-                },
-                function()
-                {
-                    $self.useDefaultLocation();
-                });
-            } 
-            else
-            {
-                $self.useDefaultLocation();
-            }
-            
+					},
+					function()
+					{
+						$self.useDefaultLocation();
+					});
+				} 
+				else
+				{
+					$self.useDefaultLocation();
+				}
+			}
+			
             $self.createAutoComplete($('input[name="chbs_google_map_autocomplete"]'));
         };
         

@@ -3,7 +3,11 @@
 /******************************************************************************/
 /******************************************************************************/
 
-define('PLUGIN_CHBS_VERSION','6.8');
+define('PLUGIN_CHBS_VERSION','9.0');
+
+define('PLUGIN_CHBS_ENVATO_ITEM_ID',array(25551220,21072773));
+
+define('PLUGIN_CHBS_PREFIX','CHBS');
 
 define('PLUGIN_CHBS_CONTEXT','chbs');
 define('PLUGIN_CHBS_CLASS_PREFIX','CHBS');
@@ -30,7 +34,6 @@ define('PLUGIN_CHBS_STYLE_URL',PLUGIN_CHBS_URL.'style/');
 define('PLUGIN_CHBS_SCRIPT_URL',PLUGIN_CHBS_URL.'script/');
 define('PLUGIN_CHBS_MULTISITE_URL',PLUGIN_CHBS_URL.'multisite/');
 
-define('PLUGIN_CHBS_ON_PAGE_INCLUDE',1);
 define('PLUGIN_CHBS_JQUERYUI_BUTTONSET_ENABLE',1);
 
 /******************************************************************************/

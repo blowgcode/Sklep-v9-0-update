@@ -82,7 +82,7 @@
 .ui-selectmenu-button span.ui-selectmenu-text
 {
     outline:0;
-    line-height:100%;
+    line-height:150%;
     box-sizing:border-box;
 }
 
@@ -134,6 +134,7 @@ html .chbs-main .chbs-list-reset
 }
 
 .chbs-datepicker.ui-datepicker,
+.chbs-datepicker#ui-datepicker-div,
 .ui-autocomplete,
 .ui-selectmenu-menu,
 .ui-timepicker-wrapper,
@@ -179,6 +180,18 @@ html .chbs-main .chbs-list-reset
     color:red;
 }
 
+.chbs-main .chbs-form-field-error label
+{
+    color:#d63638;
+}
+
+.chbs-main .chbs-form-field-error input[type="text"],
+.chbs-main .chbs-form-field-error .ui-selectmenu-button
+{
+    border-color:#d63638;
+    box-shadow:0 0 0 1px #d63638;
+}
+
 /******************************************************************************/
 /* Font                                                                       */
 /******************************************************************************/
@@ -189,10 +202,13 @@ html .chbs-main .chbs-list-reset
 .chbs-main textarea,
 .ui-menu .ui-menu-item,
 .ui-timepicker-wrapper,
+.chbs-datepicker#ui-datepicker-div,
+.chbs-datepicker#ui-datepicker-div *,
 .chbs-datepicker.ui-datepicker th,
 .chbs-datepicker.ui-datepicker td,
 .chbs-datepicker.ui-datepicker td a,
-.chbs-datepicker.ui-datepicker td span
+.chbs-datepicker.ui-datepicker td span,
+.chbs-datepicker.ui-datepicker .ui-datepicker-title
 {
     font-family:'Lato';
 }
@@ -431,6 +447,29 @@ html .chbs-main .chbs-list-reset
     {
         margin-top:50px;
     }
+	
+/******************************************************************************/
+/* Copyright                                                                  */
+/******************************************************************************/	
+	
+.chbs-main .chbs-copyright
+{
+	margin-top:25px;
+	text-align:right;
+}
+	
+	.chbs-main .chbs-copyright,
+	.chbs-main .chbs-copyright a,
+	.chbs-main .chbs-copyright a:hover
+	{
+		color:#444444;
+		font-size:14px;
+	}
+
+	.chbs-main .chbs-copyright a
+	{
+		text-decoration:underline;
+	}
 
 /******************************************************************************/
 /* Label                                                                      */
@@ -488,7 +527,8 @@ html .chbs-main .chbs-list-reset
 }
 
 .chbs-main .chbs-qtip,
-.chbs-main .chbs-notice
+.chbs-main .chbs-notice,
+.chbs-main .chbs-notice-fixed
 {
     margin:0px;
     padding:0px;
@@ -500,6 +540,7 @@ html .chbs-main .chbs-list-reset
 }
 
 .chbs-main .chbs-notice,
+.chbs-main .chbs-notice-fixed,
 .chbs-main .chbs-qtip .qtip-content
 {
     font-size:13px;
@@ -507,11 +548,48 @@ html .chbs-main .chbs-list-reset
     padding:8px 15px 10px 15px;
 }
    
-.chbs-main .chbs-notice
+.chbs-main .chbs-notice,
+.chbs-main .chbs-notice-fixed
 {
     width:100%;
 	font-size:15px;
     margin:0px 0px 40px 0px;
+}
+
+.chbs-main .chbs-notice-fixed
+{
+	left:0px;
+	margin:0px;
+	bottom:0px;
+	z-index:9999;
+	position:fixed;
+}
+
+	.chbs-main .chbs-notice-fixed *
+	{
+		font-size:16px;
+	}
+
+	.chbs-main .chbs-notice-fixed>div
+	{
+		margin-left:auto;
+		margin-right:auto;
+	}
+	
+		.chbs-main .chbs-notice-fixed>div>span+span
+		{
+			margin-left:10px;
+		}
+	
+	.chbs-main .chbs-notice-fixed a,
+	.chbs-main .chbs-notice-fixed a:hover
+	{
+		font-weight:bold;
+	}
+
+body.admin-bar .chbs-main .chbs-notice-fixed
+{
+	
 }
 
 /******************************************************************************/
@@ -702,7 +780,7 @@ html .chbs-main .chbs-list-reset
 {
     display:block;
     width:100% !important;
-    padding:4px 20px 19px 20px;
+    padding:1px 20px 22px 20px;
 }
 
 @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none)
@@ -738,6 +816,11 @@ html .chbs-main .chbs-list-reset
         padding:10px 20px 10px 20px;
         border-width:1px 0px 0px 0px;
     }
+	
+		.ui-menu .ui-menu-item .flag-icon
+		{
+			margin-right:10px;
+		}
     
     .ui-menu .ui-menu-item:first-child
     {
@@ -806,18 +889,26 @@ html .chbs-main .chbs-list-reset
 /* Datepicker                                                                 */
 /******************************************************************************/            
 
-.chbs-datepicker.ui-datepicker
+.chbs-datepicker.ui-datepicker,
+.chbs-datepicker#ui-datepicker-div
 {
     z-index:3;
     width:auto;
     margin-left:-1px;
     border-width:1px;
     border-style:solid;
-    padding:20px 18px 30px 17px;
+    padding:25px 18px 30px 18px;
+}
+
+.chbs-datepicker.ui-datepicker .ui-icon,
+.chbs-datepicker#ui-datepicker-div .ui-icon
+{
+	text-indent:-999em;
 }
 
 	.chbs-datepicker.ui-datepicker .ui-datepicker-header
 	{
+		padding:0px;
 		background:none;
 	}
 
@@ -827,18 +918,28 @@ html .chbs-main .chbs-list-reset
         font-size:18px;
         font-weight:700;
         line-height:24px;
+		padding:7px 0px 6px 0px;
     }
-    
+	
     .chbs-datepicker.ui-datepicker thead
     {
-        border-style:solid;
-        border-width:0px 0px 1px 0px;
+      
     }
     
     .chbs-datepicker.ui-datepicker tbody
     {
-        top:10px;
-        position:relative;
+      
+    }
+	
+	.chbs-datepicker.ui-datepicker table
+	{
+		margin:0px;
+	}
+	
+    .chbs-datepicker.ui-datepicker table,
+	.chbs-datepicker.ui-datepicker table tr
+    {
+        border:none;
     }
     
     .chbs-datepicker.ui-datepicker th,
@@ -857,12 +958,20 @@ html .chbs-main .chbs-list-reset
         text-align:center;
         text-transform:uppercase;
         padding:20px 0px 20px 0px;
+		border:none !important;
     }
     
     .chbs-datepicker.ui-datepicker td
     {
         padding:0px;
     }
+	
+		.chbs-datepicker.ui-datepicker td a,
+		.chbs-datepicker.ui-datepicker td a:hover,
+		.chbs-datepicker.ui-datepicker td a.ui-state-hover
+		{
+			transition:none;
+		}
     
         .chbs-datepicker.ui-datepicker td,
         .chbs-datepicker.ui-datepicker td a
@@ -972,7 +1081,8 @@ html .chbs-main .chbs-list-reset
 /* Tab                                                                        */
 /******************************************************************************/
 
-.chbs-main .chbs-tab.ui-tabs
+.chbs-main .chbs-tab.ui-tabs,
+.chbs-main .chbs-tab-custom.ui-tabs
 {
     padding:0px;
 }
@@ -981,26 +1091,42 @@ html .chbs-main .chbs-list-reset
     /* Tab / Navigation                                                       */
     /**************************************************************************/
 
-    .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav
+    .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav,
+	.chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-nav
     {
         z-index:2;
         width:100%;
         padding:0px;
+		display:flex;
         position:relative;
     }
-    
-        .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li
-        {
+	
+	.chbs-main .chbs-tab-custom.chbs-tab-custom-responsive.ui-tabs .ui-tabs-nav
+	{
+		flex-direction:column;
+	}
+	
+		.chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li
+		{
             margin:0px;
-            width:33.33333333%;
-        }
-        
-        .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li.ui-tabs-active
+			flex-grow:1;
+		}
+		
+		.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-tab.ui-tabs .ui-tabs-nav>li,
+		.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-tab.ui-tabs .ui-tabs-nav>li,
+		.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-tab.ui-tabs .ui-tabs-nav>li
+		{
+			flex-grow:0;
+		}
+
+        .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li.ui-tabs-active,
+        .chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-nav>li.ui-tabs-active
         {
             padding:0px;
         }
         
-            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li>a
+            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li>a,
+			.chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-nav>li>a
             {
                 width:100%;
                 padding:20px;
@@ -1012,18 +1138,21 @@ html .chbs-main .chbs-list-reset
                 text-transform:uppercase;
                 border-width:1px 0px 0px 1px;
             }
-            
+			
             rs-module .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li>a
             {
                 text-align:center !important;
             }
             
-            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li:last-child>a
-            {
+            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li:last-child>a,
+			.chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-nav>li:last-child>a,
+			.chbs-main .chbs-tab-custom.chbs-tab-custom-responsive.ui-tabs .ui-tabs-nav>li>a
+			{
                 border-right-width:1px;
             }
             
-            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li+li>a
+            .chbs-main .chbs-tab.ui-tabs .ui-tabs-nav>li+li>a,
+			.chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-nav>li+li>a
             {
                 
             }
@@ -1032,7 +1161,8 @@ html .chbs-main .chbs-list-reset
     /* Tab / Panel                                                            */
     /**************************************************************************/
             
-    .chbs-main .chbs-tab.ui-tabs .ui-tabs-panel
+    .chbs-main .chbs-tab.ui-tabs .ui-tabs-panel,
+	.chbs-main .chbs-tab-custom.ui-tabs .ui-tabs-panel
     {
         z-index:1;
         padding:0px;
@@ -1138,6 +1268,12 @@ html .chbs-main .chbs-list-reset
 /******************************************************************************/
 /* Main navigation                                                            */
 /******************************************************************************/
+
+	.chbs-main .chbs-tab-custom .chbs-main-navigation-default,
+	.chbs-main .chbs-tab-custom .chbs-main-navigation-responsive
+	{
+		margin-top:50px;
+	}
 
     /**************************************************************************/
     /* Main navigation / Default                                              */
@@ -1586,8 +1722,6 @@ html .chbs-main .chbs-list-reset
     
         .chbs-main .chbs-vehicle .chbs-vehicle-content>div.chbs-vehicle-content-header
         {
-            height:100%;
-            overflow:hidden;
             text-align:right;
         }
         
@@ -1640,12 +1774,19 @@ html .chbs-main .chbs-list-reset
                 display:block;
             }
             
-                .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-price>span>span:first-child
+                .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-price>span>span
                 {
                     line-height:1;
                     font-size:40px;
                     font-weight:400; 
                 }
+				
+				.chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-price>span>.chbs-vehicle-content-price-before-discount
+				{
+					font-size:18px;
+					margin-left:10px;
+					text-decoration:line-through;
+				}
 
         /**********************************************************************/
         /* Vehicle / Content / Bid                                          */
@@ -1786,31 +1927,31 @@ html .chbs-main .chbs-list-reset
         
             .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div
             {
-                display:table-row;
+                display:flex;
             }
             
                 .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>div
                 {
-                    width:40%;
-                    display:table-cell;
-                    vertical-align:middle;
+                    flex-grow:1;
+					text-align:right;
                 }
                 
                 .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info
                 {
-                    width:60%;
-                    text-align:right;
+                   
                 }
                 
                     .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div
                     {
-                        float:right;
+						height:100%;
+                        display:flex;
+						align-items:center;
+						justify-content:right;
                     }
                 
                     .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span
                     {
-                        float:left;
-                        display:inline;
+                 
                     }
                     
                     .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-circle
@@ -1825,7 +1966,6 @@ html .chbs-main .chbs-list-reset
             .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta .chbs-meta-icon-people
             {
                  font-size:48px;
-                 margin-top:-12px;
             }
             
             .chbs-main .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-meta .chbs-meta-icon-bag
@@ -1860,9 +2000,10 @@ html .chbs-main .chbs-list-reset
 /* Show more button                                                           */
 /******************************************************************************/   
 
-.chbs-main .chbs-show-more-button
+.chbs-main .chbs-show-more-button,
+.chbs-main .chbs-show-more-button>a
 {
-	display:inline-block;
+	display:block;
 }
 
 	.chbs-main .chbs-show-more-button>a
@@ -2074,7 +2215,21 @@ html .chbs-main .chbs-list-reset
             font-weight:400;
             line-height:24px;
         }
-        
+		
+			.chbs-main .chbs-summary .chbs-summary-field .chbs-summary-field-value-booking-extra-note
+			{
+				opacity:0.75;
+			}
+			
+/******************************************************************************/
+/* Currencu switcher	                                                      */
+/******************************************************************************/
+			
+.chbs-main .chbs-currency-switcher-section
+{
+	margin-top:40px;
+}
+	
 /******************************************************************************/
 /* Summary price element                                                      */
 /******************************************************************************/
@@ -2123,6 +2278,11 @@ html .chbs-main .chbs-list-reset
             line-height:30px;
             display:inline-block;            
         }
+		
+			.chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-total>span>span
+			{
+				font-size:14px;
+			}
         
         .chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-total>span:first-child+span
         {
@@ -2134,6 +2294,19 @@ html .chbs-main .chbs-list-reset
             border-style:solid;
             border-width:1px 0px 0px 0px;               
         }
+		
+		.chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-vehicle-fee-one-way,
+		.chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-vehicle-fee-return
+		{
+			opacity:0.8;
+			padding-left:5px;
+		}
+		
+		.chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-vehicle-fee-one-way>span,
+		.chbs-main .chbs-summary-price-element>div.chbs-summary-price-element-vehicle-fee-return>span
+		{
+			font-size:13px;
+		}
 
 /******************************************************************************/
 /* Ride info                                                                   */
@@ -2151,7 +2324,7 @@ html .chbs-main .chbs-list-reset
     {
         width:50%;
         display:table-cell;
-        padding:30px 30px 28px 40px;
+        padding:30px 20px 28px 30px;
     }
     
     .chbs-main .chbs-ride-info>div:first-child
@@ -2219,7 +2392,7 @@ html .chbs-main .chbs-list-reset
     .chbs-main .chbs-payment>li
     {
 		margin:10px;
-        height:265px;
+        height:130px;
         flex-grow:1;
         flex-basis:274px;
     }
@@ -2232,7 +2405,8 @@ html .chbs-main .chbs-list-reset
             display:block;
             position:relative;
             text-align:center;
-            
+            border-width:1px;
+            border-style:solid;
             background-repeat:no-repeat;
             background-position:center center;
         }
@@ -2245,13 +2419,10 @@ html .chbs-main .chbs-list-reset
         
         .chbs-main .chbs-payment>li>a.chbs-payment-background-image
         {
-            
+            border-width:2px;
             background-size:contain;
             background-repeat:no-repeat;
             background-position:center center;
-			max-width: 100%;
-			max-height: 100%;
-			
         }
         
             .chbs-main .chbs-payment>li>a>span.chbs-payment-name,
@@ -2478,6 +2649,7 @@ html .chbs-main .chbs-list-reset
 		top:-4px;
 		left:13px;
 		position:relative;
+		display:inline-block;
 	}
     
 .chbs-main .chbs-booking-extra-list
@@ -2750,7 +2922,8 @@ html .chbs-main .chbs-list-reset
 			.chbs-main .chbs-booking-complete .chbs-booking-complete-payment>div>p
 			{
 				padding:0px;
-				max-width:80%;
+				max-width:660px;
+				margin-top:3em;
 				margin-left:auto;
 				margin-right:auto;
 				text-align:center;
@@ -2869,6 +3042,11 @@ html .chbs-main .chbs-list-reset
     {
         display:block;
     }
+	
+	.chbs-main.chbs-width-300 .chbs-tab.ui-tabs .ui-tabs-nav
+	{
+		flex-wrap:wrap;
+	}
 
     .chbs-main.chbs-width-300 .chbs-tab.ui-tabs .ui-tabs-nav>li,
 	.chbs-main.chbs-width-300.chbs-widget.chbs-widget-style-1 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li,
@@ -2876,9 +3054,9 @@ html .chbs-main .chbs-list-reset
 	.chbs-main.chbs-width-300.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li,
  	.chbs-main.chbs-width-300.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li
     {
-        margin:0px;
-        float:none;
-        width:100%;
+        margin:0px !important;
+        float:none !important;
+        width:100% !important;
     }
     
     .chbs-main.chbs-width-480.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
@@ -2960,65 +3138,28 @@ html .chbs-main .chbs-list-reset
                 
             }
             
-                .chbs-main.chbs-width-480 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>span:first-child,
-                .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>span:first-child
+                .chbs-main.chbs-width-480 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>span,
+                .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>span
                 {
                     font-size:28px;
                 }
-                
+				
+                .chbs-main.chbs-width-480 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>.chbs-vehicle-content-price-before-discount,
+                .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-price>span>.chbs-vehicle-content-price-before-discount
+                {
+                    font-size:20px;
+                }
+
         .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta
         {
             
         }
-        
-            .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div
-            {
-                
-            }
-            
-                .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-show-more-button
-                {
-                    width:60%;
-                }
-            
-                .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info
-                {
-                    width:40%;
-                }
-                
-                    .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div
-                    {
-                        
-                    }
-                    
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span
-                        {
-                            float:left;
-                        }
-
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-bag
-                        {
-                            clear:both;
-                        }
-                        
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-bag,
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-people
-                        {
-                            margin-left:0px;
-                            margin-right:20px;
-                        }
-
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-circle
-                        {
-                            margin-right:0px;
-                        }
-                        
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-bag,
-                        .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content .chbs-vehicle-content-meta>div>.chbs-vehicle-content-meta-info>div>span.chbs-meta-icon-bag+span
-                        {
-                            margin-top:10px;
-                        }
-
+		
+			.chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content > .chbs-vehicle-content-meta span
+			{
+				margin-right:10px;
+			}
+		
     .chbs-main.chbs-width-300 .chbs-vehicle .chbs-vehicle-content>.chbs-vehicle-content-description>div>.chbs-vehicle-content-description-attribute>ul
     {
         width:100%;
@@ -3182,13 +3323,7 @@ html .chbs-main .chbs-list-reset
     /* Responsive / Add location                                              */
     /* Responsive / Remove location                                           */
     /**************************************************************************/
-    
-    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-add,
-    .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-remove
-    {
-        right:-1px;
-    }
-
+ 
     .chbs-main.chbs-width-300 .chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch+.chbs-form-field.chbs-form-field-location-switch .chbs-location-add
     {
         top:13px;
@@ -3271,22 +3406,23 @@ html .chbs-main .chbs-list-reset
 /* Responsive / Calendar								                      */
 /******************************************************************************/
 	
-.chbs-datepicker.ui-datepicker
+.chbs-datepicker.ui-datepicker,
+.chbs-datepicker#ui-datepicker-div
 {
-    padding:15px 10px 15px 10px;
+    padding:15px 9px 15px 9px;
 }
     
 .chbs-datepicker.ui-datepicker td a, 
 .chbs-datepicker.ui-datepicker td span
 {
-    width:34px;
-    height:34px;
-    line-height:34px;
+    width:40px;
+    height:40px;
+    line-height:40px;
 }
     
 .chbs-datepicker.ui-datepicker td a.ui-state-hover
 {
-    line-height:30px
+    line-height:36px
 }
 
 .chbs-datepicker.ui-datepicker td,
@@ -3312,10 +3448,14 @@ html .chbs-main .chbs-list-reset
     margin-left:0px;
 }
 
-.chbs-datepicker.ui-datepicker .ui-datepicker-header 
+/******************************************************************************/
+/* Responsive / Timepicker								                      */
+/******************************************************************************/
+
+.ui-timepicker-wrapper .ui-timepicker-list>li
 {
-    padding:0.7em 0px;
-}     
+	font-size:14px;
+}
 
 /******************************************************************************/
 /* Responsive / Order view								                      */
@@ -3450,6 +3590,16 @@ html .chbs-main #payment .wc_payment_methods
     border-left-color:#B87668;    
 }
 
+body.woocommerce-order-received .chbs-main>.woocommerce-order>*
+{
+	display:none;
+}
+
+body.woocommerce-order-received .chbs-main>.woocommerce-order>.woocommerce-notice
+{
+	display:block;
+}
+
 /******************************************************************************/
 /* WooCommerce Order View                                                     */
 /******************************************************************************/
@@ -3505,10 +3655,16 @@ html .chbs-main #payment .wc_payment_methods
 /* Fancybox                                                                   */
 /******************************************************************************/
 
+
 html .fancybox-inner img
 {
     height:auto;
     max-width:100%;
+}
+
+html .fancybox-inner
+{
+	overflow:hidden !important;
 }
 
 /******************************************************************************/
@@ -3552,7 +3708,7 @@ html body.rtl .iti.iti--allow-dropdown input
 
 html .iti.iti--allow-dropdown input
 {
-	padding-left:75px !important;
+	padding-left:85px !important;
 }
 
 html .iti__country.iti__highlight,
@@ -3560,6 +3716,12 @@ html .iti--separate-dial-code .iti__selected-flag,
 html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
 {
     background:transparent;
+}
+
+html .iti ul li
+{
+	margin:0px;
+	padding:5px 10px 5px 10px;
 }
 
 /******************************************************************************/
@@ -3571,6 +3733,85 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
     
 }
 
+	/**************************************************************************/
+	/* Widget / Height                                                        */
+	/**************************************************************************/
+
+    .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div,
+	.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div,
+	.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div
+	{
+		height:inherit;
+	}
+
+	.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-form-field,
+	.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-form-field
+	{
+		height:100%;
+	}	
+	
+	/**************************************************************************/
+	/* Widget / Border                                                        */
+	/**************************************************************************/
+
+	.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-form-field,
+	.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-form-field,
+	.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-form-field
+	{
+		border-top:none;
+		border-left:none;
+	}
+
+	.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-tab.ui-tabs .ui-tabs-panel,
+	.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-tab.ui-tabs .ui-tabs-panel,
+	.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-tab.ui-tabs .ui-tabs-panel
+	{
+		border-top-width:1px;
+		border-left-width:1px;
+	}
+	
+		.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-tab.ui-tabs .ui-tabs-nav>li>a,
+		.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-tab.ui-tabs .ui-tabs-nav>li>a,
+		.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-tab.ui-tabs .ui-tabs-nav>li>a
+		{
+			border:none;
+		}
+	
+	.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child
+	{
+		border-style:solid;
+		border-width:0px 1px 1px 0px;
+	}
+	
+    /**************************************************************************/
+    /* Widget / Fileds width													*/
+    /**************************************************************************/	
+	
+
+	.chbs-main.chbs-widget .chbs-form-field-route
+	{
+		flex:0 0 300px;
+		min-width:0px;
+	}
+
+	.chbs-main.chbs-widget .chbs-form-field-duration,
+	.chbs-main.chbs-widget .chbs-form-field-extra-time
+	{
+		flex:0 0 220px;
+		min-width:0px;
+	}
+	
+	.chbs-main.chbs-widget .chbs-form-field-transfer-type
+	{
+		min-width:250px;		
+	}
+	
+	.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child
+	{
+		flex:0;
+		min-width:190px;		
+	}
+
     /**************************************************************************/
     /* Widget / Style 1                                                       */
     /**************************************************************************/
@@ -3580,6 +3821,17 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
 		background-color:transparent;
     }
     
+		.chbs-main.chbs-widget.chbs-widget-style-1 .chbs-tab.ui-tabs .ui-tabs-panel
+		{
+			overflow:hidden;
+			padding:1px 0px 0px 0px;
+		}
+
+		.chbs-main.chbs-widget.chbs-widget-style-1 .chbs-form-field-pickup-date-time
+		{
+			margin-top:-1px;
+		}
+	
         .chbs-main.chbs-widget.chbs-widget-style-1 .chbs-button-widget-submit
         {
             width:auto;
@@ -3591,9 +3843,16 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
         {
             margin-top:30px;
         }
+		
+		.chbs-main.chbs-widget.chbs-widget-style-1 .chbs-tab.ui-tabs .ui-tabs-nav>li>a
+		{
+			padding:20px 10px 20px 10px;
+		}
     
     /**************************************************************************/
     /* Widget / Style 2                                                       */
+	/* Widget / Style 3                                                       */
+	/* Widget / Style 4                                                       */
     /**************************************************************************/
 
     .chbs-main.chbs-widget.chbs-widget-style-2,
@@ -3623,14 +3882,7 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
         {
             margin-right:0px;
         }
-        
-            .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li>a,
-			.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li>a,
-            .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-nav>li>a
-            {
-                border:none;
-            }
-    
+
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
 		.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
 		.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel
@@ -3639,25 +3891,9 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
             flex-direction:row;
         }
 		
-		.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel
-		{
-			border-width:1px;
-			border-style:solid;
-		}
-		
-		.chbs-main.chbs-widget.chbs-widget-style-2.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
-		.chbs-main.chbs-widget.chbs-widget-style-4.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel
-		{
-			border:none;
-		}
-		
         .chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel
         {
-			border:none;
 			flex-wrap:wrap;
-			border-style:solid;
-			border-width:1px 0px 0px 1px;
         }
         
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,
@@ -3665,62 +3901,34 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
         {
             flex-grow:1;
             display:none;
-            flex-basis:200px;
-            border-top:none;
-            border-left:none;
-            border-bottom:none;
         }
 		
         .chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*
         {
             flex-grow:1;
-            border-top:none;
-            border-left:none;
-            flex-basis:300px;
         }
-        
+		
+		.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*
+		{
+			flex:1;
+		}
+		
+		.chbs-main.chbs-widget .chbs-main-content-step-1 .chbs-tab.ui-tabs #panel-3.ui-tabs-panel>.chbs-form-field-route,      
+		.chbs-main.chbs-widget .chbs-main-content-step-1 .chbs-tab.ui-tabs #panel-3.ui-tabs-panel>.chbs-form-field-pickup-location,
+		.chbs-main.chbs-widget .chbs-main-content-step-1 .chbs-tab.ui-tabs #panel-3.ui-tabs-panel>.chbs-form-field-dropoff-location
+		{
+			display:block;
+		}
+		
         .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-transfer-type,
         .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time
         {
             display:block;
         }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-pickup-date-time,
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time
+         
+		.chbs-main.chbs-widget .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-location-switch>input
         {
-            flex-basis:220px;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time>div:first-child
-        {
-            border-left:none;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time>div:first-child+div
-        {
-            border-right:none;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-pickup-date-time>div,
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time>div
-        {
-            width:55%;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-pickup-date-time>div+div,
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-return-date-time>div+div
-        {
-            width:45%;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-location-switch>input
-        {
-            padding-right:0px;
-        }
-        
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-transfer-type
-        {
-            flex-basis:120px;
+            padding-right:20px;
         }
         
         .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-extra-time
@@ -3728,28 +3936,16 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
             display:none;
         }
         
-        .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>.chbs-form-field-location-autocomplete
-        {
-            flex-basis:120px;
-        }
-        
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,
         .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field
         {
             margin-top:0px;
-            border-bottom:none;
         }
 		
 		.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field
 		{
 			margin-top:0px;
 		}
-		
-			.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50
-			{
-				border-top:none;
-				border-left:none;
-			}
 			        
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child,
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
@@ -3768,24 +3964,15 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
         {
             display:block;
         }
-        
-            .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,
-            .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div
-            {
-                height:100%;
-                border-top:none;
-				border-left:none;
-            }
 			
 			.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div
 			{
-				height:100%;
+				
 			}
         
         .chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
         .chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child
         {
-            max-width:200px;
             text-align:center;
         }
         
@@ -3805,8 +3992,12 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
             
             /******************************************************************/
             /* Widget / Style 2 / Responsive                                  */
+			/* Widget / Style 3 / Responsive                                  */
+			/* Widget / Style 4 / Responsive                                  */
             /******************************************************************/
             
+			.chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
+            .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
             .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
             .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
             .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel,
@@ -3819,6 +4010,8 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
                 flex-direction:column;
             }
 			
+                .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,
+                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,	 
                 .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,
                 .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,
                 .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>*,
@@ -3831,6 +4024,8 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
                     flex-basis:100%;
                 }
 				
+                .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
+                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
                 .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
                 .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
                 .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
@@ -3843,6 +4038,8 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
 					padding:0px 20px 20px 0px;
                 }
 				
+                .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
+                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,    
                 .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
                 .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
                 .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-4.chbs-border-none .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child,
@@ -3853,6 +4050,8 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
 					padding:0px;
 				}
 				
+                    .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
+                    .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,  
                     .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
                     .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
                     .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
@@ -3862,9 +4061,12 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
                     .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a,
                     .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:last-child>a                    
                     {
+						margin-right:0px;
                         display:inline-block;
                     }
 
+                    .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,
+                    .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,  
                     .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,
                     .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,
                     .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel>div:first-child>div,
@@ -3877,30 +4079,8 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
                         height:auto;
                     }
 
-                .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,
-                .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,
-                .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,
-                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,                  
-                .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field,
-                .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field                
-                {
-                    border:none;
-					border-bottom-width:1px;
-					border-bottom-style:solid;
-                }
-				
-                .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,                    
-                .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child,
-                .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-4 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field:first-child                
-                {
-                    border-top:none;
-                }
-
+	            .chbs-width-960.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50,
+                .chbs-width-768.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50, 
                 .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50,
                 .chbs-width-300.chbs-main.chbs-widget.chbs-widget-style-2 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50,
 	            .chbs-width-480.chbs-main.chbs-widget.chbs-widget-style-3 .chbs-main-content-step-1 .chbs-tab.ui-tabs .ui-tabs-panel .chbs-form-field.chbs-form-field-width-50,
@@ -3930,4 +4110,30 @@ html .iti--allow-dropdown .iti__flag-container:hover .iti__selected-flag
 .pac-container
 {
     z-index:2147483647;
+}
+
+/* Chauffeur Booking System - Datepicker theme overrides */
+.chbs-datepicker.ui-datepicker,
+.chbs-datepicker#ui-datepicker-div
+{
+	background-color:#ffffff;
+	border-color:#dc3200;
+}
+
+.chbs-datepicker.ui-datepicker a,
+.chbs-datepicker#ui-datepicker-div a
+{
+	color:#dc3200;
+}
+
+.chbs-datepicker.ui-datepicker .ui-state-hover,
+.chbs-datepicker.ui-datepicker .ui-state-active,
+.chbs-datepicker.ui-datepicker .ui-state-highlight,
+.chbs-datepicker#ui-datepicker-div .ui-state-hover,
+.chbs-datepicker#ui-datepicker-div .ui-state-active,
+.chbs-datepicker#ui-datepicker-div .ui-state-highlight
+{
+	background-color:#dc3200;
+	border-color:#dc3200;
+	color:#ffffff;
 }

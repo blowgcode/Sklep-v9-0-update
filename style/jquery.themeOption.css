@@ -90,6 +90,11 @@
 	margin:0px !important; 
 }
 
+.to-margin-left-0
+{
+	margin-left:0px !important;
+}
+
 .to .to-bold 
 { 
 	font-weight:bold; 
@@ -288,6 +293,8 @@
 	.to ul.to-menu li a.to-menu-select:hover,
 	.to ul.to-menu li a.to-menu-error,
 	.to ul.to-menu li a.to-menu-error:hover,
+	.to ul.to-menu li a.to-menu-error::before,
+	.to ul.to-menu li a.to-menu-error::before:hover,
     .to li.ui-timepicker-selected,     
 	.to .to-qtip,
 	.to .to-header .to-header-left h3,
@@ -406,19 +413,24 @@
 		border-color:#F6BCB2;
 	}
 	
-	.to .to-notice-small.to-notice-small-error
-	{
-		border-left-color:#CA4A1F;
-	}
-
 	.to .to-notice.to-notice-success
 	{
 		border-color:#A9CF91;			
 	}
 	
+	.to .to-notice-small.to-notice-small-error
+	{
+		border-left-color:#CA4A1F;
+	}
+
 	.to .to-notice-small.to-notice-small-success
 	{
 		border-left-color:#A9CF91;
+	}
+	
+	.to .to-notice-small.to-notice-small-info
+	{
+		border-left-color:#0073AA;
 	}
 
 	.to .to-color-picker-sample
@@ -522,6 +534,9 @@
 	.to .ui-timepicker-list .ui-timepicker-selected:hover,
     .to .ui-button.ui-state-active,
     .to .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a,
+	.to .ui-tabs .ui-tabs .ui-tabs-nav .ui-state-active a.ui-tabs-anchor,
     .to .ui-widget-header
     {
 		background-color:#0073AA;
@@ -564,6 +579,7 @@
 		background-image:none !important;
 	}
     
+	.to .to-log-entry,
     .to .to-slider-range,
     .to .to-field-disabled,
     .to *[readonly="readonly"]
@@ -1078,6 +1094,12 @@
         margin-top:1px;
     }
 	
+	.to .ui-state-active .ui-icon,
+	.to .ui-widget-content .ui-icon
+	{
+		display:none;
+	}	
+	
 		/**********************************************************************/
 		/* Panel / Form Element / Tabs  									  */
 		/**********************************************************************/
@@ -1482,7 +1504,7 @@
             margin-top:-1px;
 		}
         
-            .ui-timepicker-list li
+            .to .ui-timepicker-list li
             {
                 padding:10px 10px 10px 10px;
             }
@@ -1502,6 +1524,26 @@
             min-height:36.2px;
             border-style:solid;
         }
+	
+		/**********************************************************************/
+		/* Panel / Form Element / Log entry		    						  */
+		/**********************************************************************/
+		
+		.to .to-log-entry
+		{
+			padding:8px;
+			max-width:100%;
+			overflow-x:auto;
+		}
+		
+/******************************************************************************/
+/* Log entry																  */
+/******************************************************************************/
+
+.to-log-entry
+{
+	
+}
 		
 	/**************************************************************************/
 	/* Panel / Qtip															  */
@@ -1778,4 +1820,31 @@
 {
 	width:100%;
 	max-width:100%;
+}
+
+/******************************************************************************/
+/* Widget style 1															  */
+/******************************************************************************/
+
+.to.to-widget-style-1
+{
+	margin:20px 10px 20px 10px;
+}
+
+.to.to-widget-style-1 .to-form-field-list>li>span.to-legend
+{
+	margin-bottom:5px;
+}
+
+.to.to-widget-style-1 .to-form-field-list>li
+{
+	margin-top:0px;
+	border-style:none;
+	padding-bottom:0px;
+}
+
+.to.to-widget-style-1 textarea,
+.to.to-widget-style-1 input[type="text"]
+{
+	width:100%;
 }

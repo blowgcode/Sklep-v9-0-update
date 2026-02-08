@@ -43,16 +43,23 @@
     var menu=jQuery('#menu-posts-chbs_booking .wp-menu-name');
     if(menu.text()==='Chauffeur Booking System')
         menu.html('Chauffeur<br/>Booking System');
-    
+	
     /**************************************************************************/
     
 })(jQuery,document,window);
 
 /******************************************************************************/
 
-function toCreateCustomDateTimePicker(dateFormat,timeFormat)
+function toCreateCustomDateTimePicker(dateFormat=null,timeFormat=null,firstDayWeek=null)
 {
-    jQuery('body').on('focusin','.to-timepicker-custom',function()
+	if(dateFormat===null)
+		dateFormat=chbsData.date_format;
+	if(timeFormat===null)
+		timeFormat=chbsData.time_format;
+	if(firstDayWeek===null)
+		firstDayWeek=parseInt(chbsData.first_day_week,10);
+	
+    jQuery('body').on('click','.to-timepicker-custom',function()
     {
         var width=jQuery(this).outerWidth();
 
@@ -66,6 +73,8 @@ function toCreateCustomDateTimePicker(dateFormat,timeFormat)
         {
             jQuery(this).next('.ui-timepicker-wrapper').width(width);
         });
+		
+		jQuery(this).timepicker('show');
     }); 
 
     jQuery('body').on('focusin','.to-datepicker-custom',function()
@@ -73,6 +82,7 @@ function toCreateCustomDateTimePicker(dateFormat,timeFormat)
         jQuery(this).datepicker(
         { 
             inline:true,
+			firstDay:firstDayWeek,
             dateFormat:dateFormat,
             prevText:'<',
             nextText:'>'
@@ -84,7 +94,7 @@ function toCreateCustomDateTimePicker(dateFormat,timeFormat)
 
 /******************************************************************************/
 
-function toCreateAutocomplete(field)
+function toCreateAutocomplete(field,useCoordinateClass=false)
 {
     jQuery(field).each(function()
     {
@@ -105,8 +115,17 @@ function toCreateAutocomplete(field)
             if(!jQuery.trim(jQuery(this).val()).length)
             {
                 var name=jQuery(this).attr('name');
-                jQuery('input[name="'+name+'_coordinate_lat"]').val('');
-                jQuery('input[name="'+name+'_coordinate_lng"]').val('');                   
+				
+				if(useCoordinateClass)
+				{
+					jQuery(this).siblings('.to-coordinate-lat').val('');
+					jQuery(this).siblings('.to-coordinate-lng').val('');
+				}
+				else
+				{
+					jQuery('input[name="'+name+'_coordinate_lat"]').val('');
+					jQuery('input[name="'+name+'_coordinate_lng"]').val('');   
+				}
             }
         });
 
@@ -116,8 +135,16 @@ function toCreateAutocomplete(field)
             var name=$field.attr('name');
             var place=autocomplete.getPlace();
             
-            jQuery('input[name="'+name+'_coordinate_lat"]').val(place.geometry.location.lat());
-            jQuery('input[name="'+name+'_coordinate_lng"]').val(place.geometry.location.lng());
+			if(useCoordinateClass)
+			{
+				jQuery(field).siblings('.to-coordinate-lat').val(place.geometry.location.lat());
+				jQuery(field).siblings('.to-coordinate-lng').val(place.geometry.location.lng());		
+			}
+			else
+			{
+				jQuery('input[name="'+name+'_coordinate_lat"]').val(place.geometry.location.lat());
+				jQuery('input[name="'+name+'_coordinate_lng"]').val(place.geometry.location.lng());		
+			}
         });
     });
 };

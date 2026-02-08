@@ -70,8 +70,11 @@
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "chbsBookingFormBlockControl", function() { return chbsBookingFormBlockControl; });
-var _lodash = lodash,
+if(typeof(lodash)!="undefined")
+{
+    var _lodash = lodash,
     assign = _lodash.assign;
+}
 var __ = wp.i18n.__;
 var Fragment = wp.element.Fragment;
 var addFilter = wp.hooks.addFilter;
