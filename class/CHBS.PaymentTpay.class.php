@@ -814,6 +814,46 @@ class CHBSPaymentTpay
 		
 		return(null);
 	}
+
+	/**************************************************************************/
+
+	private function getPaymentStatusFromResponse($response)
+	{
+		$keys=array('status','result','state','transactionStatus','transaction_status');
+
+		foreach($keys as $key)
+		{
+			if(isset($response[$key]) && is_string($response[$key]) && $response[$key]!=='')
+				return($response[$key]);
+		}
+
+		return('');
+	}
+
+	/**************************************************************************/
+
+	private function getRequestHeaders()
+	{
+		if(function_exists('getallheaders'))
+			return(getallheaders());
+
+		$headers=array();
+		foreach($_SERVER as $name=>$value)
+		{
+			if(strpos($name,'HTTP_')===0)
+			{
+				$key=str_replace('_','-',substr($name,5));
+				$headers[$key]=$value;
+			}
+		}
+
+		if(isset($_SERVER['CONTENT_TYPE']))
+			$headers['CONTENT-TYPE']=$_SERVER['CONTENT_TYPE'];
+		if(isset($_SERVER['CONTENT_LENGTH']))
+			$headers['CONTENT-LENGTH']=$_SERVER['CONTENT_LENGTH'];
+
+		return($headers);
+	}
 	
 	/**************************************************************************/
 	
@@ -1288,6 +1328,10 @@ class CHBSPaymentTpay
 		));
 		
 		$meta=CHBSPostMeta::getPostMeta($booking['post']);
+		$transactionId=$this->getPaymentTransactionId($responseData);
+		$transactionStatus=$this->getPaymentStatusFromResponse($responseData);
+		if($transactionStatus==='')
+			$transactionStatus='PENDING';
 		
 		if(!array_key_exists('payment_tpay_data',$meta))
 			$meta['payment_tpay_data']=array();
@@ -1298,15 +1342,16 @@ class CHBSPaymentTpay
 			'group_id'=>$groupId,
 			'response'=>$responseData,
 			'data'=>array(
-				'tr_id'=>$this->getPaymentTransactionId($responseData),
-				'tr_status'=>'PENDING',
+				'tr_id'=>$transactionId,
+				'tr_status'=>$transactionStatus,
 				'tr_date'=>current_time('mysql')
 			)
 		);
 		
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_data',$meta['payment_tpay_data']);
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_group_id',$groupId);
-		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_transaction_id',$this->getPaymentTransactionId($responseData));
+		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_transaction_id',$transactionId);
+		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_status',$transactionStatus);
 		
 		$response['payment_process']=1;
 		$response['payment_tpay_redirect_url']=esc_url_raw($redirectUrl);
@@ -1383,48 +1428,23 @@ class CHBSPaymentTpay
 		$data=array();
 		$productionMode=((int)(isset($bookingFormMeta['payment_tpay_sandbox_mode_enable']) ? $bookingFormMeta['payment_tpay_sandbox_mode_enable'] : 0)===1) ? false : true;
 		
-		if(!isset($_SERVER['HTTP_X_JWS_SIGNATURE']) || $_SERVER['HTTP_X_JWS_SIGNATURE']==='')
-		{
-			$LogManager->add('tpay',2,__('[TPAY] Missing JWS signature header.','chauffeur-booking-system'));
-			$this->respondAndExit(false);
-		}
-		
 		if($libraryAvailable)
 		{
 			try
 			{
-				$requestParser=new class($rawBody,$contentType,$payloadData) extends \Tpay\OpenApi\Utilities\RequestParser
-				{
-					private $rawBody;
-					private $contentType;
-					private $payloadData;
-					
-					public function __construct($rawBody,$contentType,$payloadData)
-					{
-						$this->rawBody=$rawBody;
-						$this->contentType=$contentType;
-						$this->payloadData=$payloadData;
-					}
-					
-					public function getContentType()
-					{
-						return $this->contentType;
-					}
-					
-					public function getParsedContent()
-					{
-						return is_array($this->payloadData) ? $this->payloadData : array();
-					}
-					
-					public function getPayload()
-					{
-						return $this->rawBody;
-					}
-				};
-				
-				$cache=new \Tpay\OpenApi\Utilities\Cache(null,new CHBSTpayCache());
-				$certificateProvider=new \Tpay\OpenApi\Utilities\CacheCertificateProvider($cache);
-				$notificationHandler=new \Tpay\OpenApi\Webhook\JWSVerifiedPaymentNotification($certificateProvider,$notificationSecret,$productionMode,$requestParser);
+				$requestParser=new \Tpay\OpenApi\Utilities\RequestParser(
+					$contentType,
+					$rawBody,
+					$_POST,
+					$this->getRequestHeaders()
+				);
+				$certificateProvider=new \Tpay\OpenApi\Utilities\CacheCertificateProvider();
+				$notificationHandler=new \Tpay\OpenApi\Webhook\JWSVerifiedPaymentNotification(
+					$certificateProvider,
+					$notificationSecret,
+					$productionMode,
+					$requestParser
+				);
 				$notification=$notificationHandler->getNotification();
 				$jwsVerified=true;
 				
@@ -1481,6 +1501,8 @@ class CHBSPaymentTpay
 		$trCrc=isset($data['tr_crc']) ? (string)$data['tr_crc'] : '';
 		$trStatus=isset($data['tr_status']) ? (string)$data['tr_status'] : '';
 		$notificationKey=trim($trId.'|'.$trCrc.'|'.$trStatus,'|');
+		if($trId!=='')
+			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_transaction_id',$trId);
 		
 		if(!array_key_exists('payment_tpay_notification_ids',$meta))
 			$meta['payment_tpay_notification_ids']=array();
@@ -1502,6 +1524,8 @@ class CHBSPaymentTpay
 		$LogManager->add('tpay',2,sprintf(__('[5] Notification received. tr_id=%s tr_crc=%s tr_status=%s jws_verified=%s','chauffeur-booking-system'),$trId,$trCrc,$trStatus,$jwsVerified ? 'true' : 'false'));
 		
 		$statusValue=isset($data['tr_status']) ? strtoupper(trim((string)$data['tr_status'])) : '';
+		if($statusValue!=='')
+			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_status',$statusValue);
 		
 		if($statusValue==='CHARGEBACK')
 		{
@@ -1513,6 +1537,11 @@ class CHBSPaymentTpay
 		{
 			$LogManager->add('tpay',2,__('[6] Received PAID status.','chauffeur-booking-system'));
 		}
+		else if($statusValue==='PENDING')
+		{
+			$LogManager->add('tpay',2,__('[6] Received PENDING status.','chauffeur-booking-system'));
+			$this->respondAndExit(true);
+		}
 
 		if(in_array($statusValue,array('PAID','TRUE','CORRECT','SUCCESS'),true))
 		{
@@ -1520,8 +1549,8 @@ class CHBSPaymentTpay
 			{
 				if($BookingStatus->isBookingStatus(CHBSOption::getOption('booking_status_payment_success')))
 				{
-					$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
-					$currentStatus=isset($booking['meta']['booking_status_id']) ? (int)$booking['meta']['booking_status_id'] : 0;
+						$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
+						$currentStatus=isset($booking['meta']['booking_status_id']) ? (int)$booking['meta']['booking_status_id'] : 0;
 					
 					if($currentStatus===$successStatus)
 					{
