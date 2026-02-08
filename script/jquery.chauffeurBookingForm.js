@@ -3305,6 +3305,7 @@
 
 				var field=text.siblings('input[type="hidden"]');
 
+				if(!$self.applyDrivingZoneGeofence(fieldName,placeData,text,field)) return(false);
 				if(!$self.setPickupDropoffCountry(fieldName,placeData.country_code,text,field)) return(false);
 				if(!$self.applyPickupTimeGeofence(fieldName,placeLat,placeLng,text,field)) return(false);
 
@@ -3315,6 +3316,43 @@
 				//$self.googleMapCreate();
 				$self.googleMapCreateRoute();	
 			});					   
+		};
+
+		/**********************************************************************/
+
+		this.applyDrivingZoneGeofence=function(fieldName,placeData,textField,hiddenField)
+		{
+			if((fieldName.indexOf('pickup')===-1) && (fieldName.indexOf('dropoff')===-1)) return(true);
+
+			var drivingZoneOption=$self.getGoogleMapAutocompleteOption(fieldName,0);
+
+			if(parseInt(drivingZoneOption.restrictionType,10)===0) return(true);
+
+			var inCircle=true;
+			var inCountry=true;
+
+			if(drivingZoneOption.restrictionType==1 || drivingZoneOption.restrictionType==3)
+			{
+				inCircle=$self.isPointInCircle(new google.maps.LatLng(placeData.lat,placeData.lng),drivingZoneOption.circle.center,drivingZoneOption.circle.radius);
+			}
+
+			if(drivingZoneOption.restrictionType==2 || drivingZoneOption.restrictionType==3)
+			{
+				inCountry=$.inArray(placeData.country_code,drivingZoneOption.componentRestrictions.country)>-1;
+			}
+
+			if(!(inCircle && inCountry))
+			{
+				if($option.message.pickup_dropoff_out_of_range)
+					alert($option.message.pickup_dropoff_out_of_range);
+
+				textField.val('');
+				hiddenField.val('');
+
+				return(false);
+			}
+
+			return(true);
 		};
 
 		/**********************************************************************/
@@ -3382,8 +3420,6 @@
 
 		this.setPickupDropoffCountry=function(fieldName,countryCode,textField,hiddenField)
 		{
-			if(fieldName.indexOf('service_type_1')===-1) return(true);
-
 			if(fieldName.indexOf('pickup')>-1)
 				$pickupCountryCode=countryCode;
 			else if(fieldName.indexOf('dropoff')>-1)
