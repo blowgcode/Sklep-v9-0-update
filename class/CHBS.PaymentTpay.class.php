@@ -1173,8 +1173,6 @@ class CHBSPaymentTpay
 		if($Validation->isEmpty($cancelUrl))
 			$cancelUrl=get_the_permalink($postId);
 		
-		$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
-		
 		$GeoLocation=new CHBSGeoLocation();
 		
 		$postalCode=isset($bookingMeta['client_billing_detail_postal_code']) ? trim((string)$bookingMeta['client_billing_detail_postal_code']) : '';
@@ -1245,16 +1243,13 @@ class CHBSPaymentTpay
 				'groupId'=>$groupId
 			),
 			'payer'=>$payer,
+			// Notification URL comes from Tpay PoS configuration and is not overridden via API.
 			'callbacks'=>array
 			(
 				'payerUrls'=>array
 				(
 					'success'=>$successUrl,
 					'error'=>$cancelUrl
-				),
-				'notification'=>array
-				(
-					'url'=>$notificationUrl
 				)
 			)
 		);
