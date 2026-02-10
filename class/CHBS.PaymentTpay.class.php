@@ -1518,12 +1518,22 @@ class CHBSPaymentTpay
 			$errorMessage='';
 			if(!$this->verifyJwsSignatureManually($rawBody,$productionMode,$errorMessage))
 			{
-				$LogManager->add('tpay',2,sprintf(__('[TPAY] JWS verification failed: %s','chauffeur-booking-system'),$errorMessage));
-				$this->respondAndExit(false);
+				if($errorMessage==='Missing X-JWS-Signature header.' && is_array($payloadSource) && isset($payloadSource['md5sum']))
+				{
+					$LogManager->add('tpay',2,__('[TPAY] Missing JWS signature header, falling back to MD5 verification.','chauffeur-booking-system'));
+					$data=$payloadSource;
+				}
+				else
+				{
+					$LogManager->add('tpay',2,sprintf(__('[TPAY] JWS verification failed: %s','chauffeur-booking-system'),$errorMessage));
+					$this->respondAndExit(false);
+				}
 			}
-			
-			$LogManager->add('tpay',2,__('[TPAY] JWS verified using manual verification.','chauffeur-booking-system'));
-			$data=$payloadSource;
+			else
+			{
+				$LogManager->add('tpay',2,__('[TPAY] JWS verified using manual verification.','chauffeur-booking-system'));
+				$data=$payloadSource;
+			}
 		}
 		
 		if(!is_array($data) || !count($data))
