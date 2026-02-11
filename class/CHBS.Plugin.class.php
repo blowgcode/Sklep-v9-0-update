@@ -764,8 +764,8 @@ class CHBSPlugin
 			
 			add_action('wp_enqueue_scripts',array($this,'publicInit'));
 			
-			add_action('wp_loaded',array($PaymentStripe,'receivePayment'));
-			add_action('wp_loaded',array($PaymentTpay,'receivePayment'));
+			add_action('wp_loaded',array($PaymentStripe,'receivePayment'),0);
+			add_action('wp_loaded',array($PaymentTpay,'receivePayment'),0);
 		}
 			   
 		if(function_exists('register_block_type'))
