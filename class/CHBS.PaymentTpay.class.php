@@ -1298,7 +1298,7 @@ class CHBSPaymentTpay
 
 		if($includeNotificationUrl)
 		{
-			$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
+			$notificationUrl=apply_filters('chbs_tpay_notification_url',home_url('/tpay-notify.php'),$bookingForm,$booking,$postId);
 			$fields['callbacks']['notification']=array('url'=>$notificationUrl);
 		}
 		
@@ -1314,6 +1314,26 @@ class CHBSPaymentTpay
 		
 		if($responseData===null)
 		{
+			if($this->hasErrorCode(isset($errorData['errors']) ? $errorData['errors'] : array(),'url_override_is_disabled'))
+			{
+				$retryFields=$fields;
+				if(isset($retryFields['callbacks']['notification']))
+					unset($retryFields['callbacks']['notification']);
+
+				$retryError=array();
+				$retryResponse=$this->createTransaction($bookingForm['meta'],$retryFields,$retryError);
+
+				if($retryResponse!==null)
+				{
+					$responseData=$retryResponse;
+					$errorData=array();
+				}
+				else
+				{
+					$errorData=$retryError;
+				}
+			}
+
 			if($this->hasErrorCode(isset($errorData['errors']) ? $errorData['errors'] : array(),'bank_group_does_not_exist'))
 			{
 				$channelId='';
