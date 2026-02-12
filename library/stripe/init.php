@@ -2,6 +2,12 @@
 
 // File generated from our OpenAPI spec
 
+if(!file_exists(__DIR__.'/lib/Stripe.php'))
+{
+	error_log('[CHBS Stripe] Missing Stripe SDK files in library/stripe/lib. Stripe payments disabled.');
+	return;
+}
+
 // Stripe singleton
 require __DIR__ . '/lib/Stripe.php';
 
