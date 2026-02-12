@@ -2,7 +2,7 @@
 
 ## Wymagania w panelu Tpay
 - Wygeneruj klucze OpenAPI (client_id + secret): **Integration → API → Open API keys**.
-- Ustaw **Payment Tpay notification secret** jako kod potwierdzeń / security code używany do weryfikacji webhooka (to nie jest OAuth `client_secret`).
+- Ustaw **Payment Tpay notification secret** jako merchant confirmation/security code używany do weryfikacji webhooka (to nie jest OAuth `client_secret`).
 - W sekcji powiadomień ustaw adres endpointu na:
   `https://twoja-domena.pl/?action=payment_tpay`
 - Włącz **Allow override notification URL** tylko jeśli chcesz przekazywać `callbacks.notification.url` z API.

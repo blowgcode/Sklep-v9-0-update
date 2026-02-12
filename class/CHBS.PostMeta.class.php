@@ -94,7 +94,7 @@ class CHBSPostMeta
 		
 			case $prefix.'_booking':
 				
-				self::unserialize($data,array('booking_extra','coordinate','payment_stripe_data','payment_paypal_data','payment_square_data','payment_mollie_data','form_element_panel','form_element_field','form_element_agreement','booking_driver_log','tax_rate_distance','invoice_archive'));
+				self::unserialize($data,array('booking_extra','coordinate','payment_stripe_data','payment_paypal_data','payment_square_data','payment_mollie_data','payment_tpay_data','payment_tpay_notification_ids','form_element_panel','form_element_field','form_element_agreement','booking_driver_log','tax_rate_distance','invoice_archive'));
   
 				$Booking=new CHBSBooking();
 				

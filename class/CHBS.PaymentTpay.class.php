@@ -1431,7 +1431,7 @@ class CHBSPaymentTpay
 		if($transactionStatus==='')
 			$transactionStatus='PENDING';
 		
-		if(!array_key_exists('payment_tpay_data',$meta))
+		if(!isset($meta['payment_tpay_data']) || !is_array($meta['payment_tpay_data']))
 			$meta['payment_tpay_data']=array();
 		
 		$meta['payment_tpay_data'][]=array
@@ -1609,7 +1609,7 @@ class CHBSPaymentTpay
 		
 		$meta=CHBSPostMeta::getPostMeta($bookingId);
 		
-		if(!array_key_exists('payment_tpay_data',$meta))
+		if(!isset($meta['payment_tpay_data']) || !is_array($meta['payment_tpay_data']))
 			$meta['payment_tpay_data']=array();
 		
 		$meta['payment_tpay_data'][]=array
@@ -1627,7 +1627,7 @@ class CHBSPaymentTpay
 		if($trId!=='')
 			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_transaction_id',$trId);
 		
-		if(!array_key_exists('payment_tpay_notification_ids',$meta))
+		if(!isset($meta['payment_tpay_notification_ids']) || !is_array($meta['payment_tpay_notification_ids']))
 			$meta['payment_tpay_notification_ids']=array();
 		
 		if($notificationKey!=='' && in_array($notificationKey,$meta['payment_tpay_notification_ids'],true))
