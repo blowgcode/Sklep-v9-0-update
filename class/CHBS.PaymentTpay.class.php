@@ -9,6 +9,8 @@ class CHBSPaymentTpay
 	
 	const PAYMENT_ID=6;
 	const ACCESS_TOKEN_TRANSIENT_PREFIX='chbs_tpay_access_token_';
+	const TPAY_POLL_EVENT='chbs_tpay_poll_status';
+	const TPAY_POLL_MAX_ATTEMPTS=12;
 	
 	/**************************************************************************/
 	
@@ -31,6 +33,9 @@ class CHBSPaymentTpay
 			
 			add_filter('chbs_payment_prepare_request_data',array($this,'preparePayment'),10,6);
 			add_filter(PLUGIN_CHBS_CONTEXT.'_booking_payment_transaction',array($this,'renderTransactionDetails'),10,2);
+
+			add_action('chbs_tpay_payment_success',array($this,'processPaymentSuccess'),10,1);
+			add_action(self::TPAY_POLL_EVENT,array($this,'pollTransactionStatus'),10,1);
 		}
 	}
 	
@@ -589,11 +594,87 @@ class CHBSPaymentTpay
 		$requestMethod=isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string)$_SERVER['REQUEST_METHOD']) : '';
 		if($requestMethod!=='POST')
 			return(false);
+
+		if(defined('CHBS_TPAY_NOTIFY_ENDPOINT') && CHBS_TPAY_NOTIFY_ENDPOINT)
+			return(true);
 		
 		$hasAction=(array_key_exists('action',$_REQUEST) && $_REQUEST['action']==='payment_tpay');
 		$hasSignature=isset($_SERVER['HTTP_X_JWS_SIGNATURE']) && $_SERVER['HTTP_X_JWS_SIGNATURE']!=='';
 		
 		return($hasAction || $hasSignature);
+	}
+
+	/**************************************************************************/
+
+	private function scheduleTpayPoll($bookingId,$delaySeconds=300)
+	{
+		$bookingId=(int)$bookingId;
+		if($bookingId<=0) return;
+		if(!wp_next_scheduled(self::TPAY_POLL_EVENT,array($bookingId)))
+			wp_schedule_single_event(time()+(int)$delaySeconds,self::TPAY_POLL_EVENT,array($bookingId));
+	}
+
+	/**************************************************************************/
+
+	public function pollTransactionStatus($bookingId)
+	{
+		$bookingId=(int)$bookingId;
+		if($bookingId<=0) return;
+
+		$Booking=new CHBSBooking();
+		$BookingForm=new CHBSBookingForm();
+		$BookingStatus=new CHBSBookingStatus();
+
+		$booking=$Booking->getBooking($bookingId);
+		if(!is_array($booking) || !count($booking)) return;
+
+		$formDict=$BookingForm->getDictionary(array('booking_form_id'=>$booking['meta']['booking_form_id']));
+		$formMeta=array();
+		if(is_array($formDict) && isset($formDict[$booking['meta']['booking_form_id']]['meta']))
+			$formMeta=$formDict[$booking['meta']['booking_form_id']]['meta'];
+
+		$transactionId=(string)CHBSPostMeta::getPostMeta($bookingId,'payment_tpay_transaction_id');
+		if($transactionId==='') return;
+
+		$attempts=(int)CHBSPostMeta::getPostMeta($bookingId,'payment_tpay_poll_attempts');
+		$attempts++;
+		CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_poll_attempts',$attempts);
+		if($attempts>self::TPAY_POLL_MAX_ATTEMPTS) return;
+
+		$token=$this->getAccessToken($formMeta);
+		if($token===null) { $this->scheduleTpayPoll($bookingId,300); return; }
+
+		$baseUrl=$this->getApiBaseUrl($formMeta);
+		$url=rtrim($baseUrl,'/').'/transactions/'.rawurlencode($transactionId);
+
+		$response=wp_remote_get($url,array(
+			'timeout'=>15,
+			'headers'=>array('Authorization'=>'Bearer '.$token)
+		));
+		if(is_wp_error($response)) { $this->scheduleTpayPoll($bookingId,300); return; }
+
+		$status=wp_remote_retrieve_response_code($response);
+		$body=wp_remote_retrieve_body($response);
+		$data=json_decode($body,true);
+		if($status<200 || $status>=300 || !is_array($data)) { $this->scheduleTpayPoll($bookingId,300); return; }
+
+		$meta=CHBSPostMeta::getPostMeta($bookingId);
+		if(!isset($meta['payment_tpay_data']) || !is_array($meta['payment_tpay_data'])) $meta['payment_tpay_data']=array();
+		$meta['payment_tpay_data'][]=array('type'=>'poll_status','response'=>$data,'data'=>array('tr_id'=>$transactionId,'tr_date'=>current_time('mysql')));
+		CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_data',$meta['payment_tpay_data']);
+
+		$state=strtoupper(trim((string)($data['status'] ?? ($data['payments']['status'] ?? ''))));
+		if(in_array($state,array('PAID','TRUE','CORRECT','SUCCESS'),true))
+		{
+			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_status',$state);
+			$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
+			$currentStatus=(int)($booking['meta']['booking_status_id'] ?? 0);
+			if($successStatus>0 && $currentStatus!==$successStatus && $BookingStatus->isBookingStatus($successStatus))
+				CHBSBookingHelper::paymentSuccess($bookingId);
+			return;
+		}
+
+		$this->scheduleTpayPoll($bookingId,300);
 	}
 
 	/**************************************************************************/
@@ -1273,7 +1354,7 @@ class CHBSPaymentTpay
 		if($payerIp!=='')
 			$payer['ip']=$payerIp;
 		
-		$includeNotificationUrl=(bool)apply_filters('chbs_tpay_include_notification_url_in_callbacks',true,$bookingForm,$booking,$postId);
+		$includeNotificationUrl=(bool)apply_filters('chbs_tpay_include_notification_url_in_callbacks',false,$bookingForm,$booking,$postId);
 
 		$fields=array
 		(
@@ -1470,6 +1551,8 @@ class CHBSPaymentTpay
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_group_id',$groupId);
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_transaction_id',$transactionId);
 		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_status',$transactionStatus);
+		CHBSPostMeta::updatePostMeta($booking['post']->ID,'payment_tpay_poll_attempts',0);
+		$this->scheduleTpayPoll($booking['post']->ID,300);
 		
 		$response['payment_process']=1;
 		$response['payment_tpay_redirect_url']=esc_url_raw($redirectUrl);
@@ -1596,7 +1679,8 @@ class CHBSPaymentTpay
 						'stage'=>'jws',
 						'message'=>$errorMessage
 					),$debugEnabled);
-					$this->respondAndExit(false);
+					$this->scheduleTpayPoll($bookingId,120);
+					$this->respondAndExit(true);
 				}
 			}
 			else
@@ -1613,7 +1697,8 @@ class CHBSPaymentTpay
 				'stage'=>'jws',
 				'message'=>'empty_payload_after_verification'
 			),$debugEnabled);
-			$this->respondAndExit(false);
+			$this->scheduleTpayPoll($bookingId,120);
+			$this->respondAndExit(true);
 		}
 		
 		$md5Error='';
@@ -1624,7 +1709,8 @@ class CHBSPaymentTpay
 				'stage'=>'md5sum',
 				'message'=>$md5Error
 			),$debugEnabled);
-			$this->respondAndExit(false);
+			$this->scheduleTpayPoll($bookingId,120);
+			$this->respondAndExit(true);
 		}
 		
 		$meta=CHBSPostMeta::getPostMeta($bookingId);
@@ -1688,55 +1774,10 @@ class CHBSPaymentTpay
 
 		if(in_array($statusValue,array('PAID','TRUE','CORRECT','SUCCESS'),true))
 		{
-			$shouldRunSync=false;
-			if(CHBSOption::getOption('booking_status_payment_success')!=-1)
-			{
-				if($BookingStatus->isBookingStatus(CHBSOption::getOption('booking_status_payment_success')))
-				{
-						$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
-						$currentStatus=isset($booking['meta']['booking_status_id']) ? (int)$booking['meta']['booking_status_id'] : 0;
-					
-					if($currentStatus===$successStatus)
-					{
-						$LogManager->add('tpay',2,__('[6] Booking already marked as paid.','chauffeur-booking-system'));
-					}
-					else
-					{
-						$LogManager->add('tpay',2,__('[6] Scheduling booking status update.','chauffeur-booking-system'));
-						$scheduled=true;
-						if(!wp_next_scheduled('chbs_tpay_payment_success',array($bookingId)))
-						{
-							$scheduled=wp_schedule_single_event(time(),'chbs_tpay_payment_success',array($bookingId));
-							if($scheduled===false)
-								$LogManager->add('tpay',2,__('[6] Unable to schedule wp-cron event for Tpay payment success.','chauffeur-booking-system'));
-						}
-
-						if(defined('DISABLE_WP_CRON') && DISABLE_WP_CRON)
-						{
-							$LogManager->add('tpay',2,__('[6] DISABLE_WP_CRON active - forcing synchronous payment success handling.','chauffeur-booking-system'));
-							$shouldRunSync=true;
-						}
-						elseif($scheduled===false)
-						{
-							$shouldRunSync=true;
-						}
-						elseif(apply_filters('chbs_tpay_process_payment_synchronously',false,$bookingId))
-						{
-							$shouldRunSync=true;
-						}
-					}
-				}
-				else
-				{
-					$LogManager->add('tpay',2,__('[7] Cannot find a valid booking status.','chauffeur-booking-system'));
-				}
-			}
-
-			if($shouldRunSync)
-			{
-				$LogManager->add('tpay',2,__('[6] Running synchronous payment success handling.','chauffeur-booking-system'));
+			$successStatus=(int)CHBSOption::getOption('booking_status_payment_success');
+			$currentStatus=(int)($booking['meta']['booking_status_id'] ?? 0);
+			if($successStatus>0 && $currentStatus!==$successStatus && $BookingStatus->isBookingStatus($successStatus))
 				CHBSBookingHelper::paymentSuccess($bookingId);
-			}
 			
 			$this->respondAndExit(true);
 		}
