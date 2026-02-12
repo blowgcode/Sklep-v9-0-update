@@ -2,10 +2,10 @@
 
 ## Wymagania w panelu Tpay
 - Wygeneruj klucze OpenAPI (client_id + secret): **Integration → API → Open API keys**.
-- Ustaw sekret do weryfikacji powiadomień (JWS) – wtyczka używa pola **Payment Tpay notification secret** (jeśli puste, użyje client secret).
+- Ustaw **Payment Tpay notification secret** jako merchant confirmation/security code używany do weryfikacji webhooka (to nie jest OAuth `client_secret`).
 - W sekcji powiadomień ustaw adres endpointu na:
   `https://twoja-domena.pl/?action=payment_tpay`
-- Włącz **Allow override notification URL**, jeśli URL podawany jest w `callbacks.notification.url` (domyślnie jest).
+- Włącz **Allow override notification URL** tylko jeśli chcesz przekazywać `callbacks.notification.url` z API.
 - Upewnij się, że endpoint działa po HTTPS (TLS 1.2+), nie robi redirectów i odpowiada 200.
 
 ## Testy (sandbox)
@@ -29,9 +29,12 @@
 3. Po poprawnej weryfikacji JWS endpoint powinien zwrócić `TRUE`.
 4. Sprawdź logi CHBS – wpisy zawierają `tr_id`, `tr_crc`, `tr_status`, oraz `jws_verified`.
 
+## Filtry integracji
+- `chbs_tpay_include_notification_url_in_callbacks` (bool, domyślnie `true`) — kontroluje czy wtyczka dołącza `callbacks.notification.url` podczas tworzenia transakcji (`preparePayment()` i diagnostyka).
+  - Ustaw `false`, gdy w panelu Tpay (PoS) wyłączone jest nadpisywanie URL i webhook ma być brany wyłącznie z konfiguracji PoS.
+
 ## Checklista wdrożeniowa
 - [ ] Klucze OpenAPI (client_id + secret) wpisane w ustawieniach formularza rezerwacji.
-- [ ] Sekret notyfikacji (JWS) ustawiony i zgodny z panelem Tpay.
-- [ ] `callbacks.notification.url` wskazuje na `/?action=payment_tpay`.
-- [ ] **Allow override notification URL** włączone w panelu Tpay (jeśli URL podawany w callbackach).
+- [ ] `Payment Tpay notification secret` ustawiony jako kod security/confirmation zgodny z panelem Tpay.
+- [ ] Jeśli używasz `callbacks.notification.url`, wskazuje on na właściwy endpoint i opcja override jest włączona w panelu Tpay.
 - [ ] Endpoint notyfikacji nie wykonuje redirectów i odpowiada `TRUE`.

@@ -20,9 +20,10 @@ class CHBSPaymentTpay
 	
 	/**************************************************************************/
 	
-	function __construct()
+	function __construct($bookingForm=array())
 	{
 		$this->registerAutoloader();
+		$this->initializeTpayLogging($bookingForm['meta'] ?? array());
 		
 		if(!self::$hooksInitialized)
 		{
@@ -125,6 +126,58 @@ class CHBSPaymentTpay
 		$LogManager->add('tpay',1,__('Unable to load Tpay OpenAPI library. Payment temporarily unavailable.','chauffeur-booking-system'));
 		
 		return(false);
+	}
+
+	/**************************************************************************/
+	
+	private function initializeTpayLogging($meta)
+	{
+		if(isset($meta['payment_tpay_disable_logging']) && (int)$meta['payment_tpay_disable_logging']===1)
+		{
+			if(class_exists('Tpay\\OpenApi\\Utilities\\Logger'))
+				\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			return;
+		}
+		
+		if(!class_exists('Tpay\\OpenApi\\Utilities\\Logger'))
+			return;
+		
+		$LogManager=new CHBSLogManager();
+		$uploadDir=wp_get_upload_dir();
+		$baseDir=is_array($uploadDir) && isset($uploadDir['basedir']) ? $uploadDir['basedir'] : '';
+		
+		if($baseDir==='')
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,__('Unable to determine upload directory for Tpay logs. Logging disabled.','chauffeur-booking-system'));
+			return;
+		}
+		
+		$customDir=trailingslashit($baseDir).'tpay-logs';
+		
+		if(!is_dir($customDir) && !wp_mkdir_p($customDir))
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Unable to create Tpay log directory (%s). Logging disabled.','chauffeur-booking-system'),$customDir));
+			return;
+		}
+		
+		if(!is_writable($customDir))
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Tpay log directory is not writable (%s). Logging disabled.','chauffeur-booking-system'),$customDir));
+			return;
+		}
+		
+		try
+		{
+			\Tpay\OpenApi\Utilities\Logger::setLogPath(trailingslashit($customDir));
+		}
+		catch(Exception $ex)
+		{
+			\Tpay\OpenApi\Utilities\Logger::disableLogging();
+			$LogManager->add('tpay',1,sprintf(__('Unable to configure Tpay logging: %s','chauffeur-booking-system'),$ex->getMessage()));
+		}
 	}
 
 	/**************************************************************************/
@@ -551,12 +604,53 @@ class CHBSPaymentTpay
 		{
 			ob_end_clean();
 		}
+
+		if(!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE',true);
+		if(!defined('DONOTCACHEDB')) define('DONOTCACHEDB',true);
+		if(!defined('DONOTMINIFY')) define('DONOTMINIFY',true);
+		if(!defined('DONOTCDN')) define('DONOTCDN',true);
+		if(!defined('DONOTROCKETOPTIMIZE')) define('DONOTROCKETOPTIMIZE',true);
+		if(!defined('DONOTCACHEOBJECT')) define('DONOTCACHEOBJECT',true);
+
+		http_response_code(200);
 		
 		if(!headers_sent())
+		{
 			header('Content-Type: text/plain; charset=UTF-8');
+			header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+			header('Pragma: no-cache');
+			header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
+		}
 		
 		echo ($success ? 'TRUE' : 'FALSE');
 		exit;
+	}
+
+	/**************************************************************************/
+
+	private function appendTpayMetaDebugEvent($bookingId,$type,$payload,$enabled)
+	{
+		if(!$enabled)
+			return;
+
+		$bookingId=(int)$bookingId;
+		if($bookingId<=0)
+			return;
+
+		$events=CHBSPostMeta::getPostMeta($bookingId,'chbs_payment_tpay_data');
+		if(!is_array($events))
+			$events=array();
+
+		$events[]=array(
+			'type'=>$type,
+			'date'=>current_time('mysql'),
+			'payload'=>is_array($payload) ? $payload : array('value'=>$payload)
+		);
+
+		if(count($events)>200)
+			$events=array_slice($events,-200);
+
+		CHBSPostMeta::updatePostMeta($bookingId,'chbs_payment_tpay_data',$events);
 	}
 
 	/**************************************************************************/
@@ -883,6 +977,8 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
+			$LogManager=new CHBSLogManager();
+			$LogManager->add('tpay',1,sprintf(__('Tpay bank groups request failed: %s','chauffeur-booking-system'),$ex->getMessage()));
 			$this->logDebug('Failed to fetch Tpay bank groups',array('error'=>$ex->getMessage()));
 			return(array());
 		}
@@ -1118,8 +1214,6 @@ class CHBSPaymentTpay
 		if($Validation->isEmpty($cancelUrl))
 			$cancelUrl=get_the_permalink($postId);
 		
-		$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
-		
 		$GeoLocation=new CHBSGeoLocation();
 		
 		$postalCode=isset($bookingMeta['client_billing_detail_postal_code']) ? trim((string)$bookingMeta['client_billing_detail_postal_code']) : '';
@@ -1179,6 +1273,8 @@ class CHBSPaymentTpay
 		if($payerIp!=='')
 			$payer['ip']=$payerIp;
 		
+		$includeNotificationUrl=(bool)apply_filters('chbs_tpay_include_notification_url_in_callbacks',true,$bookingForm,$booking,$postId);
+
 		$fields=array
 		(
 			'amount'=>CHBSPrice::numberFormat($bookingBilling['summary']['pay']),
@@ -1196,13 +1292,15 @@ class CHBSPaymentTpay
 				(
 					'success'=>$successUrl,
 					'error'=>$cancelUrl
-				),
-				'notification'=>array
-				(
-					'url'=>$notificationUrl
 				)
 			)
 		);
+
+		if($includeNotificationUrl)
+		{
+			$notificationUrl=apply_filters('chbs_tpay_notification_url',home_url('/tpay-notify.php'),$bookingForm,$booking,$postId);
+			$fields['callbacks']['notification']=array('url'=>$notificationUrl);
+		}
 		
 		if($this->isDebugEnabled($bookingForm['meta']))
 		{
@@ -1216,6 +1314,26 @@ class CHBSPaymentTpay
 		
 		if($responseData===null)
 		{
+			if($this->hasErrorCode(isset($errorData['errors']) ? $errorData['errors'] : array(),'url_override_is_disabled'))
+			{
+				$retryFields=$fields;
+				if(isset($retryFields['callbacks']['notification']))
+					unset($retryFields['callbacks']['notification']);
+
+				$retryError=array();
+				$retryResponse=$this->createTransaction($bookingForm['meta'],$retryFields,$retryError);
+
+				if($retryResponse!==null)
+				{
+					$responseData=$retryResponse;
+					$errorData=array();
+				}
+				else
+				{
+					$errorData=$retryError;
+				}
+			}
+
 			if($this->hasErrorCode(isset($errorData['errors']) ? $errorData['errors'] : array(),'bank_group_does_not_exist'))
 			{
 				$channelId='';
@@ -1333,7 +1451,7 @@ class CHBSPaymentTpay
 		if($transactionStatus==='')
 			$transactionStatus='PENDING';
 		
-		if(!array_key_exists('payment_tpay_data',$meta))
+		if(!isset($meta['payment_tpay_data']) || !is_array($meta['payment_tpay_data']))
 			$meta['payment_tpay_data']=array();
 		
 		$meta['payment_tpay_data'][]=array
@@ -1416,12 +1534,11 @@ class CHBSPaymentTpay
 			$bookingFormMeta=$bookingForm[$booking['meta']['booking_form_id']]['meta'];
 		
 		$notificationSecret=isset($bookingFormMeta['payment_tpay_notification_secret']) ? $bookingFormMeta['payment_tpay_notification_secret'] : '';
-		if($notificationSecret==='')
-			$notificationSecret=isset($bookingFormMeta['payment_tpay_client_secret']) ? $bookingFormMeta['payment_tpay_client_secret'] : '';
+		$debugEnabled=$this->isDebugEnabled($bookingFormMeta);
 		
 		if($notificationSecret==='')
 		{
-			$LogManager->add('tpay',2,__('[4] Missing Tpay notification secret - using empty secret.','chauffeur-booking-system'));
+			$LogManager->add('tpay',2,__('[4] Missing Tpay notification security code.','chauffeur-booking-system'));
 		}
 		
 		$jwsVerified=false;
@@ -1455,6 +1572,10 @@ class CHBSPaymentTpay
 			catch(Throwable $ex)
 			{
 				$LogManager->add('tpay',2,$ex->__toString());
+				$this->appendTpayMetaDebugEvent($bookingId,'notification_error',array(
+					'stage'=>'library_verification',
+					'message'=>$ex->getMessage()
+				),$debugEnabled);
 			}
 		}
 		
@@ -1463,17 +1584,35 @@ class CHBSPaymentTpay
 			$errorMessage='';
 			if(!$this->verifyJwsSignatureManually($rawBody,$productionMode,$errorMessage))
 			{
-				$LogManager->add('tpay',2,sprintf(__('[TPAY] JWS verification failed: %s','chauffeur-booking-system'),$errorMessage));
-				$this->respondAndExit(false);
+				if($errorMessage==='Missing X-JWS-Signature header.' && is_array($payloadSource) && isset($payloadSource['md5sum']))
+				{
+					$LogManager->add('tpay',2,__('[TPAY] Missing JWS signature header, falling back to MD5 verification.','chauffeur-booking-system'));
+					$data=$payloadSource;
+				}
+				else
+				{
+					$LogManager->add('tpay',2,sprintf(__('[TPAY] JWS verification failed: %s','chauffeur-booking-system'),$errorMessage));
+					$this->appendTpayMetaDebugEvent($bookingId,'notification_error',array(
+						'stage'=>'jws',
+						'message'=>$errorMessage
+					),$debugEnabled);
+					$this->respondAndExit(false);
+				}
 			}
-			
-			$LogManager->add('tpay',2,__('[TPAY] JWS verified using manual verification.','chauffeur-booking-system'));
-			$data=$payloadSource;
+			else
+			{
+				$LogManager->add('tpay',2,__('[TPAY] JWS verified using manual verification.','chauffeur-booking-system'));
+				$data=$payloadSource;
+			}
 		}
 		
 		if(!is_array($data) || !count($data))
 		{
 			$LogManager->add('tpay',2,__('[TPAY] Empty notification payload after verification.','chauffeur-booking-system'));
+			$this->appendTpayMetaDebugEvent($bookingId,'notification_error',array(
+				'stage'=>'jws',
+				'message'=>'empty_payload_after_verification'
+			),$debugEnabled);
 			$this->respondAndExit(false);
 		}
 		
@@ -1481,12 +1620,16 @@ class CHBSPaymentTpay
 		if(!$this->verifyMd5sum($data,$notificationSecret,$md5Error))
 		{
 			$LogManager->add('tpay',2,sprintf(__('[TPAY] %s','chauffeur-booking-system'),$md5Error));
+			$this->appendTpayMetaDebugEvent($bookingId,'notification_error',array(
+				'stage'=>'md5sum',
+				'message'=>$md5Error
+			),$debugEnabled);
 			$this->respondAndExit(false);
 		}
 		
 		$meta=CHBSPostMeta::getPostMeta($bookingId);
 		
-		if(!array_key_exists('payment_tpay_data',$meta))
+		if(!isset($meta['payment_tpay_data']) || !is_array($meta['payment_tpay_data']))
 			$meta['payment_tpay_data']=array();
 		
 		$meta['payment_tpay_data'][]=array
@@ -1504,7 +1647,7 @@ class CHBSPaymentTpay
 		if($trId!=='')
 			CHBSPostMeta::updatePostMeta($bookingId,'payment_tpay_transaction_id',$trId);
 		
-		if(!array_key_exists('payment_tpay_notification_ids',$meta))
+		if(!isset($meta['payment_tpay_notification_ids']) || !is_array($meta['payment_tpay_notification_ids']))
 			$meta['payment_tpay_notification_ids']=array();
 		
 		if($notificationKey!=='' && in_array($notificationKey,$meta['payment_tpay_notification_ids'],true))
@@ -1545,6 +1688,7 @@ class CHBSPaymentTpay
 
 		if(in_array($statusValue,array('PAID','TRUE','CORRECT','SUCCESS'),true))
 		{
+			$shouldRunSync=false;
 			if(CHBSOption::getOption('booking_status_payment_success')!=-1)
 			{
 				if($BookingStatus->isBookingStatus(CHBSOption::getOption('booking_status_payment_success')))
@@ -1559,13 +1703,26 @@ class CHBSPaymentTpay
 					else
 					{
 						$LogManager->add('tpay',2,__('[6] Scheduling booking status update.','chauffeur-booking-system'));
+						$scheduled=true;
 						if(!wp_next_scheduled('chbs_tpay_payment_success',array($bookingId)))
 						{
-							wp_schedule_single_event(time(),'chbs_tpay_payment_success',array($bookingId));
+							$scheduled=wp_schedule_single_event(time(),'chbs_tpay_payment_success',array($bookingId));
+							if($scheduled===false)
+								$LogManager->add('tpay',2,__('[6] Unable to schedule wp-cron event for Tpay payment success.','chauffeur-booking-system'));
 						}
-						if(apply_filters('chbs_tpay_process_payment_synchronously',false,$bookingId))
+
+						if(defined('DISABLE_WP_CRON') && DISABLE_WP_CRON)
 						{
-							CHBSBookingHelper::paymentSuccess($bookingId);
+							$LogManager->add('tpay',2,__('[6] DISABLE_WP_CRON active - forcing synchronous payment success handling.','chauffeur-booking-system'));
+							$shouldRunSync=true;
+						}
+						elseif($scheduled===false)
+						{
+							$shouldRunSync=true;
+						}
+						elseif(apply_filters('chbs_tpay_process_payment_synchronously',false,$bookingId))
+						{
+							$shouldRunSync=true;
 						}
 					}
 				}
@@ -1573,6 +1730,12 @@ class CHBSPaymentTpay
 				{
 					$LogManager->add('tpay',2,__('[7] Cannot find a valid booking status.','chauffeur-booking-system'));
 				}
+			}
+
+			if($shouldRunSync)
+			{
+				$LogManager->add('tpay',2,__('[6] Running synchronous payment success handling.','chauffeur-booking-system'));
+				CHBSBookingHelper::paymentSuccess($bookingId);
 			}
 			
 			$this->respondAndExit(true);
@@ -1615,7 +1778,9 @@ class CHBSPaymentTpay
 		}
 		
 		$meta=$formDictionary[$bookingFormId]['meta'];
+		$this->initializeTpayLogging($meta);
 		$api=$this->getApiClient($meta);
+		$LogManager=new CHBSLogManager();
 		
 		if(is_null($api))
 		{
@@ -1633,7 +1798,8 @@ class CHBSPaymentTpay
 		}
 		catch(Exception $ex)
 		{
-			$results['bank_groups_error']=$ex->getMessage();
+			$LogManager->add('tpay',1,sprintf(__('Tpay diagnostics bank groups failed: %s','chauffeur-booking-system'),$ex->getMessage()));
+			wp_send_json_error(array('message'=>__('Nie można zapisać logu Tpay.','chauffeur-booking-system')));
 		}
 		
 		try
@@ -1645,8 +1811,6 @@ class CHBSPaymentTpay
 			$groupId=isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 			if($groupId<=0 && count($groups))
 				$groupId=(int)$groups[0]['id'];
-			
-			$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
 			
 			$transactionData=array
 			(
@@ -1670,19 +1834,22 @@ class CHBSPaymentTpay
 					(
 						'success'=>home_url('/'),
 						'error'=>home_url('/')
-					),
-					'notification'=>array
-					(
-						'url'=>$notificationUrl
 					)
 				)
 			);
+
+			if((bool)apply_filters('chbs_tpay_include_notification_url_in_callbacks',true,$meta,null,0))
+			{
+				$notificationUrl=add_query_arg('action','payment_tpay',home_url('/'));
+				$transactionData['callbacks']['notification']=array('url'=>$notificationUrl);
+			}
 			
 			$results['transaction']=$api->transactions()->createTransactionWithInstantRedirection($transactionData);
 		}
 		catch(Exception $ex)
 		{
-			$results['transaction_error']=$ex->getMessage();
+			$LogManager->add('tpay',1,sprintf(__('Tpay diagnostics transaction failed: %s','chauffeur-booking-system'),$ex->getMessage()));
+			wp_send_json_error(array('message'=>__('Nie można zapisać logu Tpay.','chauffeur-booking-system')));
 		}
 		
 		wp_send_json_success($results);

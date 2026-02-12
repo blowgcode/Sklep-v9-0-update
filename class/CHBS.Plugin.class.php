@@ -656,7 +656,7 @@ class CHBSPlugin
 		
 		$TabCustom=new CHBSTabCustom();
 		
-		$PaymentTpay=new CHBSPaymentTpay();
+		$PaymentTpay=new CHBSPaymentTpay(array());
 		
 		add_action('chbs_tpay_payment_success',array($PaymentTpay,'processPaymentSuccess'));
 		add_action('wp_loaded',array($PaymentTpay,'maybeRunDiagnostics'));
@@ -764,8 +764,8 @@ class CHBSPlugin
 			
 			add_action('wp_enqueue_scripts',array($this,'publicInit'));
 			
-			add_action('wp_loaded',array($PaymentStripe,'receivePayment'));
-			add_action('wp_loaded',array($PaymentTpay,'receivePayment'));
+			add_action('wp_loaded',array($PaymentStripe,'receivePayment'),0);
+			add_action('wp_loaded',array($PaymentTpay,'receivePayment'),0);
 		}
 			   
 		if(function_exists('register_block_type'))

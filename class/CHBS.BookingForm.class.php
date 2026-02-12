@@ -7055,7 +7055,7 @@ class CHBSBookingForm
 	{
 		$Payment=new CHBSPayment();
 		$Validation=new CHBSValidation();
-		$PaymentTpay=new CHBSPaymentTpay();
+		$PaymentTpay=new CHBSPaymentTpay($bookingForm);
 	
 		$html=null;
 
