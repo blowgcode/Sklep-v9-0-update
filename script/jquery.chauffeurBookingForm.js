@@ -3291,13 +3291,6 @@
 				var placeLat=place.geometry.location.lat();
 				var placeLng=place.geometry.location.lng();
 
-				if(!$self.isCompleteAddress(place))
-				{
-					$self.showFieldError(text,$option.message.address_incomplete);
-					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
-					return(false);
-				}
-
 				var placeData=
 				{
 					lat:placeLat,
@@ -3466,28 +3459,6 @@
 				if(!$self.hasValidPickupLocation(i))
 					pickupTimeField.val('');
 			}
-		};
-
-		/**********************************************************************/
-
-		this.isCompleteAddress=function(place)
-		{
-			if(!place || !place.address_components) return(false);
-
-			var hasStreetNumber=false;
-			var hasRoute=false;
-			var hasLocality=false;
-
-			for(var i in place.address_components)
-			{
-				var component=place.address_components[i];
-
-				if($.inArray('street_number',component.types)>-1) hasStreetNumber=true;
-				if($.inArray('route',component.types)>-1) hasRoute=true;
-				if($.inArray('locality',component.types)>-1 || $.inArray('postal_town',component.types)>-1) hasLocality=true;
-			}
-
-			return(hasStreetNumber && hasRoute && hasLocality);
 		};
 
 		/**********************************************************************/
