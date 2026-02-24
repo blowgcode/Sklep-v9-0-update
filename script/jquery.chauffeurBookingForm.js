@@ -40,6 +40,8 @@
 
 		var $dropoffCountryCode='';
 
+		var $serviceAreaBlocked=false;
+
 		var $tpaySelectionBound=false;
 		
 		/**********************************************************************/
@@ -2191,6 +2193,12 @@
 		
 		this.goToStep=function(stepDelta,callback,useRecaptcha=true,useScrollToTop=true,usePreloader=true)
 		{   
+			if($serviceAreaBlocked===true)
+			{
+				if(usePreloader) $self.preloader(false);
+				return;
+			}
+
 			if(usePreloader)
 			{
 				$self.preloader(true);
@@ -2252,6 +2260,12 @@
 			
 			$self.post($self.e('form[name="chbs-form"]').serialize(),function(response)
 			{   
+				if($self.handleServiceAreaErrorResponse(response))
+				{
+					$self.preloader(false);
+					return;
+				}
+
 				var previousStep=$self.e('input[name="chbs_step"]').val();
 				
 				if($self.getVehiclePriceCalculationStepFirst()!==0)
@@ -3393,6 +3407,48 @@
 
 		/**********************************************************************/
 
+		this.setServiceAreaBlocked=function(blocked)
+		{
+			$serviceAreaBlocked=blocked;
+
+			$self.e('.chbs-button-step-next,.chbs-button-widget-submit').prop('disabled',blocked).toggleClass('chbs-state-disabled',blocked);
+		};
+
+		/**********************************************************************/
+
+		this.clearSummaryPrice=function()
+		{
+			$self.e('.chbs-summary-price-element').replaceWith('<div class="chbs-summary-price-element"></div>');
+		};
+
+		/**********************************************************************/
+
+		this.handleServiceAreaErrorResponse=function(response)
+		{
+			if((typeof(response.code)==='undefined') || (response.code!=='OUT_OF_SERVICE_AREA')) return(false);
+
+			var serviceTypeId=$self.getServiceTypeId();
+			var textField=$();
+
+			if(response.field==='pickup')
+				textField=$self.e('[name="chbs_pickup_location_service_type_'+serviceTypeId+'"]');
+			else if(response.field==='dropoff')
+				textField=$self.e('[name="chbs_dropoff_location_service_type_'+serviceTypeId+'"]');
+
+			if(textField.length===1 && typeof(response.message)!=='undefined')
+				$self.showFieldError(textField,response.message);
+
+			if(typeof(response.message)!=='undefined')
+				$self.getGlobalNotice().removeClass('chbs-hidden').html(response.message);
+
+			$self.clearSummaryPrice();
+			$self.setServiceAreaBlocked(true);
+
+			return(true);
+		};
+
+		/**********************************************************************/
+
 		this.showErrorPopup=function(message)
 		{
 			if((typeof($.fancybox)!=='undefined') && (typeof($.fancybox.open)==='function'))
@@ -3418,6 +3474,9 @@
 			{
 				label.qtip('destroy',true);
 			}
+
+			if($serviceAreaBlocked)
+				$self.setServiceAreaBlocked(false);
 		};
 
 		/**********************************************************************/
@@ -4372,6 +4431,14 @@
   
 			$self.post($self.e('form[name="chbs-form"]').serialize(),function(response)
 			{	
+				if($self.handleServiceAreaErrorResponse(response))
+				{
+					$self.preloader(false);
+					return;
+				}
+
+				$self.setServiceAreaBlocked(false);
+
 				$self.e('.chbs-summary-price-element').replaceWith(response.html);
 				
 				$self.createSelectMenu();

@@ -3128,8 +3128,6 @@ class CHBSBookingForm
 		
 		if($data['step_request']>1)
 		{
-			$GeofenceChecker=new CHBSGeofenceChecker();
-
 			if(!in_array($data['service_type_id'],$bookingForm['meta']['service_type_id']))
 				$data['service_type_id']=1;
 			
@@ -3469,16 +3467,6 @@ class CHBSBookingForm
 					}
 				}
 
-				if((count($bookingForm['meta']['location_fixed_pickup_service_type_'.$data['service_type_id']])===0) && ($Validation->isCoordinateGroup($data['pickup_location_coordinate_service_type_'.$data['service_type_id']])) && (!$GeofenceChecker->locationInGeofence($bookingForm['meta']['location_geofence_pickup'],$bookingForm['dictionary']['geofence'],$data['pickup_location_coordinate_service_type_'.$data['service_type_id']])))
-					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_location_coordinate_service_type_'.$data['service_type_id'],false),__('Enter a valid location.','chauffeur-booking-system'));
-
-				if(
-					(count($bookingForm['meta']['location_fixed_dropoff_service_type_'.$data['service_type_id']])===0)
-					&& ($Validation->isCoordinateGroup($data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))
-					&& (($data['service_type_id']===1) || (($data['service_type_id']===2) && ($Validation->isNotEmpty($data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))))
-					&& (!$GeofenceChecker->locationInGeofence($bookingForm['meta']['location_geofence_dropoff'],$bookingForm['dictionary']['geofence'],$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))
-				)
-					$this->setErrorLocal($response,CHBSHelper::getFormName('dropoff_location_coordinate_service_type_'.$data['service_type_id'],false),__('Enter a valid location.','chauffeur-booking-system'));
 			}
 			
 			if(in_array($data['service_type_id'],array(3)))
@@ -3609,7 +3597,16 @@ class CHBSBookingForm
 					}
 				}
 			}
-			
+
+			if((!isset($response['error'])) && (in_array($data['service_type_id'],array(1,2))))
+			{
+				if(!$this->validateServiceArea($response,$bookingForm,$data,$data['service_type_id']))
+				{
+					$response['step']=1;
+					$this->createFormResponse($response);
+				}
+			}
+
 			if(!isset($response['error']))
 			{
 				if(in_array($data['service_type_id'],array(1)))
@@ -4271,6 +4268,111 @@ class CHBSBookingForm
 		echo json_encode($response);
 		exit();		
 	}
+
+	/**************************************************************************/
+
+	function validateCoordinateForServiceArea($coordinate)
+	{
+		$Validation=new CHBSValidation();
+
+		if(!$Validation->isCoordinateGroup($coordinate)) return(false);
+
+		$location=json_decode($coordinate);
+		if(!is_object($location)) return(false);
+
+		if((!isset($location->lat)) || (!isset($location->lng))) return(false);
+
+		if(((float)$location->lat===0.0) || ((float)$location->lng===0.0)) return(false);
+
+		return(true);
+	}
+
+	/**************************************************************************/
+
+	function getLocationGeofenceForValidation($bookingForm,$fieldName)
+	{
+		$fieldKey='location_geofence_'.$fieldName;
+		$pickupGeofence=array_key_exists('location_geofence_pickup',$bookingForm['meta']) ? $bookingForm['meta']['location_geofence_pickup'] : array(-1);
+
+		$geofence=array_key_exists($fieldKey,$bookingForm['meta']) ? $bookingForm['meta'][$fieldKey] : array();
+
+		if((!is_array($geofence)) || (!count($geofence)))
+			$geofence=$pickupGeofence;
+
+		return($geofence);
+	}
+
+	/**************************************************************************/
+
+	function setServiceAreaError(&$response,$serviceTypeId,$fieldName,$message)
+	{
+		$response['status']='error';
+		$response['code']='OUT_OF_SERVICE_AREA';
+		$response['field']=$fieldName;
+		$response['message']=$message;
+
+		$this->setErrorLocal($response,CHBSHelper::getFormName($fieldName.'_location_coordinate_service_type_'.$serviceTypeId,false),$message);
+		$this->setErrorGlobal($response,$message);
+	}
+
+	/**************************************************************************/
+
+	function logServiceAreaValidation($fieldName,$coordinate,$geofence,$result)
+	{
+		if((defined('WP_DEBUG')) && (WP_DEBUG===true))
+		{
+			error_log(sprintf('[CHBS][geofence] field=%s coordinate=%s geofence=%s result=%s',$fieldName,$coordinate,json_encode($geofence),($result ? 'inside' : 'outside')));
+		}
+	}
+
+	/**************************************************************************/
+
+	function validateServiceAreaLocation(&$response,$bookingForm,$data,$serviceTypeId,$fieldName,$isRequired)
+	{
+		$coordinateKey=$fieldName.'_location_coordinate_service_type_'.$serviceTypeId;
+		$fixedLocationKey='location_fixed_'.$fieldName.'_service_type_'.$serviceTypeId;
+
+		if((array_key_exists($fixedLocationKey,$bookingForm['meta'])) && (count($bookingForm['meta'][$fixedLocationKey]))) return(true);
+
+		$coordinate=array_key_exists($coordinateKey,$data) ? $data[$coordinateKey] : '';
+
+		if((!$isRequired) && (strlen(trim($coordinate))===0)) return(true);
+
+		if(!$this->validateCoordinateForServiceArea($coordinate))
+		{
+			$message=($fieldName==='pickup') ? __('Adres początkowy jest nieprawidłowy lub poza zasięgiem usług.','chauffeur-booking-system') : __('Adres docelowy jest nieprawidłowy lub poza zasięgiem usług.','chauffeur-booking-system');
+			$this->setServiceAreaError($response,$serviceTypeId,$fieldName,$message);
+			$this->logServiceAreaValidation($fieldName,$coordinate,array(),false);
+			return(false);
+		}
+
+		$GeofenceChecker=new CHBSGeofenceChecker();
+		$geofence=$this->getLocationGeofenceForValidation($bookingForm,$fieldName);
+
+		$result=$GeofenceChecker->locationInGeofence($geofence,$bookingForm['dictionary']['geofence'],$coordinate);
+		$this->logServiceAreaValidation($fieldName,$coordinate,$geofence,$result);
+
+		if($result===false)
+		{
+			$message=($fieldName==='pickup') ? __('Adres początkowy jest poza zasięgiem usług.','chauffeur-booking-system') : __('Adres docelowy jest poza zasięgiem usług.','chauffeur-booking-system');
+			$this->setServiceAreaError($response,$serviceTypeId,$fieldName,$message);
+			return(false);
+		}
+
+		return(true);
+	}
+
+	/**************************************************************************/
+
+	function validateServiceArea(&$response,$bookingForm,$data,$serviceTypeId)
+	{
+		$dropoffRequired=((int)$serviceTypeId===1) || (((int)$serviceTypeId===2) && (strlen(trim((string)$data['dropoff_location_coordinate_service_type_'.$serviceTypeId]))>0));
+
+		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'pickup',true)) return(false);
+		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'dropoff',$dropoffRequired)) return(false);
+
+		return(true);
+	}
 	
 	/**************************************************************************/
 	
@@ -4290,6 +4392,12 @@ class CHBSBookingForm
 		if(!is_array($bookingForm=$this->checkBookingForm($data['booking_form_id'])))
 		{
 			$response['html']=null;
+			$this->createFormResponse($response);
+		}
+
+		if(!$this->validateServiceArea($response,$bookingForm,$data,$serviceTypeId))
+		{
+			$response['html']='<div class="chbs-summary-price-element"></div>';
 			$this->createFormResponse($response);
 		}
 		
