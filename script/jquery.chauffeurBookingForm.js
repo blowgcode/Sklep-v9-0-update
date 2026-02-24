@@ -3333,6 +3333,7 @@
 				if(!$self.applyDrivingZoneGeofence(fieldName,placeData,text,field)) return(false);
 				if(!$self.setPickupDropoffCountry(fieldName,placeData.country_code,text,field)) return(false);
 				if(!$self.applyPickupTimeGeofence(fieldName,placeLat,placeLng,text,field)) return(false);
+				if(!$self.applyDropoffLocationGeofence(fieldName,placeLat,placeLng,text,field)) return(false);
 				$self.setDefaultPickupTime(fieldName);
 
 				field.val(JSON.stringify(placeData));
@@ -3666,6 +3667,52 @@
 			}
 
 			return(false);
+		};
+
+		/**********************************************************************/
+
+		this.applyDropoffLocationGeofence=function(fieldName,coordinateLat,coordinateLng,textField,hiddenField)
+		{
+			if(fieldName.indexOf('dropoff')===-1) return(true);
+			if(fieldName.indexOf('service_type_1')===-1) return(true);
+			if(!$.isArray($option.pickup_time_geofence)) return(true);
+			if(parseInt($option.pickup_time_geofence.length,10)===0) return(true);
+
+			var Helper=new CHBSHelper();
+			var inGeofence=false;
+
+			for(var i in $option.pickup_time_geofence)
+			{
+				if(typeof($option.pickup_time_geofence[i].geofence_shape_coordinate)==='undefined') continue;
+				for(var j in $option.pickup_time_geofence[i].geofence_shape_coordinate)
+				{
+					var coordinate=[];
+					var point=[coordinateLng,coordinateLat];
+
+					for(var k in $option.pickup_time_geofence[i].geofence_shape_coordinate[j])
+					{
+						coordinate.push([$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lng,$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lat]);
+					}
+
+					if(Helper.coordinateInsidePolygon(point,coordinate)===true)
+					{
+						inGeofence=true;
+						break;
+					}
+				}
+				if(inGeofence) break;
+			}
+
+			if(!inGeofence)
+			{
+				if($option.message.pickup_dropoff_out_of_range)
+					$self.showFieldError(textField,$option.message.pickup_dropoff_out_of_range);
+
+				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:false,focus:true});
+				return(false);
+			}
+
+			return(true);
 		};
 
 		/**********************************************************************/
