@@ -4291,35 +4291,35 @@ class CHBSBookingForm
 
 	function getLocationGeofenceForValidation($bookingForm,$fieldName)
 	{
-		$normalizeGeofence=function($value)
-		{
-			$normalized=array();
-
-			if(!is_array($value)) $value=array($value);
-
-			foreach($value as $geofenceId)
-			{
-				$geofenceId=(int)$geofenceId;
-				if(!in_array($geofenceId,$normalized,true))
-					$normalized[]=$geofenceId;
-			}
-
-			if((in_array(-1,$normalized,true)) && (count($normalized)>1))
-				$normalized=array_values(array_diff($normalized,array(-1)));
-
-			return($normalized);
-		};
-
 		$fieldKey='location_geofence_'.$fieldName;
-		$pickupGeofence=array_key_exists('location_geofence_pickup',$bookingForm['meta']) ? $normalizeGeofence($bookingForm['meta']['location_geofence_pickup']) : array(-1);
 
-		$geofence=array_key_exists($fieldKey,$bookingForm['meta']) ? $normalizeGeofence($bookingForm['meta'][$fieldKey]) : array();
+		$pickupGeofence=array_key_exists('location_geofence_pickup',$bookingForm['meta'])
+			? $bookingForm['meta']['location_geofence_pickup']
+			: array(-1);
 
-		if(($fieldName==='dropoff') && ($geofence===array(-1)) && ($pickupGeofence!==array(-1)))
-			$geofence=$pickupGeofence;
+		$geofence=array_key_exists($fieldKey,$bookingForm['meta'])
+			? $bookingForm['meta'][$fieldKey]
+			: array();
 
-		if((!is_array($geofence)) || (!count($geofence)))
-			$geofence=$pickupGeofence;
+		if(!is_array($pickupGeofence)) $pickupGeofence=array($pickupGeofence);
+		if(!is_array($geofence)) $geofence=array($geofence);
+
+		$pickupGeofence=array_values(array_map('intval',$pickupGeofence));
+		$geofence=array_values(array_map('intval',$geofence));
+
+		if(count($pickupGeofence)>1) $pickupGeofence=array_values(array_diff($pickupGeofence,array(-1)));
+		if(count($geofence)>1) $geofence=array_values(array_diff($geofence,array(-1)));
+
+		if(!count($geofence)) $geofence=$pickupGeofence;
+
+		if($fieldName==='dropoff')
+		{
+			$dropoffAllowAll=(count($geofence)===1 && $geofence[0]===-1);
+			$pickupRestricted=!(count($pickupGeofence)===1 && $pickupGeofence[0]===-1);
+
+			if($dropoffAllowAll && $pickupRestricted)
+				$geofence=$pickupGeofence;
+		}
 
 		return($geofence);
 	}
@@ -4353,11 +4353,29 @@ class CHBSBookingForm
 	function validateServiceAreaLocation(&$response,$bookingForm,$data,$serviceTypeId,$fieldName,$isRequired)
 	{
 		$coordinateKey=$fieldName.'_location_coordinate_service_type_'.$serviceTypeId;
-		$fixedLocationKey='location_fixed_'.$fieldName.'_service_type_'.$serviceTypeId;
-
-		if((array_key_exists($fixedLocationKey,$bookingForm['meta'])) && (count($bookingForm['meta'][$fixedLocationKey]))) return(true);
+		$fixedLocationMetaKey='location_fixed_'.$fieldName.'_service_type_'.$serviceTypeId;
+		$fixedLocationDataKey='fixed_location_'.$fieldName.'_service_type_'.$serviceTypeId;
 
 		$coordinate=array_key_exists($coordinateKey,$data) ? $data[$coordinateKey] : '';
+
+		if(array_key_exists($fixedLocationDataKey,$data))
+		{
+			$fixedLocationId=(int)$data[$fixedLocationDataKey];
+
+			if(($fixedLocationId>0) && (array_key_exists($fixedLocationMetaKey,$bookingForm['meta'])) && (array_key_exists($fixedLocationId,$bookingForm['meta'][$fixedLocationMetaKey])))
+			{
+				$fixedLocation=$bookingForm['meta'][$fixedLocationMetaKey][$fixedLocationId];
+
+				if((is_array($fixedLocation)) && (array_key_exists('coordinate',$fixedLocation)))
+				{
+					$fixedCoordinate=$fixedLocation['coordinate'];
+
+					if(is_array($fixedCoordinate)) $coordinate=json_encode($fixedCoordinate);
+					else if(is_object($fixedCoordinate)) $coordinate=json_encode($fixedCoordinate);
+					else $coordinate=(string)$fixedCoordinate;
+				}
+			}
+		}
 
 		if((!$isRequired) && (strlen(trim($coordinate))===0)) return(true);
 
@@ -4389,20 +4407,18 @@ class CHBSBookingForm
 
 	function validateServiceArea(&$response,$bookingForm,$data,$serviceTypeId)
 	{
-		$dropoffTextKey='dropoff_location_service_type_'.$serviceTypeId;
-		$dropoffCoordinateKey='dropoff_location_coordinate_service_type_'.$serviceTypeId;
+		$dropoffCoord=(string)($data['dropoff_location_coordinate_service_type_'.$serviceTypeId] ?? '');
+		$dropoffText=(string)($data['dropoff_location_service_type_'.$serviceTypeId] ?? '');
 
-		$dropoffText=array_key_exists($dropoffTextKey,$data) ? trim((string)$data[$dropoffTextKey]) : '';
-		$dropoffCoordinate=array_key_exists($dropoffCoordinateKey,$data) ? trim((string)$data[$dropoffCoordinateKey]) : '';
-
-		$dropoffRequired=((int)$serviceTypeId===1) || (((int)$serviceTypeId===2) && ((strlen($dropoffText)>0) || (strlen($dropoffCoordinate)>0)));
+		$dropoffRequired=((int)$serviceTypeId===1) ||
+			(((int)$serviceTypeId===2) && (strlen(trim($dropoffText))>0 || strlen(trim($dropoffCoord))>0));
 
 		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'pickup',true)) return(false);
 		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'dropoff',$dropoffRequired)) return(false);
 
 		return(true);
 	}
-	
+
 	/**************************************************************************/
 	
 	function createSummaryPriceElementAjax($bid=false)
