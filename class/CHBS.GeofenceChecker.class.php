@@ -62,7 +62,15 @@ class CHBSGeofenceChecker
 	function locationInGeofence($geofence,$geofenceDictionary,$locationCoordinate)
 	{		
 		if((!is_array($geofence)) || (!count($geofence))) return(true);
-		if(in_array(-1,$geofence)) return(true);
+
+		$geofence=array_values(array_map('intval',$geofence));
+
+		if(in_array(-1,$geofence,true))
+		{
+			if(count($geofence)===1) return(true);
+			$geofence=array_values(array_diff($geofence,array(-1)));
+			if(!count($geofence)) return(true);
+		}
 		
 		$coordinate=$this->transformShape($geofence,$geofenceDictionary);
 
