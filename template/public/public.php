@@ -253,7 +253,7 @@
 						},
 						waypoint:
 						{
-							enable:<?php echo $this->data['meta']['driving_zone_restriction_waypoint_location_enable']; ?>,
+							enable:<?php echo (int)$this->data['meta']['driving_zone_restriction_waypoint_location_enable']; ?>,
 							country:<?php echo json_encode($this->data['meta']['driving_zone_restriction_waypoint_location_country']); ?>, 
 							area:
 							{
@@ -267,7 +267,7 @@
 						},
 						dropoff:
 						{
-							enable:<?php echo $this->data['meta']['driving_zone_restriction_dropoff_location_enable']; ?>,
+							enable:<?php echo (int)$this->data['meta']['driving_zone_restriction_dropoff_location_enable']; ?>,
 							country:<?php echo json_encode($this->data['meta']['driving_zone_restriction_dropoff_location_country']); ?>,
 							area:
 							{
