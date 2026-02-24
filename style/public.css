@@ -4137,3 +4137,19 @@ html .iti ul li
 	border-color:#dc3200;
 	color:#ffffff;
 }
+
+.chbs-error-popup
+{
+	max-width:640px;
+	width:90vw;
+	padding:36px 32px;
+	text-align:center;
+}
+
+.chbs-error-popup-content
+{
+	font-size:22px;
+	line-height:1.45;
+	font-weight:600;
+	color:#111111;
+}

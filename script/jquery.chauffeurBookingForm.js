@@ -1659,7 +1659,7 @@
 					
 					if(!place.geometry)
 					{
-						alert($option.message.place_geometry_error);
+						$self.showErrorPopup($option.message.place_geometry_error);
 						field.val('');
 						return(false);
 					}
@@ -3278,7 +3278,7 @@
 
 				if(!place.geometry)
 				{
-					$self.showFieldError(text,$option.message.place_geometry_error);
+					$self.showLocationError(text,$option.message.place_geometry_error);
 					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 
 					$self.setGoogleMapAutocompleteOption(fieldName);
@@ -3378,6 +3378,30 @@
 			else
 			{
 				$self.getGlobalNotice().removeClass('chbs-hidden').html(message);
+			}
+		};
+
+		/**********************************************************************/
+
+		this.showLocationError=function(textField,message)
+		{
+			var field=textField.closest('.chbs-form-field');
+
+			field.addClass('chbs-form-field-error');
+			$self.showErrorPopup(message);
+		};
+
+		/**********************************************************************/
+
+		this.showErrorPopup=function(message)
+		{
+			if((typeof($.fancybox)!=='undefined') && (typeof($.fancybox.open)==='function'))
+			{
+				$.fancybox.open('<div class="chbs-error-popup"><div class="chbs-error-popup-content">'+message+'</div></div>');
+			}
+			else
+			{
+				alert(message);
 			}
 		};
 
@@ -3570,7 +3594,7 @@
 			if(!(inCircle && inCountry))
 			{
 				if($option.message.pickup_dropoff_out_of_range)
-					$self.showFieldError(textField,$option.message.pickup_dropoff_out_of_range);
+					$self.showLocationError(textField,$option.message.pickup_dropoff_out_of_range);
 
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 				return(false);
@@ -3593,7 +3617,7 @@
 			if(pickupTime===false)
 			{
 				if($option.message.pickup_time_geofence_out_of_range)
-					$self.showFieldError(textField,$option.message.pickup_time_geofence_out_of_range);
+					$self.showLocationError(textField,$option.message.pickup_time_geofence_out_of_range);
 
 				$self.clearPickupTimeField();
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
@@ -3651,7 +3675,7 @@
 			if($pickupCountryCode && $dropoffCountryCode && $pickupCountryCode===$dropoffCountryCode)
 			{
 				if($option.message.pickup_dropoff_same_country)
-					$self.showFieldError(textField,$option.message.pickup_dropoff_same_country);
+					$self.showLocationError(textField,$option.message.pickup_dropoff_same_country);
 
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 

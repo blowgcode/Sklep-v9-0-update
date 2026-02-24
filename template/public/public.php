@@ -207,10 +207,10 @@
 					first_day_week:'<?php echo CHBSOption::getOption('first_day_week'); ?>',
 					message:
 					{
-						google_map_ask_load_confirm:'<?php esc_html_e('This page requires the Google Maps library to load the booking form. If you choose not to enable it, the form will not be displayed.','chauffeur-booking-system'); ?>',
-						designate_route_error:'<?php esc_html_e('It is not possible to create a route between chosen points.','chauffeur-booking-system'); ?>',
-						place_geometry_error:'<?php esc_html_e('Google Maps API cannot find details for this place.','chauffeur-booking-system'); ?>',
-						pickup_time_geofence_out_of_range:'<?php esc_html_e('Selected pickup address is outside the service area.','chauffeur-booking-system'); ?>',
+						google_map_ask_load_confirm:'<?php esc_html_e('Ta strona wymaga wczytania biblioteki Google Maps, aby wyświetlić formularz rezerwacji. Jeśli jej nie włączysz, formularz nie będzie dostępny.','chauffeur-booking-system'); ?>',
+						designate_route_error:'<?php esc_html_e('Nie można wyznaczyć trasy pomiędzy wybranymi punktami.','chauffeur-booking-system'); ?>',
+						place_geometry_error:'<?php esc_html_e('Nie udało się pobrać szczegółów wybranego adresu w Google Maps.','chauffeur-booking-system'); ?>',
+						pickup_time_geofence_out_of_range:'<?php esc_html_e('Wskazany adres odbioru znajduje się poza zasięgiem naszych usług.','chauffeur-booking-system'); ?>',
 						pickup_dropoff_out_of_range:'<?php esc_html_e('Niestety wskazany adres odbioru lub docelowy znajduje się poza zasięgiem naszych usług','chauffeur-booking-system'); ?>',
 						pickup_dropoff_same_country:'<?php esc_html_e('W celu rezerwacji przejazdu na podanej trasie skontaktuj się z biurem obsługi klienta pod numerem +48 510 480 808','chauffeur-booking-system'); ?>'
 					},
