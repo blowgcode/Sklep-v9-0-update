@@ -2055,6 +2055,8 @@ class CHBSBookingForm
 		
 		CHBSHelper::setDefault($meta,'location_replace',array());
 		CHBSHelper::setDefault($meta,'pickup_time_geofence',array());
+		CHBSHelper::setDefault($meta,'location_geofence_pickup',array(-1));
+		CHBSHelper::setDefault($meta,'location_geofence_dropoff',array(-1));
 		
 		/***/
 		
@@ -3126,6 +3128,8 @@ class CHBSBookingForm
 		
 		if($data['step_request']>1)
 		{
+			$GeofenceChecker=new CHBSGeofenceChecker();
+
 			if(!in_array($data['service_type_id'],$bookingForm['meta']['service_type_id']))
 				$data['service_type_id']=1;
 			
@@ -3464,6 +3468,17 @@ class CHBSBookingForm
 						}
 					}
 				}
+
+				if((count($bookingForm['meta']['location_fixed_pickup_service_type_'.$data['service_type_id']])===0) && ($Validation->isCoordinateGroup($data['pickup_location_coordinate_service_type_'.$data['service_type_id']])) && (!$GeofenceChecker->locationInGeofence($bookingForm['meta']['location_geofence_pickup'],$bookingForm['dictionary']['geofence'],$data['pickup_location_coordinate_service_type_'.$data['service_type_id']])))
+					$this->setErrorLocal($response,CHBSHelper::getFormName('pickup_location_coordinate_service_type_'.$data['service_type_id'],false),__('Enter a valid location.','chauffeur-booking-system'));
+
+				if(
+					(count($bookingForm['meta']['location_fixed_dropoff_service_type_'.$data['service_type_id']])===0)
+					&& ($Validation->isCoordinateGroup($data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))
+					&& (($data['service_type_id']===1) || (($data['service_type_id']===2) && ($Validation->isNotEmpty($data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))))
+					&& (!$GeofenceChecker->locationInGeofence($bookingForm['meta']['location_geofence_dropoff'],$bookingForm['dictionary']['geofence'],$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']]))
+				)
+					$this->setErrorLocal($response,CHBSHelper::getFormName('dropoff_location_coordinate_service_type_'.$data['service_type_id'],false),__('Enter a valid location.','chauffeur-booking-system'));
 			}
 			
 			if(in_array($data['service_type_id'],array(3)))
