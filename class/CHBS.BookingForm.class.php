@@ -4291,10 +4291,32 @@ class CHBSBookingForm
 
 	function getLocationGeofenceForValidation($bookingForm,$fieldName)
 	{
-		$fieldKey='location_geofence_'.$fieldName;
-		$pickupGeofence=array_key_exists('location_geofence_pickup',$bookingForm['meta']) ? $bookingForm['meta']['location_geofence_pickup'] : array(-1);
+		$normalizeGeofence=function($value)
+		{
+			$normalized=array();
 
-		$geofence=array_key_exists($fieldKey,$bookingForm['meta']) ? $bookingForm['meta'][$fieldKey] : array();
+			if(!is_array($value)) $value=array($value);
+
+			foreach($value as $geofenceId)
+			{
+				$geofenceId=(int)$geofenceId;
+				if(!in_array($geofenceId,$normalized,true))
+					$normalized[]=$geofenceId;
+			}
+
+			if((in_array(-1,$normalized,true)) && (count($normalized)>1))
+				$normalized=array_values(array_diff($normalized,array(-1)));
+
+			return($normalized);
+		};
+
+		$fieldKey='location_geofence_'.$fieldName;
+		$pickupGeofence=array_key_exists('location_geofence_pickup',$bookingForm['meta']) ? $normalizeGeofence($bookingForm['meta']['location_geofence_pickup']) : array(-1);
+
+		$geofence=array_key_exists($fieldKey,$bookingForm['meta']) ? $normalizeGeofence($bookingForm['meta'][$fieldKey]) : array();
+
+		if(($fieldName==='dropoff') && ($geofence===array(-1)) && ($pickupGeofence!==array(-1)))
+			$geofence=$pickupGeofence;
 
 		if((!is_array($geofence)) || (!count($geofence)))
 			$geofence=$pickupGeofence;
@@ -4312,6 +4334,7 @@ class CHBSBookingForm
 		$response['message']=$message;
 
 		$this->setErrorLocal($response,CHBSHelper::getFormName($fieldName.'_location_coordinate_service_type_'.$serviceTypeId,false),$message);
+		$this->setErrorLocal($response,CHBSHelper::getFormName($fieldName.'_location_service_type_'.$serviceTypeId,false),$message);
 		$this->setErrorGlobal($response,$message);
 	}
 
@@ -4366,7 +4389,13 @@ class CHBSBookingForm
 
 	function validateServiceArea(&$response,$bookingForm,$data,$serviceTypeId)
 	{
-		$dropoffRequired=((int)$serviceTypeId===1) || (((int)$serviceTypeId===2) && (strlen(trim((string)$data['dropoff_location_coordinate_service_type_'.$serviceTypeId]))>0));
+		$dropoffTextKey='dropoff_location_service_type_'.$serviceTypeId;
+		$dropoffCoordinateKey='dropoff_location_coordinate_service_type_'.$serviceTypeId;
+
+		$dropoffText=array_key_exists($dropoffTextKey,$data) ? trim((string)$data[$dropoffTextKey]) : '';
+		$dropoffCoordinate=array_key_exists($dropoffCoordinateKey,$data) ? trim((string)$data[$dropoffCoordinateKey]) : '';
+
+		$dropoffRequired=((int)$serviceTypeId===1) || (((int)$serviceTypeId===2) && ((strlen($dropoffText)>0) || (strlen($dropoffCoordinate)>0)));
 
 		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'pickup',true)) return(false);
 		if(!$this->validateServiceAreaLocation($response,$bookingForm,$data,$serviceTypeId,'dropoff',$dropoffRequired)) return(false);
