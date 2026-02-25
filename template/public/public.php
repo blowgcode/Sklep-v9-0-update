@@ -84,7 +84,7 @@
 ?>
 				<div class="chbs-main-content chbs-clear-fix">
 <?php
-		$step=$this->data['widget_mode']==1 ? 1 : 5;
+		$step=$this->data['widget_mode']==1 ? 1 : 3;
 
 		for($i=1;$i<=$step;$i++)
 		{

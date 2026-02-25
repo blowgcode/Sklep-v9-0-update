@@ -544,15 +544,15 @@
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-4').on('click','.chbs-summary .chbs-summary-header a',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-summary .chbs-summary-header a',function(e)
 			{
 				e.preventDefault();
-				$self.goToStep(parseInt($(this).attr('data-step'),10)-4);
+				$self.goToStep(parseInt($(this).attr('data-step'),10)-2);
 			});
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-4').on('click','.chbs-coupon-code-section a',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-coupon-code-section a',function(e)
 			{
 				e.preventDefault();
 				
@@ -592,7 +592,7 @@
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-4').on('click','.chbs-gratuity-section a',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-gratuity-section a',function(e)
 			{
 				e.preventDefault();
 				
@@ -765,7 +765,7 @@
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-3').on('click','.chbs-button-sign-up',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-button-sign-up',function(e)
 			{
 				e.preventDefault();
 				
@@ -879,7 +879,7 @@
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-3').on('click','.chbs-button-sign-in',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-button-sign-in',function(e)
 			{
 				e.preventDefault();
 				
@@ -895,13 +895,13 @@
 				{
 					if(parseInt(response.user_sign_in,10)===1)
 					{
-						$self.e('.chbs-main-content-step-3 .chbs-client-form').html('');
+						$self.e('.chbs-main-content-step-2 .chbs-client-form').html('');
 				 
 						if(typeof(response.client_form_sign_up)!=='undefined')
-							$self.e('.chbs-main-content-step-3 .chbs-client-form').append(response.client_form_sign_up);  
+							$self.e('.chbs-main-content-step-2 .chbs-client-form').append(response.client_form_sign_up);  
 	   
 						if(typeof(response.summary)!=='undefined')
-							$self.e('.chbs-main-content-step-3>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);						
+							$self.e('.chbs-main-content-step-2>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);						
 						
 						$self.createSelectMenu();
 						
@@ -920,7 +920,7 @@
 			
 			/***/
 			
-			$self.e('.chbs-main-content-step-3').on('click','.chbs-sign-up-password-generate',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-sign-up-password-generate',function(e)
 			{
 				e.preventDefault();
 				
@@ -930,7 +930,7 @@
 				$self.e('input[name="chbs_client_sign_up_password"],input[name="chbs_client_sign_up_password_retype"]').val(password);
 			});
 			
-			$self.e('.chbs-main-content-step-3').on('click','.chbs-sign-up-password-show',function(e)
+			$self.e('.chbs-main-content-step-2').on('click','.chbs-sign-up-password-show',function(e)
 			{
 				e.preventDefault();
 				
@@ -967,7 +967,7 @@
 						case 'chbs_client_sign_in_login':
 						case 'chbs_client_sign_in_password':
 						
-							$self.e('.chbs-main-content-step-3 .chbs-button-sign-in').trigger('click');
+							$self.e('.chbs-main-content-step-2 .chbs-button-sign-in').trigger('click');
 						
 						break;
 					}
@@ -2239,7 +2239,7 @@
 				if(sum>0) $self.e('[name="chbs_vehicle_passenger_count"]').val(sum);
 			}
 			
-			if(parseInt(stepRequest.val(),10)===4)
+			if(parseInt(stepRequest.val(),10)===3)
 			{
 				if($iti)
 				{
@@ -2300,95 +2300,71 @@
 				switch(parseInt(response.step,10))
 				{
 					case 2:
-						
+
 						if(typeof(response.redirect_to_url_address)!=='undefined')
 						{
 							$('body').css({'display':'none'});
 							window.location.href=response.redirect_to_url_address;
 							break;
 						}
-						
+
 						$self.e('.chbs-vehicle-filter>.chbs-form-field>select[name="chbs_vehicle_passenger_count"]').replaceWith(response.vehicle_passenger_filter_field);
-						
+
 						if(typeof(response.vehicle)!=='undefined')
 						{
 							$self.e('.chbs-vehicle-list').removeClass('chbs-preloader-1');
 							$self.e('.chbs-vehicle-list').html(response.vehicle);
-							
+
 							$self.recalculateVehiclePrice(response,previousStep);
 						}
-						
+
 						if(typeof(response.booking_extra)!=='undefined')
-							$self.e('.chbs-booking-extra').html(response.booking_extra);						
-						
+							$self.e('.chbs-booking-extra').html(response.booking_extra);
+
 						if(typeof(response.summary)!=='undefined')
-							$self.e('.chbs-main-content-step-2>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);  
-						
-						$self.preloadVehicleImage();
-						$self.createVehicleGallery();
-						
-						$self.createSelectMenu();
-					
-						$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');
-						$self.createAutocomplete('.chbs-form-field-route-autocomplete');
+							$self.e('.chbs-main-content-step-2>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);
 
-						$self.manageBookingExtra();
-
-					break;
-						
-					case 3:
-						
 						if((typeof(response.client_form_sign_in)!=='undefined') && (typeof(response.client_form_sign_up)!=='undefined'))
 						{
-							$self.e('.chbs-main-content-step-3 .chbs-client-form').html('');
+							$self.e('.chbs-main-content-step-2 .chbs-client-form').html('');
 
 							if(typeof(response.client_form_sign_in)!=='undefined')
-								$self.e('.chbs-main-content-step-3 .chbs-client-form').prepend(response.client_form_sign_in);						
+								$self.e('.chbs-main-content-step-2 .chbs-client-form').prepend(response.client_form_sign_in);
 
 							if(typeof(response.client_form_sign_up)!=='undefined')
-								$self.e('.chbs-main-content-step-3 .chbs-client-form').append(response.client_form_sign_up); 
-							
+								$self.e('.chbs-main-content-step-2 .chbs-client-form').append(response.client_form_sign_up);
+
 							if(typeof(response.payment_form)!=='undefined')
-								$self.e('.chbs-main-content-step-3 .chbs-payment-form').html(response.payment_form); 
+								$self.e('.chbs-main-content-step-2 .chbs-payment-form').html(response.payment_form);
 						}
-						
-						if(typeof(response.summary)!=='undefined')
-							$self.e('.chbs-main-content-step-3>.chbs-layout-25x75 .chbs-layout-column-left:first').html(response.summary[0]);
-						
+
+						$self.e('.chbs-agreement-header,.chbs-agreement').remove();
+
+						if(typeof(response.agreement_html)!=='undefined')
+						{
+							$self.e('.chbs-main-content-step-2 .chbs-payment-form').after(response.agreement_html);
+						}
+
 						$self.setPayment();
 						$self.createFileField();
-						
+						$self.preloadVehicleImage();
+						$self.createVehicleGallery();
+
 						$self.createSelectMenu();
-						
+
 						$self.createAutocomplete('.chbs-form-field-location-fixed-autocomplete');
 						$self.createAutocomplete('.chbs-form-field-route-autocomplete');
-						
+
 						$self.createFormElementFieldDatePicker();
 						$self.createFormElementFieldTimePicker();
 						$self.createFormElementFieldAutocomplete();
 
+						$self.manageBookingExtra();
+
 					break;
-					
-					case 4:
-						
-						if(typeof(response.summary)!=='undefined')
-						{
-							$self.e('.chbs-main-content-step-4>.chbs-layout-33x33x33>.chbs-layout-column-left').html(response.summary[0]);
-						
-							$self.e('.chbs-main-content-step-4>.chbs-layout-33x33x33>.chbs-layout-column-center').html(response.summary[1]);
-						
-							$self.e('.chbs-main-content-step-4>.chbs-layout-33x33x33>.chbs-layout-column-right').html(response.summary[2]);
-						}
-						
-						$self.e('.chbs-agreement-header,.chbs-agreement').remove();
-						
-						if(typeof(response.agreement_html)!=='undefined')
-						{
-							$self.e('.chbs-main-content-step-4>.chbs-layout-33x33x33').after(response.agreement_html);
-						}
-						
-						$self.createSelectMenu();
-					
+
+					case 3:
+						// Thank you / payment confirmation step
 					break;
 				}
 				
@@ -2397,14 +2373,14 @@
 				
 				$self.createStickySidebar();
 				
-				if($.inArray(response.step,[2,3,4])>-1) 
+				if($.inArray(response.step,[2])>-1) 
 				{
 					$self.createCurrencySwitcher();
 				}
 				
 				$(window).scroll();
 				
-				if($.inArray(response.step,[4])>-1)   
+				if(false)   
 					$self.googleMapDuplicate(response.step);
 				
 				$('.qtip').remove();
@@ -2452,7 +2428,7 @@
 					}
 				}
 				
-				if(parseInt(response.step,10)===5)
+				if(parseInt(response.step,10)===3)
 				{
 					$self.addGAEvent('booking_send',{'booking_id':response.booking_id});
 					
