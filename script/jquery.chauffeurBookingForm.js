@@ -1659,7 +1659,7 @@
 					
 					if(!place.geometry)
 					{
-						alert($option.message.place_geometry_error);
+						$self.showErrorPopup($option.message.place_geometry_error);
 						field.val('');
 						return(false);
 					}
@@ -3278,7 +3278,7 @@
 
 				if(!place.geometry)
 				{
-					$self.showFieldError(text,$option.message.place_geometry_error);
+					$self.showLocationError(text,$option.message.place_geometry_error);
 					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 
 					$self.setGoogleMapAutocompleteOption(fieldName);
@@ -3290,13 +3290,6 @@
 
 				var placeLat=place.geometry.location.lat();
 				var placeLng=place.geometry.location.lng();
-
-				if(!$self.isCompleteAddress(place))
-				{
-					$self.showFieldError(text,$option.message.address_incomplete);
-					$self.resetLocationSelection(fieldName,text,text.siblings('input[type="hidden"]'),{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
-					return(false);
-				}
 
 				var placeData=
 				{
@@ -3391,6 +3384,30 @@
 
 		/**********************************************************************/
 
+		this.showLocationError=function(textField,message)
+		{
+			var field=textField.closest('.chbs-form-field');
+
+			field.addClass('chbs-form-field-error');
+			$self.showErrorPopup(message);
+		};
+
+		/**********************************************************************/
+
+		this.showErrorPopup=function(message)
+		{
+			if((typeof($.fancybox)!=='undefined') && (typeof($.fancybox.open)==='function'))
+			{
+				$.fancybox.open('<div class="chbs-error-popup"><div class="chbs-error-popup-content">'+message+'</div></div>');
+			}
+			else
+			{
+				alert(message);
+			}
+		};
+
+		/**********************************************************************/
+
 		this.clearFieldError=function(textField)
 		{
 			var field=textField.closest('.chbs-form-field');
@@ -3467,28 +3484,6 @@
 				if(!$self.hasValidPickupLocation(i))
 					pickupTimeField.val('');
 			}
-		};
-
-		/**********************************************************************/
-
-		this.isCompleteAddress=function(place)
-		{
-			if(!place || !place.address_components) return(false);
-
-			var hasStreetNumber=false;
-			var hasRoute=false;
-			var hasLocality=false;
-
-			for(var i in place.address_components)
-			{
-				var component=place.address_components[i];
-
-				if($.inArray('street_number',component.types)>-1) hasStreetNumber=true;
-				if($.inArray('route',component.types)>-1) hasRoute=true;
-				if($.inArray('locality',component.types)>-1 || $.inArray('postal_town',component.types)>-1) hasLocality=true;
-			}
-
-			return(hasStreetNumber && hasRoute && hasLocality);
 		};
 
 		/**********************************************************************/
@@ -3600,7 +3595,7 @@
 			if(!(inCircle && inCountry))
 			{
 				if($option.message.pickup_dropoff_out_of_range)
-					$self.showFieldError(textField,$option.message.pickup_dropoff_out_of_range);
+					$self.showLocationError(textField,$option.message.pickup_dropoff_out_of_range);
 
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 				return(false);
@@ -3623,7 +3618,7 @@
 			if(pickupTime===false)
 			{
 				if($option.message.pickup_time_geofence_out_of_range)
-					$self.showFieldError(textField,$option.message.pickup_time_geofence_out_of_range);
+					$self.showLocationError(textField,$option.message.pickup_time_geofence_out_of_range);
 
 				$self.clearPickupTimeField();
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
@@ -3727,7 +3722,7 @@
 			if($pickupCountryCode && $dropoffCountryCode && $pickupCountryCode===$dropoffCountryCode)
 			{
 				if($option.message.pickup_dropoff_same_country)
-					$self.showFieldError(textField,$option.message.pickup_dropoff_same_country);
+					$self.showLocationError(textField,$option.message.pickup_dropoff_same_country);
 
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:true,focus:true});
 
