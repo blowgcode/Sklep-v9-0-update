@@ -2450,22 +2450,7 @@ class CHBSBookingForm
 		
 		$data['step']=array();
 		$data['step']['disable']=array();
-		
-		if(($data['meta']['step_second_enable']!=1) && (count($data['dictionary']['vehicle'])==1))
-		{
-			array_push($data['step']['disable'],2);
-		}
-		
-		if(($data['meta']['step_third_enable']!=1) && ($WooCommerce->isAddToCartEnable($data)))
-		{
-			array_push($data['step']['disable'],3);
-		}
-		
-		if($data['meta']['step_fourth_enable']!=1)
-		{
-			array_push($data['step']['disable'],4);
-		}
-		
+
 		$data['step']['dictionary']=array
 		(
 			1=>array
@@ -2483,88 +2468,17 @@ class CHBSBookingForm
 			2=>array
 			(
 				'navigation'=>array
-				(				
+				(
 					'number'=>__('2','chauffeur-booking-system'),
-					'label'=>__('Choose a Vehicle','chauffeur-booking-system')
+					'label'=>__('Contact & Booking','chauffeur-booking-system')
 				),
 				'button'=>array
 				(
 					'prev'=>__('Choose ride details','chauffeur-booking-system'),
-					'next'=>__('Enter contact details','chauffeur-booking-system')
-				)
-			),
-			3=>array
-			(
-				'navigation'=>array
-				(
-					'number'=>__('3','chauffeur-booking-system'),
-					'label'=>__('Enter Contact Details','chauffeur-booking-system')
-				),
-				'button'=>array
-				(
-					'prev'=>__('Choose a vehicle','chauffeur-booking-system'),
-					'next'=>__('Booking summary','chauffeur-booking-system')
-				)
-			),
-			4=>array
-			(
-				'navigation'=>array
-				(
-					'number'=>__('4','chauffeur-booking-system'),
-					'label'=>__('Booking Summary','chauffeur-booking-system')
-				),
-				'button'=>array
-				(
-					'prev'=>__('Enter contact details','chauffeur-booking-system'),
 					'next'=>((int)$data['meta']['price_hide']===1 ? __('Send now','chauffeur-booking-system') : ($WooCommerce->isAddToCartEnable($data) ? __('Add to cart','chauffeur-booking-system') : __('Book now','chauffeur-booking-system')))
 				)
-			)			
+			)
 		);
-		
-		if((in_array(2,$data['step']['disable'])) && (in_array(3,$data['step']['disable'])) && (in_array(4,$data['step']['disable'])))
-		{
-			$data['step']['dictionary'][1]['button']['next']=$data['step']['dictionary'][4]['button']['next'];
-		}
-		elseif((in_array(2,$data['step']['disable'])) && (in_array(3,$data['step']['disable'])))
-		{
-			$data['step']['dictionary'][4]['navigation']['number']=$data['step']['dictionary'][2]['navigation']['number'];
-			$data['step']['dictionary'][1]['button']['next']=$data['step']['dictionary'][3]['button']['next'];
-			$data['step']['dictionary'][4]['button']['prev']=$data['step']['dictionary'][2]['button']['prev'];
-		}
-		elseif((in_array(2,$data['step']['disable'])) && (in_array(4,$data['step']['disable'])))
-		{
-			$data['step']['dictionary'][3]['navigation']['number']=$data['step']['dictionary'][2]['navigation']['number'];
-			
-			$data['step']['dictionary'][1]['button']['next']=$data['step']['dictionary'][2]['button']['next'];
-			$data['step']['dictionary'][3]['button']['next']=$data['step']['dictionary'][4]['button']['next'];
-			$data['step']['dictionary'][3]['button']['prev']=$data['step']['dictionary'][2]['button']['prev'];
-		}
-		elseif((in_array(3,$data['step']['disable'])) && (in_array(4,$data['step']['disable'])))
-		{
-			$data['step']['dictionary'][2]['button']['next']=$data['step']['dictionary'][4]['button']['next'];
-		}		
-		else if(in_array(2,$data['step']['disable']))
-		{
-			$data['step']['dictionary'][4]['navigation']['number']=$data['step']['dictionary'][3]['navigation']['number'];
-			$data['step']['dictionary'][3]['navigation']['number']=$data['step']['dictionary'][2]['navigation']['number'];
-			
-			$data['step']['dictionary'][1]['button']['next']=$data['step']['dictionary'][2]['button']['next'];
-			$data['step']['dictionary'][3]['button']['prev']=$data['step']['dictionary'][2]['button']['prev'];
-		}
-		elseif(in_array(3,$data['step']['disable']))
-		{
-			$data['step']['dictionary'][4]['navigation']['number']=$data['step']['dictionary'][3]['navigation']['number'];
-			
-			$data['step']['dictionary'][2]['button']['next']=$data['step']['dictionary'][3]['button']['next'];
-			$data['step']['dictionary'][4]['button']['prev']=$data['step']['dictionary'][3]['button']['prev'];
-		}
-		elseif(in_array(4,$data['step']['disable']))
-		{
-			$data['step']['dictionary'][3]['button']['next']=$data['step']['dictionary'][4]['button']['next'];
-		}
-
-		foreach($data['step']['disable'] as $value)
-			unset($data['step']['dictionary'][$value]);
 		
 		/***/
 	   
@@ -3085,10 +2999,10 @@ class CHBSBookingForm
 		
 		$response['booking_summary_hide_fee']=$bookingForm['meta']['booking_summary_hide_fee'];
 		
-		if((!in_array($data['step_request'],array(2,3,4,5))) || (!in_array($data['step'],array(1,2,3,4))))
+		if((!in_array($data['step_request'],array(2,3))) || (!in_array($data['step'],array(1,2))))
 		{
 			$response['step']=1;
-			$this->createFormResponse($response);			
+			$this->createFormResponse($response);
 		}
 
 		$data['step_request']=$this->getAvailableStepNumber($data['step'],$data['step_request'],$bookingForm);
@@ -3105,7 +3019,7 @@ class CHBSBookingForm
 		
 		if((int)CHBSOption::getOption('google_map_server_data_validation_enable')===1)
 		{
-			if($data['step_request']>4)
+			if($data['step_request']>2)
 			{
 				$GoogleMapAPI=new CHBSGoogleMapAPI();
 				$result=$GoogleMapAPI->validateBookingFormData($bookingForm,$data);
@@ -3855,7 +3769,7 @@ class CHBSBookingForm
 		
 		if(!isset($response['error']))
 		{
-			if($data['step_request']>3)
+			if($data['step_request']>2)
 			{
 				if(!in_array(3,$bookingForm['step']['disable']))
 				{
@@ -3970,7 +3884,7 @@ class CHBSBookingForm
 
 					if(isset($response['error']))
 					{
-						$data['step']=$data['step_request']=$response['step']=3;
+						$data['step']=$data['step_request']=$response['step']=2;
 					} 
 				}
 				
@@ -3986,7 +3900,7 @@ class CHBSBookingForm
 		
 		if(!isset($response['error']))
 		{
-			if($data['step_request']>4)
+			if($data['step_request']>2)
 			{
 				if(!in_array(4,$bookingForm['step']['disable']))
 				{
@@ -4000,7 +3914,7 @@ class CHBSBookingForm
 				
 				if(isset($response['error']))
 				{
-					$response['step']=4;
+					$response['step']=2;
 				}
 				else
 				{
@@ -4025,7 +3939,7 @@ class CHBSBookingForm
 							
 							/***/
 							
-							$response['step']=5;
+							$response['step']=3;
 							$response['payment_id']=(int)$data['payment_id'];  
 
 							$bookingBilling=$Booking->createBilling($bookingId);			  
@@ -4095,7 +4009,7 @@ class CHBSBookingForm
 						}
 						else
 						{
-							$response['step']=5;
+							$response['step']=3;
 							$response['payment_id']=-1;
 							$response['payment_url']=$WooCommerce->getPaymentURLAddress($bookingId+1);
 							
@@ -4146,10 +4060,10 @@ class CHBSBookingForm
 		
 		/***/
 		
-		if($data['step_request']>=3)
+		if($data['step_request']>=2)
 		{
 			$userData=array();
-			
+
 			$User=new CHBSUser();
 			$WooCommerce=new CHBSWooCommerce();
 			

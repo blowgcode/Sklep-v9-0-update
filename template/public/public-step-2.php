@@ -1,4 +1,4 @@
-		
+
 		<div class="chbs-layout-25x75 chbs-clear-fix">
 
 			<div class="chbs-layout-column-left"></div>
@@ -10,7 +10,7 @@
 			$columnName=(int)(100/count($this->data['meta']['vehicle_filter_enable']));
 ?>
 				<div class="chbs-vehicle-filter chbs-box-shadow chbs-clear-fix">
-					
+
 					<label class="chbs-form-label-group"><?php esc_html_e('Vehicles filter','chauffeur-booking-system'); ?></label>
 <?php
 			if(in_array(1,$this->data['meta']['vehicle_filter_enable']))
@@ -75,7 +75,7 @@
 						</select>
 					</div>
 <?php
-			}			
+			}
 			if(in_array(4,$this->data['meta']['vehicle_filter_enable']))
 			{
 ?>
@@ -94,21 +94,42 @@
 <?php
 				}
 ?>
-						</select>						
+						</select>
 					</div>
 <?php
 			}
 ?>
 				</div>
-<?php		  
+<?php
 		}
 ?>
 				<div class="chbs-notice chbs-hidden"></div>
-				
+
 				<div class="chbs-vehicle-list"></div>
-			
+
 				<div class="chbs-booking-extra"></div>
-				
+
+			</div>
+
+		</div>
+
+<?php
+		$Payment=new CHBSPayment();
+		$Validation=new CHBSValidation();
+		$BookingFormElement=new CHBSBookingFormElement();
+?>
+		<div class="chbs-layout-25x75 chbs-clear-fix">
+
+			<div class="chbs-layout-column-left"></div>
+
+			<div class="chbs-layout-column-right">
+
+				<div class="chbs-notice chbs-hidden"></div>
+
+				<div class="chbs-client-form"></div>
+
+				<div class="chbs-payment-form"></div>
+
 			</div>
 
 		</div>
@@ -117,9 +138,9 @@
 			<a href="#" class="chbs-button chbs-button-style-2 chbs-button-step-prev">
 				<span class="chbs-meta-icon-arrow-horizontal-large"></span>
 				<?php echo esc_html($this->data['step']['dictionary'][2]['button']['prev']); ?>
-			</a> 
+			</a>
 			<a href="#" class="chbs-button chbs-button-style-1 chbs-button-step-next">
 				<?php echo esc_html($this->data['step']['dictionary'][2]['button']['next']); ?>
 				<span class="chbs-meta-icon-arrow-horizontal-large"></span>
-			</a> 
+			</a>
 		</div>
