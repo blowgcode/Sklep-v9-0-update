@@ -211,7 +211,7 @@ class CHBSBookingHelper
 		
 		/***/
 		
-		if((int)$bookingForm['meta']['show_net_price_hide_tax']===1)
+		if((int)($bookingForm['meta']['show_net_price_hide_tax'] ?? 0)===1)
 		{
 			if((int)$step!==4)
 			{
@@ -223,7 +223,7 @@ class CHBSBookingHelper
 		
 		/***/
 		
-		if((int)$bookingForm['meta']['order_sum_split']===1)
+		if((int)($bookingForm['meta']['order_sum_split'] ?? 0)===1)
 		{
 			$priceType='net';
 		}
@@ -651,10 +651,10 @@ class CHBSBookingHelper
         
         $Validation=new CHBSValidation();
         
-        if((int)$serviceTypeId!==1) return($duration);
-        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($duration);
+        if((int)$serviceTypeId!==1) return($count);
+        if((int)($bookingForm['meta']['waypoint_enable'] ?? 0)!==1) return($count);
         
-        if(is_array($data['waypoint_location_coordinate_service_type_1']))
+        if(isset($data['waypoint_location_coordinate_service_type_1']) && is_array($data['waypoint_location_coordinate_service_type_1']))
         {
             foreach($data['waypoint_location_coordinate_service_type_1'] as $value)
             {
@@ -676,9 +676,9 @@ class CHBSBookingHelper
         $Validation=new CHBSValidation();
         
         if((int)$serviceTypeId!==1) return($duration);
-        if((int)$bookingForm['meta']['waypoint_enable']!==1) return($duration);
+        if((int)($bookingForm['meta']['waypoint_enable'] ?? 0)!==1) return($duration);
         
-        if(is_array($data['waypoint_location_coordinate_service_type_1']))
+        if(isset($data['waypoint_location_coordinate_service_type_1']) && is_array($data['waypoint_location_coordinate_service_type_1']))
         {
             foreach($data['waypoint_location_coordinate_service_type_1'] as $index=>$value)
             {
@@ -1242,7 +1242,7 @@ class CHBSBookingHelper
 
 				if(((int)$data['service_type_id']===1) && ((int)$bookingForm['meta']['waypoint_enable']===1))
 				{
-					if(is_array($data['waypoint_location_coordinate_service_type_1']))
+					if(isset($data['waypoint_location_coordinate_service_type_1']) && is_array($data['waypoint_location_coordinate_service_type_1']))
 					{
 						foreach($data['waypoint_location_coordinate_service_type_1'] as $index=>$value)
 						{

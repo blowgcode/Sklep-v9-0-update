@@ -63,7 +63,7 @@ class CHBSGoogleCalendar
 		
 		if(($booking=$Booking->getBooking($bookingId))===false) return(false);
 		
-		if(((int)$booking['meta']['google_calendar_add_event']===1) && (!$bookingReturn)) return(false);
+		if(((int)($booking['meta']['google_calendar_add_event'] ?? 0)===1) && (!$bookingReturn)) return(false);
 		
 		$bookingFormId=$booking['meta']['booking_form_id'];
 		
