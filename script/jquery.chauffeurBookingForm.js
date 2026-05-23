@@ -1121,9 +1121,9 @@
 		
 		/**********************************************************************/
 		
-		this.createTimePicker=function(dateField,object)
-		{
-			var helper=new CHBSHelper();
+			this.createTimePicker=function(dateField,object)
+			{
+				var helper=new CHBSHelper();
 
 			var dateSelected=[object.selectedDay,object.selectedMonth+1,object.selectedYear];
 
@@ -1139,12 +1139,21 @@
 			var dayWeek=parseInt(dateField.datepicker('getDate').getDay(),10);
 			if(dayWeek===0) dayWeek=7;					
 
-			var prefix=dateField.attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
-			var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
-			var allowDefaultTime=true;
+				var prefix=dateField.attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
+				var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
+				var allowDefaultTime=true;
+				var geofencePickupTime=false;
 
-			if(prefix==='pickup' && !$self.hasValidPickupLocation($self.getServiceTypeId()))
-				allowDefaultTime=false;
+				if(prefix==='pickup' && !$self.hasValidPickupLocation($self.getServiceTypeId()))
+					allowDefaultTime=false;
+				
+				if(prefix==='pickup' && parseInt($self.getServiceTypeId(),10)===1)
+				{
+					geofencePickupTime=$self.getPickupTimeByStoredPickupLocation($self.getServiceTypeId());
+					
+					if(geofencePickupTime!==false)
+						allowDefaultTime=false;
+				}
 
 			if(parseInt($option.pickup_time_field_write_enable,10)===1 || prefix==='return')
 			{	
@@ -1290,9 +1299,16 @@
 				else
 				{
 					timeField.val('');
+					}
 				}
-			}			
-		};
+				
+				// Keep pickup time derived from pickup_time_geofence when date changes.
+				// Datepicker rebuilds the timepicker and would otherwise restore business_hour.default_format.
+				if(geofencePickupTime!==false)
+				{
+					timeField.val(geofencePickupTime);
+				}
+			};
 		
 		/**********************************************************************/
 		
@@ -3493,14 +3509,21 @@
 
 		/**********************************************************************/
 
-		this.setDefaultPickupTime=function(fieldName)
-		{
+			this.setDefaultPickupTime=function(fieldName)
+			{
 			if(fieldName.indexOf('pickup')===-1) return;
 
-			var serviceTypeId=$self.getServiceTypeId();
-			var helper=new CHBSHelper();
+				var serviceTypeId=$self.getServiceTypeId();
+				var helper=new CHBSHelper();
+				var geofencePickupTime=false;
 
-			if(!$self.hasValidPickupLocation(serviceTypeId)) return;
+				if(!$self.hasValidPickupLocation(serviceTypeId)) return;
+				
+				if(parseInt(serviceTypeId,10)===1)
+				{
+					geofencePickupTime=$self.getPickupTimeByStoredPickupLocation(serviceTypeId);
+					if(geofencePickupTime!==false) return;
+				}
 
 			var pickupTimeField=$self.e('[name="chbs_pickup_time_service_type_'+serviceTypeId+'"]');
 			var pickupDateField=$self.e('[name="chbs_pickup_date_service_type_'+serviceTypeId+'"]');
@@ -3526,9 +3549,38 @@
 			var dayWeek=parseInt(date.getDay(),10);
 			if(dayWeek===0) dayWeek=7;
 
-			if(typeof($option.business_hour[dayWeek])!=='undefined' && typeof($option.business_hour[dayWeek].default_format)!=='undefined')
-				pickupTimeField.val($option.business_hour[dayWeek].default_format);
-		};
+				if(typeof($option.business_hour[dayWeek])!=='undefined' && typeof($option.business_hour[dayWeek].default_format)!=='undefined')
+					pickupTimeField.val($option.business_hour[dayWeek].default_format);
+			};
+
+			/**********************************************************************/
+
+			this.getPickupTimeByStoredPickupLocation=function(serviceTypeId)
+			{
+				if(parseInt(serviceTypeId,10)!==1) return(false);
+
+				var helper=new CHBSHelper();
+				var coordinateField=$self.e('[name="chbs_pickup_location_coordinate_service_type_'+serviceTypeId+'"]');
+
+				if(coordinateField.length!==1 || helper.isEmpty(coordinateField.val())) return(false);
+
+				try
+				{
+					var coordinate=JSON.parse(coordinateField.val());
+
+					if(typeof(coordinate.lat)==='undefined' || typeof(coordinate.lng)==='undefined')
+						return(false);
+
+					if(helper.isEmpty(coordinate.lat) || helper.isEmpty(coordinate.lng))
+						return(false);
+
+					return($self.getPickupTimeByGeofence(parseFloat(coordinate.lat),parseFloat(coordinate.lng)));
+				}
+				catch(e)
+				{
+					return(false);
+				}
+			};
 
 		/**********************************************************************/
 
