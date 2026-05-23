@@ -405,7 +405,7 @@ class CHBSBooking
 		CHBSPostMeta::updatePostMeta($bookingId,'passenger_adult_number',$passenger['adult']);
 		CHBSPostMeta::updatePostMeta($bookingId,'passenger_children_number',$passenger['children']);
 
-		CHBSPostMeta::updatePostMeta($bookingId,'hide_fee',$bookingForm['meta']['hide_fee']);
+		CHBSPostMeta::updatePostMeta($bookingId,'hide_fee',($bookingForm['meta']['hide_fee'] ?? 0));
 		CHBSPostMeta::updatePostMeta($bookingId,'price_hide',$bookingForm['meta']['price_hide']);
 		CHBSPostMeta::updatePostMeta($bookingId,'total_time_display_enable',$bookingForm['meta']['total_time_display_enable']);
 		
@@ -592,9 +592,9 @@ class CHBSBooking
 			'transfer_type_id'=>$data['transfer_type_service_type_'.$data['service_type_id']],
 			'pickup_location_coordinate'=>$data['pickup_location_coordinate_service_type_'.$data['service_type_id']],
 			'dropoff_location_coordinate'=>$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']],
-			'fixed_location_pickup'=>$data['fixed_location_pickup_service_type_'.$data['service_type_id']],
-			'fixed_location_dropoff'=>$data['fixed_location_dropoff_service_type_'.$data['service_type_id']],
-			'route_id'=>$data['route_service_type_3'],
+			'fixed_location_pickup'=>($data['fixed_location_pickup_service_type_'.$data['service_type_id']] ?? ''),
+			'fixed_location_dropoff'=>($data['fixed_location_dropoff_service_type_'.$data['service_type_id']] ?? ''),
+			'route_id'=>($data['route_service_type_3'] ?? 0),
 			'vehicle_id'=>$data['vehicle_id'],
 			'pickup_date'=>$data['pickup_date_service_type_'.$data['service_type_id']],
 			'pickup_time'=>$data['pickup_time_service_type_'.$data['service_type_id']],

@@ -4278,7 +4278,7 @@ class CHBSBookingForm
 			$this->createFormResponse($response);
 		}
 		
-		CHBSBookingHelper::getPriceType($data['booking_form'],$priceType,$sumType,$showTax,$data['step']);
+		CHBSBookingHelper::getPriceType($bookingForm,$priceType,$sumType,$showTax,($data['step'] ?? 1));
 		
 		$price=array();
 		
@@ -4330,13 +4330,15 @@ class CHBSBookingForm
 			}
 		}
 		
-		CHBSBookingHelper::getPriceType($data['booking_form'],$priceType,$sumType,$showTax,$data['step']);
+		CHBSBookingHelper::getPriceType($bookingForm,$priceType,$sumType,$showTax,($data['step'] ?? 1));
 		
 		if(in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(0,2)))
 		{
 			if($price['initial']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-deliver-fee">
 						<span>'.__('Initial fee','chauffeur-booking-system').'</span>
@@ -4346,7 +4348,9 @@ class CHBSBookingForm
 			}
 			if($price['delivery']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-deliver-fee">
 						<span>'.__('Delivery fee','chauffeur-booking-system').'</span>
@@ -4356,7 +4360,9 @@ class CHBSBookingForm
 			}
 			if($price['delivery_return']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-deliver-fee">
 						<span>'.__('Return to base fee','chauffeur-booking-system').'</span>
@@ -4366,7 +4372,9 @@ class CHBSBookingForm
 			}
 			if($price['extra_time']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-time-extra">
 						<span>'.__('Extra time','chauffeur-booking-system').'</span>
@@ -4376,7 +4384,9 @@ class CHBSBookingForm
 			}
 			if($price['waypoint']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-waypoint">
 						<span>'.__('Waypoints','chauffeur-booking-system').'</span>
@@ -4386,7 +4396,9 @@ class CHBSBookingForm
 			}
 			if($price['waypoint_duration']['sum'][$priceType]['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-waypoint-duration">
 						<span>'.__('Waypoints duration','chauffeur-booking-system').'</span>
@@ -4400,7 +4412,9 @@ class CHBSBookingForm
 		{
 			$priceVehicleIndex=in_array((int)$data['booking_form']['meta']['booking_summary_hide_fee'],array(2)) ? 'vehicle_exclude_fee' : 'vehicle';
 		
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-vehicle-fee">
 					<span>'.__('Selected vehicle','chauffeur-booking-system').'</span>
@@ -4412,7 +4426,9 @@ class CHBSBookingForm
 			{
 				if(in_array($data['transfer_type_service_type_'.$data['service_type_id']],$bookingForm['meta']['vehicle_sum_split']))
 				{
-					$html.=
+					$html='';
+
+		$html.=
 					'
 						<div class="chbs-summary-price-element-vehicle-fee-one-way">
 							<span>'.__('One way','chauffeur-booking-system').'</span>
@@ -4429,7 +4445,9 @@ class CHBSBookingForm
 		
 		if($price['booking_extra']['sum'][$priceType]['value']!=0)
 		{		
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-booking-extra">
 					<span>'.__('Extra options','chauffeur-booking-system').'</span>
@@ -4442,7 +4460,9 @@ class CHBSBookingForm
 		{
 			if($price['tax']['sum']['value']!=0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<div class="chbs-summary-price-element-booking-extra">
 						<span>'.__('Tax','chauffeur-booking-system').'</span>
@@ -4454,7 +4474,9 @@ class CHBSBookingForm
 		
 		if($price['gratuity']['value']>0.00)
 		{
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-booking-extra">
 					<span>'.__('Gratuity','chauffeur-booking-system').'</span>
@@ -4465,7 +4487,9 @@ class CHBSBookingForm
 		
 		if($price['paypal_fee']['value']!=0)
 		{
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-booking-extra">
 					<span>'.__('PayPal fee','chauffeur-booking-system').'</span>
@@ -4475,7 +4499,9 @@ class CHBSBookingForm
 		}		
 		if($price['stripe_fee']['value']!=0)
 		{
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-booking-extra">
 					<span>'.__('Stripe fee','chauffeur-booking-system').'</span>
@@ -4496,6 +4522,8 @@ class CHBSBookingForm
 		
 		/****/
 		
+		$html='';
+
 		$html.=
 		'
 			<div class="chbs-summary-price-element-total">
@@ -4508,7 +4536,9 @@ class CHBSBookingForm
 		
 		if(CHBSBookingHelper::isPaymentDepositEnable($data['booking_form']['meta']))
 		{
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-summary-price-element-pay">
 					<span>'.sprintf(__('To pay <span>(%s%% deposit)</span>','chauffeur-booking-system'),$bookingForm['meta']['payment_deposit_value']).'</span>
@@ -5917,9 +5947,9 @@ class CHBSBookingForm
 		
 		$response['booking_summary_hide_fee']=$bookingForm['meta']['booking_summary_hide_fee'];
 		
-		if(!$Validation->isNumber($data['vehicle_standard'],1,4)) $data['vehicle_standard']=1;
-		if(!$Validation->isNumber($data['vehicle_bag_count'],1,99)) $data['vehicle_bag_count']=1;
-		if(!$Validation->isNumber($data['vehicle_passenger_count'],1,99)) $data['vehicle_passenger_count']=1;		
+		if(!$Validation->isNumber(($data['vehicle_standard'] ?? null),1,4)) $data['vehicle_standard']=1;
+		if(!$Validation->isNumber(($data['vehicle_bag_count'] ?? null),1,99)) $data['vehicle_bag_count']=1;
+		if(!$Validation->isNumber(($data['vehicle_passenger_count'] ?? null),1,99)) $data['vehicle_passenger_count']=1;		
 		
 		$sum=CHBSBookingHelper::getPassenegerSum($bookingForm['meta'],$data);
 		
@@ -5937,7 +5967,7 @@ class CHBSBookingForm
 		
 		$vehicleCategory=$this->getBookingFormVehicleCategory($bookingForm['meta']);
 		
-		if($data['vehicle_category']!=0)
+		if(($data['vehicle_category'] ?? 0)!=0)
 			$attribute=array('category_id'=>$data['vehicle_category']);
 		
 		if(isset($attribute['category_id']))
@@ -5978,10 +6008,10 @@ class CHBSBookingForm
 				'transfer_type_id'=>$data['transfer_type_service_type_'.$data['service_type_id']],
 				'pickup_location_coordinate'=>$data['pickup_location_coordinate_service_type_'.$data['service_type_id']],
 				'dropoff_location_coordinate'=>$data['dropoff_location_coordinate_service_type_'.$data['service_type_id']],				
-				'fixed_location_pickup'=>$data['fixed_location_pickup_service_type_'.$data['service_type_id']],
-				'fixed_location_dropoff'=>$data['fixed_location_dropoff_service_type_'.$data['service_type_id']],				
+				'fixed_location_pickup'=>($data['fixed_location_pickup_service_type_'.$data['service_type_id']] ?? ''),
+				'fixed_location_dropoff'=>($data['fixed_location_dropoff_service_type_'.$data['service_type_id']] ?? ''),				
 				'transfer_type_id'=>$data['transfer_type_service_type_'.$data['service_type_id']],
-				'route_id'=>$data['route_service_type_3'],
+				'route_id'=>($data['route_service_type_3'] ?? 0),
 				'vehicle'=>$value,
 				'vehicle_id'=>$value['post']->ID,
 				'vehicle_selected_id'=>$data['vehicle_id'],
@@ -6056,11 +6086,15 @@ class CHBSBookingForm
 					array_push($class,'chbs-hidden');
 			}
 			
-			$html.='<li'.CHBSHelper::createCSSClassAttribute($class).'>'.$vehicleHtml[$index].'</li>';
+			$html='';
+
+		$html.='<li'.CHBSHelper::createCSSClassAttribute($class).'>'.$vehicleHtml[$index].'</li>';
 		}
 		
 		$html='<ul class="chbs-list-reset">'.$html.'</ul>';
 		
+		$html='';
+
 		$html.=$this->createPagination($dictionary,$bookingForm['meta']['vehicle_pagination_vehicle_per_page']);
 		
 		$response['html']=$html;
@@ -6335,6 +6369,8 @@ class CHBSBookingForm
 		
 		/***/
 		
+		$html='';
+
 		$html.=
 		'
 					<div class="chbs-clear-fix">
@@ -6492,8 +6528,12 @@ class CHBSBookingForm
 				{
 					$serviceType=$ServiceType->getServiceType($value);
 					
-					if($Validation->isNotEmpty($html)) $html.=', ';
-					$html.=$serviceType[0];
+					if($Validation->isNotEmpty($html)) $html='';
+
+		$html.=', ';
+					$html='';
+
+		$html.=$serviceType[0];
 				}
 				
 				echo esc_html($html);
@@ -6548,7 +6588,9 @@ class CHBSBookingForm
 		$html=null;
 		
 		for($i=$min;$i<=$max;$i++)
-			$html.='<option value="'.esc_attr($i).'"'.($i==$passengerSum ? ' selected="selected"' : '').'>'.esc_html($i).'</option>';
+			$html='';
+
+		$html.='<option value="'.esc_attr($i).'"'.($i==$passengerSum ? ' selected="selected"' : '').'>'.esc_html($i).'</option>';
 			
 		$html='<select name="'.CHBSHelper::getFormName('vehicle_passenger_count',false).'">'.$html.'</select>';
 
@@ -6637,7 +6679,9 @@ class CHBSBookingForm
 			$Validation=new CHBSValidation();
 			$BookingExtra=new CHBSBookingExtra();
 
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<h4 class="chbs-booking-extra-header">
 					<span class="chbs-circle chbs-meta-icon-cart"></span>
@@ -6646,10 +6690,14 @@ class CHBSBookingForm
 			
 			if((int)$bookingForm['meta']['booking_extra_button_toggle_visibility_enable']===1)
 			{
-				$html.=$this->createShowMoreButton($bookingForm['meta']['booking_extra_visibility_status'],array('more'=>__('Show all','chauffeur-booking-system'),'less'=>__('Hide','chauffeur-booking-system')));
+				$html='';
+
+		$html.=$this->createShowMoreButton($bookingForm['meta']['booking_extra_visibility_status'],array('more'=>__('Show all','chauffeur-booking-system'),'less'=>__('Hide','chauffeur-booking-system')));
 			}
 			
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				</h4>
 			';
@@ -6661,7 +6709,9 @@ class CHBSBookingForm
 			}
 			else array_push($class,'chbs-state-open');
 			
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div'.CHBSHelper::createCSSClassAttribute($class).'>
 			';
@@ -6675,7 +6725,9 @@ class CHBSBookingForm
 					foreach($bookingForm['dictionary']['booking_extra_category'] as $index=>$value)
 						$htmlCategory.='<div><a href="#" data-category_id="'.(int)$value['term_id'].'">'.esc_html($value['name']).'</a></div>';
 					
-					$html.=
+					$html='';
+
+		$html.=
 					'
 						<div class="chbs-booking-extra-category-list">
 							'.$htmlCategory.'
@@ -6684,7 +6736,9 @@ class CHBSBookingForm
 				}
 			}
 						
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-booking-extra-list">
 					<ul class="chbs-list-reset">
@@ -6706,7 +6760,9 @@ class CHBSBookingForm
 				if(count($value['category'][0]))
 					$category=join(',',array_keys($value['category'][0]));
 				
-				$html.=
+				$html='';
+
+		$html.=
 				'
 						<li'.CHBSHelper::createCSSClassAttribute($class).' data-category_id="'.esc_attr($category).'" data-vehicle_id="'.esc_attr(join(',',$value['meta']['vehicle_id'])).'" data-booking_extra_id="'.esc_attr($index).'" data-booking_extra_name="'.esc_attr($value['post']->post_title).'">
 				';
@@ -6898,10 +6954,14 @@ class CHBSBookingForm
 							</div>
 				';
 			
-				$html.=$htmlColumn[0].$htmlColumn[1].$htmlColumn[2].'</li>';
+				$html='';
+
+		$html.=$htmlColumn[0].$htmlColumn[1].$htmlColumn[2].'</li>';
 			}
 
-			$html.=
+			$html='';
+
+		$html.=
 			'
 						</ul>
 					</div>
@@ -7066,7 +7126,9 @@ class CHBSBookingForm
 		{
 			if((int)$bookingForm['meta']['price_hide']===0)
 			{
-				$html.=
+				$html='';
+
+		$html.=
 				'
 					<h4 class="chbs-payment-header">
 						'.esc_html__('Choose payment method','chauffeur-booking-system').'
@@ -7090,7 +7152,9 @@ class CHBSBookingForm
 						';
 					}
 					
-					$html.=
+					$html='';
+
+		$html.=
 					'
 						<ul class="chbs-payment chbs-payment-woocommerce chbs-list-reset">
 							'.$htmlItem.'
@@ -7154,7 +7218,9 @@ class CHBSBookingForm
 						';
 					}
 					
-					$html.=
+					$html='';
+
+		$html.=
 					'	
 						<ul class="chbs-payment chbs-list-reset">
 							'.$htmlItem.'
@@ -7168,7 +7234,9 @@ class CHBSBookingForm
 		{
 			$tpayHtml=$PaymentTpay->getBankSelectionForm($bookingForm);
 			
-			$html.=
+			$html='';
+
+		$html.=
 			'
 				<div class="chbs-payment-tpay-selection chbs-hidden" data-payment-id="'.(int)CHBSPaymentTpay::PAYMENT_ID.'">
 					<h5 class="chbs-payment-header">
@@ -7191,6 +7259,8 @@ class CHBSBookingForm
 		if(!array_key_exists('less',$label))
 			$label['less']=__('Less info','chauffeur-booking-system');		
 		
+		$html='';
+
 		$html.=
 		'
 			<span class="chbs-show-more-button">
