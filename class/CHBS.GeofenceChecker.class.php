@@ -60,7 +60,7 @@ class CHBSGeofenceChecker
 	/**************************************************************************/
 	
 	function locationInGeofence($geofence,$geofenceDictionary,$locationCoordinate)
-	{		
+	{
 		if((!is_array($geofence)) || (!count($geofence))) return(true);
 		if(in_array(-1,$geofence)) return(true);
 		
@@ -69,6 +69,8 @@ class CHBSGeofenceChecker
 		if(is_array($coordinate))
 		{
 			$location=json_decode($locationCoordinate);
+
+			if((!is_object($location)) || (!isset($location->lat)) || (!isset($location->lng))) return(false);
 			
 			foreach($coordinate as $coordinateValue)
 			{
@@ -77,6 +79,24 @@ class CHBSGeofenceChecker
 			}
 		}
 		
+		return(false);
+	}
+
+	/**************************************************************************/
+
+	function getPickupTimeByGeofence($pickupTimeGeofence,$geofenceDictionary,$locationCoordinate)
+	{
+		if((!is_array($pickupTimeGeofence)) || (!count($pickupTimeGeofence))) return(false);
+
+		foreach($pickupTimeGeofence as $value)
+		{
+			if(!array_key_exists('geofence_id',$value)) continue;
+			if(!array_key_exists('time',$value)) continue;
+
+			if($this->locationInGeofence(array($value['geofence_id']),$geofenceDictionary,$locationCoordinate))
+				return($value['time']);
+		}
+
 		return(false);
 	}
 	

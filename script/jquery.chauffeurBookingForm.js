@@ -1142,8 +1142,12 @@
 			var prefix=dateField.attr('name').indexOf('pickup')>-1 ? 'pickup' : 'return';
 			var timeField=$self.e('input[name="chbs_'+prefix+'_time_service_type_'+$self.getServiceTypeId()+'"]');
 			var allowDefaultTime=true;
+			var preserveReturnTimeByGeofence=$self.isReturnTimeGeofenceMode(prefix);
 
 			if(prefix==='pickup' && !$self.hasValidPickupLocation($self.getServiceTypeId()))
+				allowDefaultTime=false;
+
+			if(preserveReturnTimeByGeofence)
 				allowDefaultTime=false;
 
 			if(parseInt($option.pickup_time_field_write_enable,10)===1 || prefix==='return')
@@ -1220,8 +1224,11 @@
 
 					timeField.timepicker(option);
 
-					timeField.val('').timepicker('show');
-					timeField.blur();				
+					if(!(preserveReturnTimeByGeofence && !helper.isEmpty(timeField.val())))
+					{
+						timeField.val('').timepicker('show');
+						timeField.blur();
+					}
 
 					$self.setTimepicker(timeField);
 
@@ -1283,7 +1290,11 @@
 			}
 			else
 			{	
-				if(allowDefaultTime && new String(typeof($option.business_hour[dayWeek]))!=='undefined')
+				if(preserveReturnTimeByGeofence && !helper.isEmpty(timeField.val()))
+				{
+					return;
+				}
+				else if(allowDefaultTime && new String(typeof($option.business_hour[dayWeek]))!=='undefined')
 				{
 					timeField.val($option.business_hour[dayWeek].default_format);
 				}
@@ -1346,6 +1357,28 @@
 			if(parseInt(serviceTypeId,10)===2)
 				$self.e('.chbs-ride-info>div:first').addClass('chbs-hidden');
 			else $self.e('.chbs-ride-info>div:first').removeClass('chbs-hidden');
+
+			$self.updateRideInfoLayout();
+		};
+
+		/**********************************************************************/
+
+		this.updateRideInfoLayout=function()
+		{
+			var serviceTypeId=$self.getServiceTypeId();
+			var transferTypeId=parseInt($self.e('select[name="chbs_transfer_type_service_type_'+serviceTypeId+'"]').val(),10);
+			var showReturnBreakdown=(parseInt(serviceTypeId,10)===1 && transferTypeId===3);
+
+			if(parseInt(serviceTypeId,10)===2)
+			{
+				$self.e('.chbs-ride-info-total-distance,.chbs-ride-info-outbound-distance,.chbs-ride-info-return-distance').addClass('chbs-hidden');
+				$self.e('.chbs-ride-info-total-time').removeClass('chbs-hidden');
+				$self.e('.chbs-ride-info-outbound-time,.chbs-ride-info-return-time').addClass('chbs-hidden');
+				return;
+			}
+
+			$self.e('.chbs-ride-info-total-distance,.chbs-ride-info-total-time').toggleClass('chbs-hidden',showReturnBreakdown);
+			$self.e('.chbs-ride-info-outbound-distance,.chbs-ride-info-return-distance,.chbs-ride-info-outbound-time,.chbs-ride-info-return-time').toggleClass('chbs-hidden',!showReturnBreakdown);
 		};
 		
 		/**********************************************************************/
@@ -1836,8 +1869,21 @@
 					{
 						var section=$self.e('[name="chbs_return_date_service_type_'+$self.getServiceTypeId()+'"]').parent('div').parent('div');
 						
-						if(parseInt($(this).val(),10)===3) section.removeClass('chbs-hidden');
-						else section.addClass('chbs-hidden');
+						if(parseInt($(this).val(),10)===3)
+						{
+							section.removeClass('chbs-hidden');
+							$self.applyReturnTimeGeofenceFromDropoff();
+						}
+						else
+						{
+							section.addClass('chbs-hidden');
+							if(name==='chbs_transfer_type_service_type_1')
+							{
+								$self.clearReturnTimeField();
+								$self.e('input[name="chbs_distance_return_map"]').val(0);
+								$self.e('input[name="chbs_duration_return_map"]').val(0);
+							}
+						}
 					}
 					
 					if($.inArray(name,['chbs_extra_time_service_type_1','chbs_transfer_type_service_type_1','chbs_duration_service_type_2','chbs_extra_time_service_type_3','chbs_transfer_type_service_type_3'])>-1)
@@ -3425,6 +3471,9 @@
 			if(settings.clearPickupTime && fieldName.indexOf('pickup')>-1)
 				$self.clearPickupTimeField();
 
+			if(fieldName.indexOf('dropoff')>-1 && fieldName.indexOf('service_type_1')>-1)
+				$self.clearReturnTimeField();
+
 			if(settings.clearRoute)
 				$self.resetRouteData();
 
@@ -3453,6 +3502,25 @@
 
 			if(pickupTimeField.length===1)
 				pickupTimeField.val('');
+		};
+
+		/**********************************************************************/
+
+		this.clearReturnTimeField=function()
+		{
+			var returnTimeField=$self.e('[name="chbs_return_time_service_type_1"]');
+
+			if(returnTimeField.length===1)
+				returnTimeField.val('');
+		};
+
+		/**********************************************************************/
+
+		this.isReturnTimeGeofenceMode=function(prefix)
+		{
+			if(prefix!=='return') return(false);
+			if(parseInt($self.getServiceTypeId(),10)!==1) return(false);
+			return(parseInt($self.e('select[name="chbs_transfer_type_service_type_1"]').val(),10)===3);
 		};
 
 		/**********************************************************************/
@@ -3566,6 +3634,8 @@
 			$self.e('input[name="chbs_route_data"]').val('');
 			$self.e('input[name="chbs_distance_map"]').val(0);
 			$self.e('input[name="chbs_duration_map"]').val(0);
+			$self.e('input[name="chbs_distance_return_map"]').val(0);
+			$self.e('input[name="chbs_duration_return_map"]').val(0);
 			$self.e('input[name="chbs_distance_sum"]').val(0);
 			$self.e('input[name="chbs_duration_sum"]').val(0);
 
@@ -3675,42 +3745,52 @@
 		{
 			if(fieldName.indexOf('dropoff')===-1) return(true);
 			if(fieldName.indexOf('service_type_1')===-1) return(true);
+			if(parseInt($self.e('select[name="chbs_transfer_type_service_type_1"]').val(),10)!==3) return(true);
 			if(!$.isArray($option.pickup_time_geofence)) return(true);
 			if(parseInt($option.pickup_time_geofence.length,10)===0) return(true);
 
-			var Helper=new CHBSHelper();
-			var inGeofence=false;
+			var returnTime=$self.getPickupTimeByGeofence(coordinateLat,coordinateLng);
 
-			for(var i in $option.pickup_time_geofence)
+			if(returnTime===false)
 			{
-				if(typeof($option.pickup_time_geofence[i].geofence_shape_coordinate)==='undefined') continue;
-				for(var j in $option.pickup_time_geofence[i].geofence_shape_coordinate)
-				{
-					var coordinate=[];
-					var point=[coordinateLng,coordinateLat];
+				if($option.message.pickup_time_geofence_out_of_range)
+					$self.showFieldError(textField,$option.message.pickup_time_geofence_out_of_range);
 
-					for(var k in $option.pickup_time_geofence[i].geofence_shape_coordinate[j])
-					{
-						coordinate.push([$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lng,$option.pickup_time_geofence[i].geofence_shape_coordinate[j][k].lat]);
-					}
-
-					if(Helper.coordinateInsidePolygon(point,coordinate)===true)
-					{
-						inGeofence=true;
-						break;
-					}
-				}
-				if(inGeofence) break;
-			}
-
-			if(!inGeofence)
-			{
-				if($option.message.pickup_dropoff_out_of_range)
-					$self.showFieldError(textField,$option.message.pickup_dropoff_out_of_range);
-
+				$self.clearReturnTimeField();
 				$self.resetLocationSelection(fieldName,textField,hiddenField,{resetCountry:true,clearRoute:true,clearPickupTime:false,focus:true});
 				return(false);
 			}
+
+			$self.e('[name="chbs_return_time_service_type_1"]').val(returnTime);
+
+			return(true);
+		};
+
+		/**********************************************************************/
+
+		this.applyReturnTimeGeofenceFromDropoff=function()
+		{
+			var helper=new CHBSHelper();
+
+			if(parseInt($self.getServiceTypeId(),10)!==1) return(true);
+			if(parseInt($self.e('select[name="chbs_transfer_type_service_type_1"]').val(),10)!==3) return(true);
+			if(!$.isArray($option.pickup_time_geofence)) return(true);
+			if(parseInt($option.pickup_time_geofence.length,10)===0) return(true);
+
+			var hiddenField=$self.e('[name="chbs_dropoff_location_coordinate_service_type_1"]');
+			var textField=$self.e('[name="chbs_dropoff_location_service_type_1"]');
+
+			if(hiddenField.length!==1 || helper.isEmpty(hiddenField.val())) return(true);
+
+			try
+			{
+				var coordinate=JSON.parse(hiddenField.val());
+
+				if(helper.isEmpty(coordinate.lat) || helper.isEmpty(coordinate.lng)) return(true);
+
+				return($self.applyDropoffLocationGeofence('chbs_dropoff_location_service_type_1',coordinate.lat,coordinate.lng,textField,hiddenField));
+			}
+			catch(e) {}
 
 			return(true);
 		};
@@ -4132,8 +4212,37 @@
 					var routePolyline=$GoogleMapAPI.drawRoute(response,$self.getRouteIndex(),$googleMap);
 					if(routePolyline)
 						$routePolyline.push(routePolyline);
-					
-					$self.calculateRoute(response,callback);
+
+					if($self.hasReturnMapRoute(serviceTypeId,coordinate))
+					{
+						var requestReturn=
+						{
+							origin:coordinate[length-1],
+							destination:coordinate[0],
+							travelMode:'drive',
+							routeModifiers:request.routeModifiers
+						};
+
+						if(parseInt($option.google_map_option.route_type,10)===2)
+							requestReturn.computeAlternativeRoutes=true;
+
+						$GoogleMapAPI.computeRoutes(requestReturn,function(responseReturn)
+						{
+							if($GoogleMapAPI.hasRoute(responseReturn))
+							{
+								var returnRouteIndex=$self.getShortestRouteIndex(responseReturn);
+								var returnPolyline=$GoogleMapAPI.drawRoute(responseReturn,returnRouteIndex,$googleMap);
+								if(returnPolyline)
+									$routePolyline.push(returnPolyline);
+							}
+
+							$self.calculateRoute(response,callback,responseReturn);
+						});
+					}
+					else
+					{
+						$self.calculateRoute(response,callback);
+					}
 				}
 				else
 				{
@@ -4225,29 +4334,75 @@
 
 		/**********************************************************************/
 		
-		this.calculateRoute=function(response,callback)
+		this.calculateRoute=function(response,callback,responseReturn)
 		{
 			var distance=0;
 			var duration=0;
+			var distanceReturn=0;
+			var durationReturn=0;
 			
 			if($GoogleMapAPI.hasRoute(response))
 			{
 				distance=parseInt(response.routes[$self.getRouteIndex()].distanceMeters,10);
 				duration=parseInt(response.routes[$self.getRouteIndex()].duration,10);
 			}
+
+			if($GoogleMapAPI.hasRoute(responseReturn))
+			{
+				var returnRouteIndex=$self.getShortestRouteIndex(responseReturn);
+				distanceReturn=parseInt(responseReturn.routes[returnRouteIndex].distanceMeters,10);
+				durationReturn=parseInt(responseReturn.routes[returnRouteIndex].duration,10);
+			}
 			
 			distance=$self.formatDistance(distance);
 			duration=$self.formatDuration(duration);
+			distanceReturn=$self.formatDistance(distanceReturn);
+			durationReturn=$self.formatDuration(durationReturn);
 			
 			if($option.ride_time_rounding>0.00)
 			{
 				duration=Math.ceil(duration/$option.ride_time_rounding)*$option.ride_time_rounding;
+				durationReturn=Math.ceil(durationReturn/$option.ride_time_rounding)*$option.ride_time_rounding;
 			}
 			
 			$self.e('input[name="chbs_distance_map"]').val(distance);
 			$self.e('input[name="chbs_duration_map"]').val(duration*$option.ride_time_multiplier);
+			$self.e('input[name="chbs_distance_return_map"]').val(distanceReturn);
+			$self.e('input[name="chbs_duration_return_map"]').val(durationReturn*$option.ride_time_multiplier);
 			
 			$self.reCalculateRoute(callback);
+		};
+
+		/**********************************************************************/
+
+		this.hasReturnMapRoute=function(serviceTypeId,coordinate)
+		{
+			if(parseInt(serviceTypeId,10)!==1) return(false);
+			if(parseInt($self.e('select[name="chbs_transfer_type_service_type_1"]').val(),10)!==3) return(false);
+			return($.isArray(coordinate) && coordinate.length>=2);
+		};
+
+		/**********************************************************************/
+
+		this.getShortestRouteIndex=function(response)
+		{
+			var routeIndex=0;
+			var distanceMin=-1;
+
+			if(!$GoogleMapAPI.hasRoute(response)) return(routeIndex);
+
+			for(var i in response.routes)
+			{
+				var d=$self.formatDistance(response.routes[i].distanceMeters);
+
+				if((d<distanceMin) || (distanceMin===-1))
+				{
+					distanceMin=d;
+					routeIndex=i;
+				}
+			}
+
+			return(routeIndex);
 		};
 		
 		/**********************************************************************/
@@ -4258,10 +4413,23 @@
 			var durationWaypoint=0;
 			
 			var distance=0;
+			var distanceReturn=0;
+			var durationMap=0;
+			var durationReturnMap=0;
 			
 			var serviceTypeId=parseInt($self.e('input[name="chbs_service_type_id"]').val(),10);
 			
-			distance=$self.e('input[name="chbs_distance_map"]').val();
+			distance=parseFloat($self.e('input[name="chbs_distance_map"]').val());
+			if(isNaN(distance)) distance=0;
+
+			distanceReturn=parseFloat($self.e('input[name="chbs_distance_return_map"]').val());
+			if(isNaN(distanceReturn)) distanceReturn=0;
+
+			durationMap=parseInt($self.e('input[name="chbs_duration_map"]').val(),10);
+			if(isNaN(durationMap)) durationMap=0;
+
+			durationReturnMap=parseInt($self.e('input[name="chbs_duration_return_map"]').val(),10);
+			if(isNaN(durationReturnMap)) durationReturnMap=0;
 			
 			switch(serviceTypeId)
 			{
@@ -4323,22 +4491,40 @@
 			if($.inArray(serviceTypeId,[1,3])>-1)
 			{
 				var transferType=$self.e('select[name="chbs_transfer_type_service_type_'+serviceTypeId+'"]');
-				var transferTypeValue=transferType.length===1 ? ($.inArray(parseInt(transferType.val(),10),[2,3])>-1 ? 2 : 1) : 1;
+				var transferTypeId=transferType.length===1 ? parseInt(transferType.val(),10) : 1;
+				var transferTypeValue=$.inArray(transferTypeId,[2,3])>-1 ? 2 : 1;
 				
-				duration+=(parseInt($self.e('input[name="chbs_duration_map"]').val(),10)*transferTypeValue)+(durationWaypoint*transferTypeValue);
-				distance*=transferTypeValue;
+				if(serviceTypeId===1 && transferTypeId===3)
+				{
+					duration+=durationMap+durationReturnMap+(durationWaypoint*transferTypeValue);
+					distance+=distanceReturn;
+				}
+				else
+				{
+					duration+=(durationMap*transferTypeValue)+(durationWaypoint*transferTypeValue);
+					distance*=transferTypeValue;
+				}
 			}
 			
 			$self.e('input[name="chbs_distance_sum"]').val(distance);
 			$self.e('input[name="chbs_duration_sum"]').val(duration);
 			
 			var sDuration=$self.splitTime(duration);
+			var sDurationMap=$self.splitTime(durationMap);
+			var sDurationReturnMap=$self.splitTime(durationReturnMap);
 			
-			distance=$self.formatLength(distance);
-				
-			$self.e('.chbs-ride-info>div:eq(0)>span:eq(2)>span:eq(0)').html(distance);
-			$self.e('.chbs-ride-info>div:eq(1)>span:eq(2)>span:eq(0)').html(sDuration[0]);
-			$self.e('.chbs-ride-info>div:eq(1)>span:eq(2)>span:eq(2)').html(sDuration[1]);  
+			$self.e('.chbs-ride-info-total-distance>span:eq(2)>span:eq(0)').html($self.formatLength(distance));
+			$self.e('.chbs-ride-info-total-time>span:eq(2)>span:eq(0)').html(sDuration[0]);
+			$self.e('.chbs-ride-info-total-time>span:eq(2)>span:eq(2)').html(sDuration[1]);
+
+			$self.e('.chbs-ride-info-outbound-distance>span:eq(2)>span:eq(0)').html($self.formatLength(parseFloat($self.e('input[name="chbs_distance_map"]').val())));
+			$self.e('.chbs-ride-info-return-distance>span:eq(2)>span:eq(0)').html($self.formatLength(distanceReturn));
+			$self.e('.chbs-ride-info-outbound-time>span:eq(2)>span:eq(0)').html(sDurationMap[0]);
+			$self.e('.chbs-ride-info-outbound-time>span:eq(2)>span:eq(2)').html(sDurationMap[1]);
+			$self.e('.chbs-ride-info-return-time>span:eq(2)>span:eq(0)').html(sDurationReturnMap[0]);
+			$self.e('.chbs-ride-info-return-time>span:eq(2)>span:eq(2)').html(sDurationReturnMap[1]);
+
+			$self.updateRideInfoLayout();
 			
 			$self.calculateBaseLocationDistance(callback);
 		};
