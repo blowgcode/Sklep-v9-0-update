@@ -3057,6 +3057,7 @@ class CHBSBookingForm
 		$Validation=new CHBSValidation();
 		$WooCommerce=new CHBSWooCommerce();
 		$TransferType=new CHBSTransferType();
+		$GeofenceChecker=new CHBSGeofenceChecker();
 		$BookingFormElement=new CHBSBookingFormElement();
 	   
 		$data=CHBSHelper::getPostOption();
@@ -3193,6 +3194,27 @@ class CHBSBookingForm
 					$dateTimeError=true;
 					$this->setErrorLocal($response,CHBSHelper::getFormName('return_time_service_type_'.$data['service_type_id'],false),__('Enter a valid time.','chauffeur-booking-system'));
 				}				
+
+				if(((int)$data['service_type_id']===1) && (is_array($bookingForm['meta']['pickup_time_geofence'])) && (count($bookingForm['meta']['pickup_time_geofence'])) && (array_key_exists('dropoff_location_coordinate_service_type_1',$data)))
+				{
+					$returnTimeByGeofence=$GeofenceChecker->getPickupTimeByGeofence($bookingForm['meta']['pickup_time_geofence'],$bookingForm['dictionary']['geofence'],$data['dropoff_location_coordinate_service_type_1']);
+
+					if($returnTimeByGeofence===false)
+					{
+						$dateTimeError=true;
+						$this->setErrorLocal($response,CHBSHelper::getFormName('return_time_service_type_1',false),__('Selected return pickup address is outside the service area.','chauffeur-booking-system'));
+					}
+					else
+					{
+						$returnTimeByGeofence=$Date->formatTimeToStandard($returnTimeByGeofence);
+
+						if($returnTimeByGeofence!==$data['return_time_service_type_1'])
+						{
+							$dateTimeError=true;
+							$this->setErrorLocal($response,CHBSHelper::getFormName('return_time_service_type_1',false),__('Enter a valid time.','chauffeur-booking-system'));
+						}
+					}
+				}
 			}
 			
 			/***/

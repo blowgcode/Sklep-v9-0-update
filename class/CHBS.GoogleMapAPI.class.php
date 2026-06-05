@@ -51,6 +51,13 @@ class CHBSGoogleMapAPI
 				$i++;
 			}
 		}
+		else if($type===4)
+		{
+			if($coordinateCount<2) return(-2);
+
+			$postData['origin']=$this->transformCoordinate($coordinate[$coordinateCount-1]);
+			$postData['destination']=$this->transformCoordinate($coordinate[0]);
+		}
 		else if(in_array($type,array(2,3)))
 		{
 			$baseLocation=array();
@@ -160,6 +167,8 @@ class CHBSGoogleMapAPI
 		(
 			'distance_map'=>0,
 			'duration_map'=>0,
+			'distance_return_map'=>0,
+			'duration_return_map'=>0,
 			'distance_sum'=>0,
 			'duration_sum'=>0,
 			'base_location_duration'=>0,
@@ -186,14 +195,29 @@ class CHBSGoogleMapAPI
 		
 			$result['distance_map']=round((int)$response->routes[0]->distanceMeters/1000,1);
 			$result['duration_map']=ceil((int)$response->routes[0]->duration/60);
+
+			if(((int)$data['service_type_id']===1) && ((int)$data['transfer_type_service_type_1']===3))
+			{
+				$responseReturn=$this->computeRoutes($bookingForm,$data,4);
+
+				if($responseReturn===-1) return(-1);
+
+				if($responseReturn!==-2)
+				{
+					$result['distance_return_map']=round((int)$responseReturn->routes[0]->distanceMeters/1000,1);
+					$result['duration_return_map']=ceil((int)$responseReturn->routes[0]->duration/60);
+				}
+			}
 		}
 		
 		if($bookingForm['meta']['ride_time_rounding']>0.00)
 		{
 			$result['duration_map']=ceil($result['duration_map']/$bookingForm['meta']['ride_time_rounding'])*$bookingForm['meta']['ride_time_rounding'];
+			$result['duration_return_map']=ceil($result['duration_return_map']/$bookingForm['meta']['ride_time_rounding'])*$bookingForm['meta']['ride_time_rounding'];
 		}
 		
 		$result['duration_map']*=$bookingForm['meta']['ride_time_multiplier'];
+		$result['duration_return_map']*=$bookingForm['meta']['ride_time_multiplier'];
 		
 		$distance=$result['distance_map'];
 		
@@ -252,10 +276,17 @@ class CHBSGoogleMapAPI
 		{
 			$transferTypeId=(int)$data['transfer_type_service_type_'.$data['service_type_id']];
 			$transferTypeValue=in_array($transferTypeId,array(2,3)) ? 2 : 1;
-				
-			$duration+=($result['duration_map']*$transferTypeValue)+($durationWaypoint*$transferTypeValue);
-				
-			$distance*=$transferTypeValue;
+
+			if(((int)$data['service_type_id']===1) && ($transferTypeId===3))
+			{
+				$duration+=$result['duration_map']+$result['duration_return_map']+($durationWaypoint*$transferTypeValue);
+				$distance+=$result['distance_return_map'];
+			}
+			else
+			{
+				$duration+=($result['duration_map']*$transferTypeValue)+($durationWaypoint*$transferTypeValue);
+				$distance*=$transferTypeValue;
+			}
 		}
 		
 		$result['distance_sum']=$distance;
@@ -288,13 +319,15 @@ class CHBSGoogleMapAPI
 		$resultData=array();
 		
 		foreach($result as $resultIndex=>$resultValue)
-			$resultData[$resultIndex]=$data[$resultIndex];
+			$resultData[$resultIndex]=array_key_exists($resultIndex,$data) ? $data[$resultIndex] : 0;
 		
 		/****/
 		
 		foreach($result as $resultIndex=>$resultValue)
 		{
-			if((float)$resultValue!==(float)$data[$resultIndex])
+			$dataValue=array_key_exists($resultIndex,$data) ? $data[$resultIndex] : 0;
+
+			if((float)$resultValue!==(float)$dataValue)
 			{
 				$LogManager=new CHBSLogManager();
 				$LogManager->add('booking_data_validation',1,__('Result: ','chauffeur-booking-system').print_r($result,true).__('Data: ','chauffeur-booking-system').print_r($resultData,true)); 

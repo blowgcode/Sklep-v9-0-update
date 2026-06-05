@@ -117,6 +117,8 @@
 				
 				<input type="hidden" name="<?php CHBSHelper::getFormName('distance_map') ?>" data-value="0"/>
 				<input type="hidden" name="<?php CHBSHelper::getFormName('duration_map') ?>" data-value="0"/>
+				<input type="hidden" name="<?php CHBSHelper::getFormName('distance_return_map') ?>" data-value="0"/>
+				<input type="hidden" name="<?php CHBSHelper::getFormName('duration_return_map') ?>" data-value="0"/>
 				
 				<input type="hidden" name="<?php CHBSHelper::getFormName('base_location_distance') ?>" data-value="0"/>
 				<input type="hidden" name="<?php CHBSHelper::getFormName('base_location_duration') ?>" data-value="0"/>

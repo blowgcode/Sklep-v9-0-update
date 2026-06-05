@@ -341,7 +341,7 @@
 							</div>
 
 							<div class="chbs-form-field chbs-form-field-width-50">
-								<label><?php esc_html_e('Return time','chauffeur-booking-system'); ?></label>
+								<label><?php esc_html_e('Godzina wyjazdu powrotnego','chauffeur-booking-system'); ?></label>
 								<input type="text" autocomplete="off" name="<?php CHBSHelper::getFormName('return_time_service_type_1'); ?>" class="chbs-timepicker" value="<?php echo esc_attr($this->data['booking_edit']->getFieldValue('return_time',array('meta','return_time'),1)); ?>"/>
 							</div>
 
@@ -1091,9 +1091,25 @@
 					<div id="chbs_google_map"></div>
 				</div>
 				<div class="chbs-ride-info chbs-box-shadow">
-					<div>
+					<div class="chbs-ride-info-total-distance">
 						<span class="chbs-meta-icon-route"></span>
 						<span><?php esc_html_e('Total distance','chauffeur-booking-system'); ?></span>
+						<span>
+							<span>0</span>
+							<span><?php echo esc_html($this->data['length_unit'][1]); ?></span>
+						</span>
+					</div>
+					<div class="chbs-ride-info-outbound-distance chbs-hidden">
+						<span class="chbs-meta-icon-route"></span>
+						<span><?php esc_html_e('Wyjazd - odległość','chauffeur-booking-system'); ?></span>
+						<span>
+							<span>0</span>
+							<span><?php echo esc_html($this->data['length_unit'][1]); ?></span>
+						</span>
+					</div>
+					<div class="chbs-ride-info-return-distance chbs-hidden">
+						<span class="chbs-meta-icon-route"></span>
+						<span><?php esc_html_e('Powrót - odległość','chauffeur-booking-system'); ?></span>
 						<span>
 							<span>0</span>
 							<span><?php echo esc_html($this->data['length_unit'][1]); ?></span>
@@ -1103,9 +1119,29 @@
 			if((int)$this->data['meta']['total_time_display_enable']===1)
 			{
 ?>
-					<div>
+					<div class="chbs-ride-info-total-time">
 						<span class="chbs-meta-icon-clock"></span>
 						<span><?php esc_html_e('Total time','chauffeur-booking-system'); ?></span>
+						<span>
+							<span>0</span>
+							<span><?php esc_html_e('h','chauffeur-booking-system'); ?></span>
+							<span>0</span>
+							<span><?php esc_html_e('m','chauffeur-booking-system'); ?></span>
+						</span>
+					</div>
+					<div class="chbs-ride-info-outbound-time chbs-hidden">
+						<span class="chbs-meta-icon-clock"></span>
+						<span><?php esc_html_e('Wyjazd - czas','chauffeur-booking-system'); ?></span>
+						<span>
+							<span>0</span>
+							<span><?php esc_html_e('h','chauffeur-booking-system'); ?></span>
+							<span>0</span>
+							<span><?php esc_html_e('m','chauffeur-booking-system'); ?></span>
+						</span>
+					</div>
+					<div class="chbs-ride-info-return-time chbs-hidden">
+						<span class="chbs-meta-icon-clock"></span>
+						<span><?php esc_html_e('Powrót - czas','chauffeur-booking-system'); ?></span>
 						<span>
 							<span>0</span>
 							<span><?php esc_html_e('h','chauffeur-booking-system'); ?></span>
